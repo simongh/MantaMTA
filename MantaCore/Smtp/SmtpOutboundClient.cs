@@ -70,9 +70,6 @@ namespace MantaMTA.Core.Smtp
 								removedCount++;
 							}
 						}
-
-						if (removedCount > 0)
-							Logging.Debug("Removed " + removedCount + " idle connections");
 					}
 					catch (Exception ex)
 					{
@@ -175,8 +172,8 @@ namespace MantaMTA.Core.Smtp
 		/// </summary>
 		~SmtpOutboundClient()
 		{
-			if (base.Connected)
-				Task.Run(()=>ExecQuitAsync()).Wait();
+            if (base.Connected)
+                ExecQuitAsync().Wait();
 
 			if (!IsDisposed)
 				this.Dispose(true);
@@ -425,9 +422,9 @@ namespace MantaMTA.Core.Smtp
 				await successCallbackAsync(response);
 
 
-			// If max messages have been sent quit the connection.			
-			if (_DataCommands >= OutboundRules.OutboundRuleManager.GetMaxMessagesPerConnection(MXRecord, MtaIpAddress))
-				Task.Run(() => ExecQuitAsync()).Wait();
+            // If max messages have been sent quit the connection.			
+            if (_DataCommands >= OutboundRuleManager.GetMaxMessagesPerConnection(MXRecord, MtaIpAddress))
+                ExecQuitAsync().Wait();
 
 			return true;
 		}

@@ -147,10 +147,10 @@ namespace MantaMTA.Core.Events
 
 			try
 			{
-				Task.Run(new Action(delegate()
-				{					 
-					DirectoryHandler(MtaParameters.FeedbackLoopDropFolder, EventsManager.Instance.ProcessFeedbackLoop);
-				}));
+                Task.Run(() =>
+                {
+                    DirectoryHandler(MtaParameters.FeedbackLoopDropFolder, EventsManager.Instance.ProcessFeedbackLoop);
+                });
 			}
 			catch (Exception ex)
 			{

@@ -79,7 +79,7 @@ namespace MantaMTA.Core.Sends
 		/// <returns>The Send.</returns>
 		public Send GetSend(string sendId)
 		{
-			return Task.Run(()=>GetSendAsync(sendId)).Result;
+			return GetSendAsync(sendId).ConfigureAwait(false).GetAwaiter().GetResult();
 		}
 
 		/// <summary>

@@ -127,7 +127,7 @@ namespace MantaMTA.Core.Client
 					if (!runningTasks.TryAdd(taskID, 1))
 						return;
 
-					Task.Run(async () =>
+                    Task.Factory.StartNew(async () =>
 					{
 						try
 						{
@@ -175,7 +175,7 @@ namespace MantaMTA.Core.Client
 							int value;
 							runningTasks.TryRemove(taskID, out value);
 						}
-					});
+					}, TaskCreationOptions.LongRunning | TaskCreationOptions.PreferFairness);
 				};
 
 				Action startWorkerTasks = () => {

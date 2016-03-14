@@ -45,72 +45,68 @@ namespace MantaMTA.Core.Smtp
 		public SmtpClientQueue()
 			: base()
 		{
-			Task.Run(new Action(RunInUseCleaner));
+            Task.Factory.StartNew(RunInUseCleaner, TaskCreationOptions.LongRunning);
 		}
 
 		/// <summary>
 		/// Removes dead & orphaned connections from InUseConnections.
 		/// </summary>
-		private async void RunInUseCleaner()
+		private async Task RunInUseCleaner()
 		{
+            try
+            {
+                while (true) // Run forever
+                {
+                    // Look the collection, so it doesn't change under us.
+                    lock (InUseConnections.SyncRoot)
+                    {
+                        ArrayList toRemove = new ArrayList();
 
-			await Task.Run(new Action(async delegate()
-				{
-					try
-					{
-						while (true) // Run forever
-						{
-							// Look the collection, so it doesn't change under us.
-							lock (InUseConnections.SyncRoot)
-							{
-								ArrayList toRemove = new ArrayList();
+                        // Loop through all connections and check they still exist and are connected, if there not then we should remove them.
+                        for (int i = 0; i < InUseConnections.Count; i++)
+                        {
+                            if (InUseConnections[i] == null || !((SmtpOutboundClient)InUseConnections[i]).Connected)
+                                toRemove.Add(i);
+                        }
 
-								// Loop through all connections and check they still exist and are connected, if there not then we should remove them.
-								for (int i = 0; i < InUseConnections.Count; i++)
-								{
-									if (InUseConnections[i] == null || !((SmtpOutboundClient)InUseConnections[i]).Connected)
-										toRemove.Add(i);
-								}
+                        // Remove dead connections.
+                        for (int z = toRemove.Count - 1; z >= 0; z--)
+                        {
+                            if (InUseConnections.Count < z)
+                            {
+                                ((SmtpOutboundClient)InUseConnections[z]).Client.Close();
+                                ((SmtpOutboundClient)InUseConnections[z]).Dispose();
+                                InUseConnections.RemoveAt((int)toRemove[z]);
+                            }
+                        }
+                    }
 
-								// Remove dead connections.
-								for (int z = toRemove.Count - 1; z >= 0; z--)
-								{
-									if (InUseConnections.Count < z)
-									{
-										((SmtpOutboundClient)InUseConnections[z]).Client.Close();
-										((SmtpOutboundClient)InUseConnections[z]).Dispose();
-										InUseConnections.RemoveAt((int)toRemove[z]);
-									}
-								}
-							}
-
-							// Don't want to loop to often so wait 30 seconds before next iteration.
-							await Task.Delay(30 * 1000);
-						}
-					}
-					catch (Exception)
-					{
-						//Logging.Debug("SmtpClientQueue :: RunInUseCleaner", ex);
-						RunInUseCleaner();
-					}
-				}));
+                    // Don't want to loop to often so wait 30 seconds before next iteration.
+                    await Task.Delay(30 * 1000);
+                }
+            }
+            catch (Exception)
+            {
+                //Logging.Debug("SmtpClientQueue :: RunInUseCleaner", ex);
+                await Task.Factory.StartNew(RunInUseCleaner, TaskCreationOptions.LongRunning);
+            }
 		}
 
 		/// <summary>
 		/// Attempt to create a new connection using the specified ip address and mx record.
 		/// </summary>
 		/// <returns>A connected outbound client or NULL</returns>
-		public async Task<CreateNewConnectionAsyncResult> CreateNewConnectionAsync(VirtualMta.VirtualMTA ipAddress, DNS.MXRecord mxRecord)
+		public async Task<CreateNewConnectionAsyncResult> CreateNewConnectionAsync(VirtualMTA ipAddress, MXRecord mxRecord)
 		{
 			SmtpOutboundClient smtpClient = null;
 
 			// Get the maximum connections to the destination.
-			int maximumConnections = OutboundRules.OutboundRuleManager.GetMaxConnectionsToDestination(ipAddress, mxRecord);
+			int maximumConnections = OutboundRuleManager.GetMaxConnectionsToDestination(ipAddress, mxRecord);
 
 			lock (this.SyncRoot)
 			{
 				// Get the currently active connections count.
-				int currentConnections = this.InUseConnections.Count;
+				int currentConnections = InUseConnections.Count;
 
 				lock (_ConnectionAttemptsInProgressLock)
 				{
@@ -238,14 +234,14 @@ namespace MantaMTA.Core.Smtp
 									}
 								}
 							}
-							Logging.Debug(string.Concat(new string[]
+							/*Logging.Debug(string.Concat(new string[]
 							{
 								"SmtpClientPool : Removed ",
 								removed.ToString("N0"),
 								" client queues. ",
 								(count - removed).ToString("N0"),
 								" remaining."
-							}));
+							}));*/
 						}
 					}
 					catch (Exception ex)
@@ -299,7 +295,7 @@ namespace MantaMTA.Core.Smtp
 						return new SmtpOutboundClientDequeueResponse(SmtpOutboundClientDequeueAsyncResult.ServiceUnavalible);
 
 					SmtpClientQueue clientQueue = null;
-					lock (this._ClientPoolLock)
+					lock (_ClientPoolLock)
 					{
 						if (!mxConnections.TryGetValue(mxs[i].Host, out clientQueue))
 						{
@@ -333,10 +329,10 @@ namespace MantaMTA.Core.Smtp
 					else
 						throw createNewConnectionResult.Exception;
 				}
-				catch (SocketException ex)
+				catch (SocketException)
 				{
 					// We have failed to connect to the remote host.
-					Logging.Warn("Failed to connect to " + mxs[i].Host, ex);
+					// Logging.Warn("Failed to connect to " + mxs[i].Host, ex);
 
 					// If we fail to connect to an MX then don't try again for at least a minute.
 					ServiceNotAvailableManager.Add(ipAddress.IPAddress.ToString(), mxs[i].Host, DateTime.UtcNow);

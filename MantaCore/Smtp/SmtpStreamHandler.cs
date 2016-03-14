@@ -203,7 +203,7 @@ namespace MantaMTA.Core.Smtp
 		/// <param name="log">If true will log.</param>
 		public void WriteLine(string message, bool log = true)
 		{
-			Task.Run(() => WriteLineAsync(message, log)).Wait();
+            WriteLineAsync(message, log).Wait();
 		}
 
 		/// <summary>

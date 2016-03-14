@@ -71,8 +71,8 @@ namespace MantaMTA.Core.Server
 			{
 				TcpClient client = _TcpListener.EndAcceptTcpClient(ir);
 				_TcpListener.BeginAcceptTcpClient(AsyncConnectionHandler, _TcpListener);
-				Task.Run(async () => await HandleSmtpConnection(client));
-			}
+                Task.Factory.StartNew(HandleSmtpConnection, client, TaskCreationOptions.LongRunning | TaskCreationOptions.PreferFairness);
+            }
 			catch (ObjectDisposedException)
 			{
 				// SMTP Server stop was done mid connection handshake, just ignore it.
@@ -369,7 +369,7 @@ namespace MantaMTA.Core.Server
 							smtpStream.RemoteAddress.ToString(),
 							serverHostname,
 							smtpStream.LocalAddress.ToString(),
-							DateTime.UtcNow.ToString("ddd, dd MMM yyyy HH':'mm':'ss K")));
+							DateTime.UtcNow.ToString("ddd, dd MMM yyyy HH':'mm':'ss -0000 (UTC)")));
 
 						
 						// Complete the transaction,either saving to local mailbox or queueing for relay.
