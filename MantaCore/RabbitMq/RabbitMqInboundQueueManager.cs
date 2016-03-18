@@ -2,6 +2,7 @@
 using RabbitMQ.Client.Events;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace MantaMTA.Core.RabbitMq
 {
@@ -12,7 +13,7 @@ namespace MantaMTA.Core.RabbitMq
 		/// </summary>
 		/// <param name="maxItems">The maximum amount of messages to dequeue.</param>
 		/// <returns>The dequeue messages.</returns>
-		public static MtaMessageCollection Dequeue(int maxItems)
+		public static async Task<MtaMessageCollection> Dequeue(int maxItems)
 		{
 			List<BasicDeliverEventArgs> items = RabbitMqManager.Dequeue(RabbitMqManager.RabbitMqQueue.Inbound, maxItems, 1 * 1000);
 			MtaMessageCollection messages = new MtaMessageCollection();
@@ -21,7 +22,7 @@ namespace MantaMTA.Core.RabbitMq
 
 			foreach (BasicDeliverEventArgs ea in items)
 			{
-				MtaMessage msg = Serialisation.Deserialise<MtaMessage>(ea.Body);
+				MtaMessage msg = await Serialisation.Deserialise<MtaMessage>(ea.Body);
 				msg.RabbitMqDeliveryTag = ea.DeliveryTag;
 				messages.Add(msg);
 			}
@@ -39,7 +40,7 @@ namespace MantaMTA.Core.RabbitMq
 		/// <param name="rcptTo">The envelope rcpt to.</param>
 		/// <param name="message">The Email.</param>
 		/// <returns>True if the Email has been enqueued in RabbitMQ.</returns>
-		public static bool Enqueue(Guid messageID, int ipGroupID, int internalSendID, string mailFrom, string[] rcptTo, string message)
+		public static async Task<bool> Enqueue(Guid messageID, int ipGroupID, int internalSendID, string mailFrom, string[] rcptTo, string message)
 		{
 			// Create the thing we are going to queue in RabbitMQ.
 			MtaMessage recordToSave = new MtaMessage(messageID,
@@ -49,7 +50,7 @@ namespace MantaMTA.Core.RabbitMq
 				rcptTo,
 				message);
 
-			return RabbitMqManager.Publish(MtaQueuedMessage.CreateNew(recordToSave), RabbitMqManager.RabbitMqQueue.InboundStaging, true);
+			return await RabbitMqManager.Publish(MtaQueuedMessage.CreateNew(recordToSave), RabbitMqManager.RabbitMqQueue.InboundStaging, true);
 		}
 	}
 }

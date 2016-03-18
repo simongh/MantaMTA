@@ -2,22 +2,36 @@
 using RabbitMQ.Client.Events;
 using System;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using System.Web.Script.Serialization;
 
 namespace MantaMTA.Core.RabbitMq
 {
-	internal static class RabbitMqOutboundQueueManager
+    internal static class RabbitMqOutboundQueueManager
 	{
-		/// <summary>
-		/// Enqueue the messages in the collection for relaying.
-		/// </summary>
-		/// <param name="inboundMessages">Messages to enqueue.</param>
-		public static void Enqueue(MtaMessageCollection inboundMessages)
+        /// <summary>
+        /// Dequeue a message from RabbitMQ.
+        /// </summary>
+        /// <returns>A dequeued message or null if there weren't any.</returns>
+        public static async Task<MtaQueuedMessage> Dequeue()
+        {
+            BasicDeliverEventArgs ea = RabbitMqManager.Dequeue(RabbitMqManager.RabbitMqQueue.OutboundWaiting, 1, 100).FirstOrDefault();
+            if (ea == null)
+                return null;
+
+            MtaQueuedMessage qmsg = await Serialisation.Deserialise<MtaQueuedMessage>(ea.Body);
+            qmsg.RabbitMqDeliveryTag = ea.DeliveryTag;
+            qmsg.IsHandled = false;
+            return qmsg;
+        }
+
+        /// <summary>
+        /// Enqueue the messages in the collection for relaying.
+        /// </summary>
+        /// <param name="inboundMessages">Messages to enqueue.</param>
+        public static void Enqueue(MtaMessageCollection inboundMessages)
 		{
-			Parallel.ForEach(inboundMessages, message=>{
-				Enqueue(MtaQueuedMessage.CreateNew(message));
+			Parallel.ForEach(inboundMessages, message => {
+				Enqueue(MtaQueuedMessage.CreateNew(message)).Wait();
 			});
 
 			RabbitMqManager.Ack(RabbitMqManager.RabbitMqQueue.Inbound, inboundMessages.Max(m => m.RabbitMqDeliveryTag), true);
@@ -27,7 +41,7 @@ namespace MantaMTA.Core.RabbitMq
 		/// Enqueue the message for relaying.
 		/// </summary>
 		/// <param name="msg">Message to enqueue.</param>
-		public static bool Enqueue(MtaQueuedMessage msg)
+		public static async Task<bool> Enqueue(MtaQueuedMessage msg)
 		{
 			RabbitMqManager.RabbitMqQueue queue = RabbitMqManager.RabbitMqQueue.OutboundWaiting;
 
@@ -45,28 +59,13 @@ namespace MantaMTA.Core.RabbitMq
 					queue = RabbitMqManager.RabbitMqQueue.OutboundWait300;
 			}
 
-			if (!RabbitMqManager.Publish(msg, queue))
-				return false;
-			msg.IsHandled = true;
-			return true;
+            var published = await RabbitMqManager.Publish(msg, queue);
+
+            if (published)
+			    msg.IsHandled = true;
+
+			return published;
 		}
-
-		/// <summary>
-		/// Dequeue a message from RabbitMQ.
-		/// </summary>
-		/// <returns>A dequeued message or null if there weren't any.</returns>
-		public static MtaQueuedMessage Dequeue()
-		{
-			BasicDeliverEventArgs ea = RabbitMqManager.Dequeue(RabbitMqManager.RabbitMqQueue.OutboundWaiting, 1, 100).FirstOrDefault();
-			if (ea == null)
-				return null;
-
-			MtaQueuedMessage qmsg = Serialisation.Deserialise<MtaQueuedMessage>(ea.Body);
-			qmsg.RabbitMqDeliveryTag = ea.DeliveryTag;
-			qmsg.IsHandled = false;
-			return qmsg;
-		}
-
 		/// <summary>
 		/// Acknowledge the message as handled.
 		/// </summary>

@@ -13,259 +13,259 @@ namespace MantaMTA.Core.Smtp
 	/// </summary>
 	public class SmtpStreamHandler
 	{
-		/// <summary>
-		///	Logging directions for SMTP conversations.
-		/// </summary>
-		private struct SmtpConversationDirection
-		{
-			/// <summary>
-			/// This server sent the message.
-			/// </summary>
-			public const string OUTBOUND = "Outbound";
+        /// <summary>
+        /// Holds a Copy of a UTF8 Encoding without a BOM.
+        /// </summary>
+        private static Encoding _UTF8Encoding = new UTF8Encoding(false);
 
-			/// <summary>
-			/// This server received the message.
-			/// </summary>
-			public const string INBOUND = "Inbound";
-		}
+        /// <summary>
+        /// Create an SmtpStreamHandler from the TCP client.
+        /// </summary>
+        /// <param name="client"></param>
+        public SmtpStreamHandler(TcpClient client) : this(client.GetStream())
+        {
+            IPEndPoint remote = client.Client.RemoteEndPoint as IPEndPoint;
+            this.RemoteAddress = remote.Address;
+            this.RemotePort = remote.Port;
 
-		/// <summary>
-		/// Holds a Copy of a UTF8 Encoding without a BOM.
-		/// </summary>
-		private static Encoding _UTF8Encoding = new UTF8Encoding(false);
+            IPEndPoint local = client.Client.LocalEndPoint as IPEndPoint;
+            this.LocalAddress = local.Address;
+            this.LocalPort = local.Port;
+        }
 
-		/// <summary>
-		/// The local address is the address on the server that the client is connected to.
-		/// </summary>
-		public IPAddress LocalAddress { get; set; }
+        /// <summary>
+        /// Constructor is used for NUnit tests and SmtpStreamHandler(TcpClient).
+        /// </summary>
+        /// <param name="stream"></param>
+        public SmtpStreamHandler(Stream stream)
+        {
+            this._CurrentTransportMIME = SmtpTransportMIME._7BitASCII;
 
-		/// <summary>
-		/// The port number connected to at the local address.
-		/// </summary>
-		private int LocalPort { get; set; }
+            // Use new UTF8Encoding(false) so we don't send BOM to the network stream.
+            this.ClientStreamReaderUTF8 = new StreamReader(stream, _UTF8Encoding);
+            this.ClientStreamWriterUTF8 = new StreamWriter(stream, _UTF8Encoding);
+            this.ClientStreamReaderASCII = new StreamReader(stream, Encoding.ASCII);
+            this.ClientStreamWriterASCII = new StreamWriter(stream, Encoding.ASCII);
+        }
 
-		/// <summary>
-		/// The remote address is the source of the client request.
-		/// </summary>
-		public IPAddress RemoteAddress { get; set; }
+        /// <summary>
+        /// The local address is the address on the server that the client is connected to.
+        /// </summary>
+        public IPAddress LocalAddress { get; set; }
 
-		/// <summary>
-		/// The port number connected to at the remote address.
-		/// </summary>
-		private int RemotePort { get; set; }
+        /// <summary>
+        /// The remote address is the source of the client request.
+        /// </summary>
+        public IPAddress RemoteAddress { get; set; }
 
-		/// <summary>
-		/// Stream reader for the underlying connection. Encoding is UTF8.
-		/// </summary>
-		private StreamReader ClientStreamReaderUTF8 { get; set; }
+        /// <summary>
+        /// The SMTP Transport MIME currently set.
+        /// </summary>
+        private SmtpTransportMIME _CurrentTransportMIME { get; set; }
 
-		/// <summary>
-		/// Stream writer for the underlying connection. Encoding is UTF8.
-		/// </summary>
-		private StreamWriter ClientStreamWriterUTF8 { get; set; }
+        /// <summary>
+        /// Stream reader for the underlying connection. Encoding is 7bit ASCII.
+        /// </summary>
+        private StreamReader ClientStreamReaderASCII { get; set; }
 
-		/// <summary>
-		/// Stream reader for the underlying connection. Encoding is 7bit ASCII.
-		/// </summary>
-		private StreamReader ClientStreamReaderASCII { get; set; }
+        /// <summary>
+        /// Stream reader for the underlying connection. Encoding is UTF8.
+        /// </summary>
+        private StreamReader ClientStreamReaderUTF8 { get; set; }
 
-		/// <summary>
-		/// Stream writer for the underlying connection. Encoding is 7bit ASCII.
-		/// </summary>
-		private StreamWriter ClientStreamWriterASCII { get; set; }
+        /// <summary>
+        /// Stream writer for the underlying connection. Encoding is 7bit ASCII.
+        /// </summary>
+        private StreamWriter ClientStreamWriterASCII { get; set; }
 
-		/// <summary>
-		/// The SMTP Transport MIME currently set.
-		/// </summary>
-		private SmtpTransportMIME _CurrentTransportMIME { get; set; }
+        /// <summary>
+        /// Stream writer for the underlying connection. Encoding is UTF8.
+        /// </summary>
+        private StreamWriter ClientStreamWriterUTF8 { get; set; }
 
-		/// <summary>
-		/// Create an SmtpStreamHandler from the TCP client.
-		/// </summary>
-		/// <param name="client"></param>
-		public SmtpStreamHandler(TcpClient client) : this(client.GetStream())
-		{
-			IPEndPoint remote = client.Client.RemoteEndPoint as IPEndPoint;			
-			this.RemoteAddress = remote.Address;
-			this.RemotePort = remote.Port;
+        /// <summary>
+        /// The port number connected to at the local address.
+        /// </summary>
+        private int LocalPort { get; set; }
 
-			IPEndPoint local = client.Client.LocalEndPoint as IPEndPoint;
-			this.LocalAddress = local.Address;
-			this.LocalPort = local.Port;
-		}
+        /// <summary>
+        /// The port number connected to at the remote address.
+        /// </summary>
+        private int RemotePort { get; set; }
 
-		/// <summary>
-		/// Constructor is used for NUnit tests and SmtpStreamHandler(TcpClient).
-		/// </summary>
-		/// <param name="stream"></param>
-		public SmtpStreamHandler(Stream stream)
-		{
-			this._CurrentTransportMIME = SmtpTransportMIME._7BitASCII;
+        /// <summary>
+        /// Reads all lines from the stream.
+        /// </summary>
+        /// <param name="log">If true will log.</param>
+        /// <returns>All lines from the stream that are considered part of one message by SMTP.</returns>
+        public string ReadAllLines(bool log = true)
+        {
+            return ReadAllLinesAsync(log).Result;
+        }
 
-			// Use new UTF8Encoding(false) so we don't send BOM to the network stream.
-			this.ClientStreamReaderUTF8 = new StreamReader(stream, _UTF8Encoding);
-			this.ClientStreamWriterUTF8 = new StreamWriter(stream, _UTF8Encoding);
-			this.ClientStreamReaderASCII = new StreamReader(stream, Encoding.ASCII);
-			this.ClientStreamWriterASCII = new StreamWriter(stream, Encoding.ASCII);
-		}
+        /// <summary>
+        /// Reads all lines from the stream.
+        /// </summary>
+        /// <param name="log">If true will log.</param>
+        /// <returns>All lines from the stream that are considered part of one message by SMTP.</returns>
+        public async Task<string> ReadAllLinesAsync(bool log = true)
+        {
+            StringBuilder sb = new StringBuilder();
 
-		/// <summary>
-		/// Set MIME type to be used for reading/writing the underlying stream.
-		/// </summary>
-		/// <param name="mime">Transport MIME to begin using.</param>
-		public void SetSmtpTransportMIME(SmtpTransportMIME mime)
-		{
-			_CurrentTransportMIME = mime;
-		}
+            string line = string.Empty;
+            try
+            {
+                line = await ReadLineAsync(false);
+            }
+            catch (Exception)
+            {
+                return line;
+            }
 
-		/// <summary>
-		/// Read an SMTP line from the client.
-		/// </summary>
-		/// <param name="log">If true will log.</param>
-		/// <returns>Line read from the stream.</returns>
-		public async Task<string> ReadLineAsync(bool log = true)
-		{
-			string response = string.Empty;
+            while (line[3] == '-')
+            {
+                sb.AppendLine(line);
+                try
+                {
+                    line = await ReadLineAsync(false);
+                }
+                catch (Exception)
+                {
+                    line = string.Empty;
+                    break;
+                }
+            }
+            sb.AppendLine(line);
 
-			// Read the underlying stream using the correct encoding.
-			if (_CurrentTransportMIME == SmtpTransportMIME._7BitASCII)
-				response = await ClientStreamReaderASCII.ReadLineAsync();
-			else if (_CurrentTransportMIME == SmtpTransportMIME._8BitUTF)
-				response = await ClientStreamReaderUTF8.ReadLineAsync();
-			else
-				throw new NotImplementedException(_CurrentTransportMIME.ToString());
+            string result = sb.ToString();
 
-			if (response == null)
-				throw new IOException("Remote Endpoint Disconnected.");
+            if (log)
+                LogSmtpConversationMessage(SmtpConversationDirection.INBOUND, result);
 
-			if (log)
-				LogSmtpConversationMessage(SmtpConversationDirection.INBOUND, response);
+            return result;
+        }
 
-			return response;
-		}
+        /// <summary>
+        /// Read an SMTP line from the client.
+        /// </summary>
+        /// <param name="log">If true will log.</param>
+        /// <returns>Line read from the stream.</returns>
+        public async Task<string> ReadLineAsync(bool log = true)
+        {
+            string response = string.Empty;
 
-		/// <summary>
-		/// Reads all lines from the stream.
-		/// </summary>
-		/// <param name="log">If true will log.</param>
-		/// <returns>All lines from the stream that are considered part of one message by SMTP.</returns>
-		public string ReadAllLines(bool log = true)
-		{
-			return ReadAllLinesAsync(log).Result;
-		}
+            // Read the underlying stream using the correct encoding.
+            if (_CurrentTransportMIME == SmtpTransportMIME._7BitASCII)
+                response = await ClientStreamReaderASCII.ReadLineAsync();
+            else if (_CurrentTransportMIME == SmtpTransportMIME._8BitUTF)
+                response = await ClientStreamReaderUTF8.ReadLineAsync();
+            else
+                throw new NotImplementedException(_CurrentTransportMIME.ToString());
 
-		/// <summary>
-		/// Reads all lines from the stream.
-		/// </summary>
-		/// <param name="log">If true will log.</param>
-		/// <returns>All lines from the stream that are considered part of one message by SMTP.</returns>
-		public async Task<string> ReadAllLinesAsync(bool log = true)
-		{
-			StringBuilder sb = new StringBuilder();
+            if (response == null)
+                throw new IOException("Remote Endpoint Disconnected.");
 
-			string line = string.Empty;
-			try
-			{
-				line = await ReadLineAsync(false);
-			}
-			catch (Exception)
-			{
-				return line;
-			}
+            if (log)
+                LogSmtpConversationMessage(SmtpConversationDirection.INBOUND, response);
 
-			while (line[3] == '-')
-			{
-				sb.AppendLine(line);
-				try
-				{
-					line = await ReadLineAsync(false);
-				}
-				catch (Exception)
-				{
-					line = string.Empty;
-					break;
-				}
-			}
-			sb.AppendLine(line);
+            return response;
+        }
 
-			string result = sb.ToString();
+        /// <summary>
+        /// Set MIME type to be used for reading/writing the underlying stream.
+        /// </summary>
+        /// <param name="mime">Transport MIME to begin using.</param>
+        public void SetSmtpTransportMIME(SmtpTransportMIME mime)
+        {
+            _CurrentTransportMIME = mime;
+        }
 
-			if (log)
-				LogSmtpConversationMessage(SmtpConversationDirection.INBOUND, result);
-
-			return result;
-		}
-
-		/// <summary>
-		/// Write a line to the Stream. Using the current transport MIME.
-		/// </summary>
-		/// <param name="message">Message to send.</param>
-		/// <param name="log">If true will log.</param>
-		public void WriteLine(string message, bool log = true)
-		{
+        /// <summary>
+        /// Write a line to the Stream. Using the current transport MIME.
+        /// </summary>
+        /// <param name="message">Message to send.</param>
+        /// <param name="log">If true will log.</param>
+        public void WriteLine(string message, bool log = true)
+        {
             WriteLineAsync(message, log).Wait();
-		}
+        }
 
-		/// <summary>
-		/// Write a line to the Stream. Using the current transport MIME.
-		/// </summary>
-		/// <param name="message">Message to send.</param>
-		/// <param name="log">If true will log.</param>
-		public async Task<bool> WriteLineAsync(string message, bool log = true)
+        /// <summary>
+        /// Write a line to the Stream. Using the current transport MIME.
+        /// </summary>
+        /// <param name="message">Message to send.</param>
+        /// <param name="log">If true will log.</param>
+        public async Task<bool> WriteLineAsync(string message, bool log = true)
+        {
+            if (_CurrentTransportMIME == SmtpTransportMIME._7BitASCII)
+            {
+                await ClientStreamWriterASCII.WriteLineAsync(message);
+                await ClientStreamWriterASCII.FlushAsync();
+            }
+            else if (_CurrentTransportMIME == SmtpTransportMIME._8BitUTF)
+            {
+                await ClientStreamWriterUTF8.WriteLineAsync(message);
+                await ClientStreamWriterUTF8.FlushAsync();
+            }
+            else
+                throw new NotImplementedException(_CurrentTransportMIME.ToString());
+
+            if (log)
+                LogSmtpConversationMessage(SmtpConversationDirection.OUTBOUND, message);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Write to the Stream. Using the current transport MIME.
+        /// </summary>
+        /// <param name="message">Message to send.</param>
+        /// <param name="log">If true will log.</param>
+        internal async Task<bool> WriteAsync(string message, bool log = true)
+        {
+            if (_CurrentTransportMIME == SmtpTransportMIME._7BitASCII)
+            {
+                await ClientStreamWriterASCII.WriteAsync(message);
+                await ClientStreamWriterASCII.FlushAsync();
+            }
+            else if (_CurrentTransportMIME == SmtpTransportMIME._8BitUTF)
+            {
+                await ClientStreamWriterUTF8.WriteAsync(message);
+                await ClientStreamWriterUTF8.FlushAsync();
+            }
+            else
+                throw new NotImplementedException(_CurrentTransportMIME.ToString());
+
+            if (log)
+                LogSmtpConversationMessage(SmtpConversationDirection.OUTBOUND, message);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Log Smtp conversation message.
+        /// </summary>
+        /// <param name="direction">Direction the message went, either Inbound or Outbound.</param>
+        /// <param name="message">The smtp message.</param>
+        private void LogSmtpConversationMessage(string direction, string message)
+        {
+            SmtpTransactionLogger.Instance.Log(", " + this.LocalAddress + ":" + this.LocalPort + ", " + this.RemoteAddress + ":" + this.RemotePort + ", " + direction + ", " + message);
+        }
+
+        /// <summary>
+        ///	Logging directions for SMTP conversations.
+        /// </summary>
+        private struct SmtpConversationDirection
 		{
-			if (_CurrentTransportMIME == SmtpTransportMIME._7BitASCII)
-			{
-				await ClientStreamWriterASCII.WriteLineAsync(message);
-				await ClientStreamWriterASCII.FlushAsync();
-			}
-			else if (_CurrentTransportMIME == SmtpTransportMIME._8BitUTF)
-			{
-				await ClientStreamWriterUTF8.WriteLineAsync(message);
-				await ClientStreamWriterUTF8.FlushAsync();
-			}
-			else
-				throw new NotImplementedException(_CurrentTransportMIME.ToString());
+            /// <summary>
+            /// This server received the message.
+            /// </summary>
+            public const string INBOUND = "Inbound";
 
-			if (log)
-				LogSmtpConversationMessage(SmtpConversationDirection.OUTBOUND, message);
-
-			return true;
-		}
-
-		/// <summary>
-		/// Write to the Stream. Using the current transport MIME.
-		/// </summary>
-		/// <param name="message">Message to send.</param>
-		/// <param name="log">If true will log.</param>
-		internal async Task<bool> WriteAsync(string message, bool log = true)
-		{
-			if (_CurrentTransportMIME == SmtpTransportMIME._7BitASCII)
-			{
-				await ClientStreamWriterASCII.WriteAsync(message);
-				await ClientStreamWriterASCII.FlushAsync();
-			}
-			else if (_CurrentTransportMIME == SmtpTransportMIME._8BitUTF)
-			{
-				await ClientStreamWriterUTF8.WriteAsync(message);
-				await ClientStreamWriterUTF8.FlushAsync();
-			}
-			else
-				throw new NotImplementedException(_CurrentTransportMIME.ToString());
-
-			if (log)
-				LogSmtpConversationMessage(SmtpConversationDirection.OUTBOUND, message);
-
-			return true;
-		}
-
-		/// <summary>
-		/// Log Smtp conversation message.
-		/// </summary>
-		/// <param name="direction">Direction the message went, either Inbound or Outbound.</param>
-		/// <param name="message">The smtp message.</param>
-		private void LogSmtpConversationMessage(string direction, string message)
-		{
-			SmtpTransactionLogger.Instance.Log(", " + this.LocalAddress + ":" + this.LocalPort + ", " + this.RemoteAddress + ":" + this.RemotePort + ", " + direction + ", " + message);
+            /// <summary>
+            /// This server sent the message.
+            /// </summary>
+            public const string OUTBOUND = "Outbound";
 		}
 	}
 }

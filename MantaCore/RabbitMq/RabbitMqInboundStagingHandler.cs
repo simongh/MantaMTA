@@ -18,13 +18,14 @@ namespace MantaMTA.Core.RabbitMq
 		{
 			for (int i = 0; i < STAGING_DEQUEUE_THREADS; i++)
 			{
-				Thread t = new Thread(new ThreadStart(HandleDequeue));
+                Task.Factory.StartNew(HandleDequeue, TaskCreationOptions.LongRunning);
+				/*Thread t = new Thread(new ThreadStart(HandleDequeue));
 				t.IsBackground = true;
-				t.Start();
+				t.Start();*/
 			}
 		}
 
-		private static void HandleDequeue()
+		private static async Task HandleDequeue()
 		{
 			if (_StartedThreads >= STAGING_DEQUEUE_THREADS)
 				return;
@@ -36,15 +37,15 @@ namespace MantaMTA.Core.RabbitMq
 				BasicDeliverEventArgs ea = RabbitMq.RabbitMqManager.Dequeue(RabbitMqManager.RabbitMqQueue.InboundStaging, 1, 100).FirstOrDefault();
 				if(ea == null)
 				{
-					Thread.Sleep(1000);
+                    await Task.Delay(1000);
 					continue;
 				}
 
-				MtaQueuedMessage qmsg = Serialisation.Deserialise<MtaQueuedMessage>(ea.Body);
+				MtaQueuedMessage qmsg = await Serialisation.Deserialise<MtaQueuedMessage>(ea.Body);
 				MtaMessage msg = new MtaMessage(qmsg.ID, qmsg.VirtualMTAGroupID, qmsg.InternalSendID, qmsg.MailFrom, qmsg.RcptTo, string.Empty);
 
-				RabbitMqManager.Publish(msg, RabbitMqManager.RabbitMqQueue.Inbound, true);
-				RabbitMqManager.Publish(qmsg, RabbitMqManager.RabbitMqQueue.OutboundWaiting, true);
+				await RabbitMqManager.Publish(msg, RabbitMqManager.RabbitMqQueue.Inbound, true);
+				await RabbitMqManager.Publish(qmsg, RabbitMqManager.RabbitMqQueue.OutboundWaiting, true);
 				RabbitMqManager.Ack(RabbitMqManager.RabbitMqQueue.InboundStaging, ea.DeliveryTag, false);
 			}
 		}

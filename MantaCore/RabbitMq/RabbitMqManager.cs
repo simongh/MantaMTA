@@ -3,6 +3,7 @@ using RabbitMQ.Client.Events;
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace MantaMTA.Core.RabbitMq
 {
@@ -159,9 +160,9 @@ namespace MantaMTA.Core.RabbitMq
 		/// </summary>
 		/// <param name="message">Message to queue.</param>
 		/// <param name="queue">Queue to place message in.</param>
-		public static bool Publish(object obj, RabbitMqQueue queue, bool confirm = true)
+		public static async Task<bool> Publish(object obj, RabbitMqQueue queue, bool confirm = true)
 		{
-			byte[] bytes = Serialisation.Serialise(obj);
+			byte[] bytes = await Serialisation.Serialise(obj);
 			return Publish(bytes, queue, !confirm);
 		}
 

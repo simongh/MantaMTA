@@ -8,50 +8,75 @@ namespace MantaMTA.Core.Sends
 {
 	public class SendManager
 	{
-		public static SendManager Instance
-		{
+        private static SendManager _Instance = new SendManager();
+
+        /// <summary>
+        /// Collection of cached Sends, key is SendID.
+        /// Objects should be in this and _SendsInternalID with alternate key.
+        /// </summary>
+        private ConcurrentDictionary<string, Send> _Sends = new ConcurrentDictionary<string, Send>();
+
+        /// <summary>
+        /// Collection of cached Sends, key is internal ID.
+        /// Objects should be in this and _Sends with alternate key.
+        /// </summary>
+        private ConcurrentDictionary<int, Send> _SendsInternalID = new ConcurrentDictionary<int, Send>();
+
+        /// <summary>
+        /// Timestamp of when cached sends were last cleared. 
+        /// </summary>
+        private DateTime _SendsLastCleared = DateTime.UtcNow;
+
+        /// <summary>
+        /// Sends cache lock, used when clearing the cached items.
+        /// </summary>
+        private object _SendsLock = new object();
+
+        private SendManager()
+        {
+        }
+
+        public static SendManager Instance
+        {
 			get
 			{
 				return SendManager._Instance;
 			}
 		}
-		private static SendManager _Instance = new SendManager();
-		private SendManager()
-		{
-		}
+        /// <summary>
+        /// Clear the Sends from memory.
+        /// </summary>
+        public void ClearSendsCache()
+        {
+            lock (_SendsLock)
+            {
+                this._Sends.Clear();
+                this._SendsInternalID.Clear();
+                this._SendsLastCleared = DateTime.UtcNow;
+            }
+        }
 
-		/// <summary>
-		/// Collection of cached Sends, key is SendID.
-		/// Objects should be in this and _SendsInternalID with alternate key.
-		/// </summary>
-		private ConcurrentDictionary<string, Send> _Sends = new ConcurrentDictionary<string, Send>();
+        /// <summary>
+        /// Gets Send with the specified sendID.
+        /// If it doesn't exist it will be created in the database.
+        /// </summary>
+        /// <param name="sendId">ID of the Send.</param>
+        /// <returns>The Send.</returns>
+        public Send GetSend(string sendId)
+        {
+            return GetSendAsync(sendId).ConfigureAwait(false).GetAwaiter().GetResult();
+        }
 
-		/// <summary>
-		/// Collection of cached Sends, key is internal ID.
-		/// Objects should be in this and _Sends with alternate key.
-		/// </summary>
-		private ConcurrentDictionary<int, Send> _SendsInternalID = new ConcurrentDictionary<int, Send>();
-		
-		/// <summary>
-		/// Timestamp of when cached sends were last cleared. 
-		/// </summary>
-		private DateTime _SendsLastCleared = DateTime.UtcNow;
-
-		/// <summary>
-		/// Sends cache lock, used when clearing the cached items.
-		/// </summary>
-		private object _SendsLock = new object();
-		
-		/// <summary>
-		/// Gets Send with the specified sendID.
-		/// If it doesn't exist it will be created in the database.
-		/// </summary>
-		/// <param name="sendId">ID of the Send.</param>
-		/// <returns>The Send.</returns>
-		public async Task<Send> GetSendAsync(string sendId)
+        /// <summary>
+        /// Gets Send with the specified sendID.
+        /// If it doesn't exist it will be created in the database.
+        /// </summary>
+        /// <param name="sendId">ID of the Send.</param>
+        /// <returns>The Send.</returns>
+        public async Task<Send> GetSendAsync(string sendId)
 		{
 			// Don't want send IDs sitting in memory for to long so clear every so often.
-			if (this._SendsLastCleared.AddSeconds(10) < DateTime.UtcNow)
+			if (this._SendsLastCleared.AddSeconds(60) < DateTime.UtcNow)
 				this.ClearSendsCache();
 
 			Send snd;
@@ -70,18 +95,6 @@ namespace MantaMTA.Core.Sends
 			// return the value.
 			return snd;
 		}
-
-		/// <summary>
-		/// Gets Send with the specified sendID.
-		/// If it doesn't exist it will be created in the database.
-		/// </summary>
-		/// <param name="sendId">ID of the Send.</param>
-		/// <returns>The Send.</returns>
-		public Send GetSend(string sendId)
-		{
-			return GetSendAsync(sendId).ConfigureAwait(false).GetAwaiter().GetResult();
-		}
-
 		/// <summary>
 		/// Gets the specified Send.
 		/// </summary>
@@ -118,20 +131,6 @@ namespace MantaMTA.Core.Sends
 			string sendID = DateTime.UtcNow.ToString("yyyyMMdd");
 			return await this.GetSendAsync(sendID);
 		}
-
-		/// <summary>
-		/// Clear the Sends from memory.
-		/// </summary>
-		public void ClearSendsCache()
-		{
-			lock (_SendsLock)
-			{
-				this._Sends.Clear();
-				this._SendsInternalID.Clear();
-				this._SendsLastCleared = DateTime.UtcNow;
-			}
-		}
-		
 		/// <summary>
 		/// Sets the status of the specified send to the specified status.
 		/// </summary>

@@ -19,49 +19,58 @@ namespace MantaMTA.Core.Server
 		/// </summary>
 		private TcpListener _TcpListener = null;
 
-		/// <summary>
-		/// Make default constructor private so code from other classes has to use SmtpServer(port)
-		/// </summary>
-		private SmtpServer()
+        /// <summary>
+        /// Creates an instance of the Colony101 SMTP Server.
+        /// </summary>
+        /// <param name="port">Port number that server bind to.</param>
+        public SmtpServer(int port) : this(IPAddress.Any, port) { }
+
+        /// <summary>
+        /// Creates an instance of the Colony101 SMTP Server.
+        /// </summary>
+        /// <param name="iPAddress">IP Address to use for binding.</param>
+        /// <param name="port">Port number that server bind to.</param>
+        public SmtpServer(IPAddress ipAddress, int port)
+        {
+            // Create the TCP Listener using specified port on all IPs
+            _TcpListener = new TcpListener(ipAddress, port);
+
+            try
+            {
+                _TcpListener.Start();
+                _TcpListener.BeginAcceptTcpClient(AsyncConnectionHandler, _TcpListener);
+            }
+            catch (SocketException ex)
+            {
+                Logging.Error("Failed to create server on " + ipAddress.ToString() + ":" + port, ex);
+                return;
+            }
+
+            Logging.Info("Server started on " + ipAddress.ToString() + ":" + port);
+        }
+
+        /// <summary>
+        /// Make default constructor private so code from other classes has to use SmtpServer(port)
+        /// </summary>
+        private SmtpServer()
 		{
 			throw new Exception("Must specify port for SMTP Server.");
 		}
 
-		/// <summary>
-		/// Creates an instance of the Colony101 SMTP Server.
-		/// </summary>
-		/// <param name="port">Port number that server bind to.</param>
-		public SmtpServer(int port) : this(IPAddress.Any, port)	{ }
+        /// <summary>
+        /// SmtpServer dispose method. Ensures the TcpListener is stopped.
+        /// </summary>
+        public void Dispose()
+        {
+            _TcpListener.Stop();
+            _TcpListener = null;
+        }
 
-		/// <summary>
-		/// Creates an instance of the Colony101 SMTP Server.
-		/// </summary>
-		/// <param name="iPAddress">IP Address to use for binding.</param>
-		/// <param name="port">Port number that server bind to.</param>
-		public SmtpServer(IPAddress ipAddress, int port)
-		{
-			// Create the TCP Listener using specified port on all IPs
-			_TcpListener = new TcpListener(ipAddress, port);
-			
-			try
-			{
-				_TcpListener.Start();
-				_TcpListener.BeginAcceptTcpClient(AsyncConnectionHandler, _TcpListener);
-			}
-			catch (SocketException ex)
-			{
-				Logging.Error("Failed to create server on " + ipAddress.ToString() + ":" + port, ex);
-				return;
-			}
-
-			Logging.Info("Server started on " + ipAddress.ToString() + ":" + port);
-		}
-
-		/// <summary>
-		/// Event fired when a new Connection to the SMTP Server is made.
-		/// </summary>
-		/// <param name="ir">The AsyncResult from the TcpListener.</param>
-		private void AsyncConnectionHandler(IAsyncResult ir)
+        /// <summary>
+        /// Event fired when a new Connection to the SMTP Server is made.
+        /// </summary>
+        /// <param name="ir">The AsyncResult from the TcpListener.</param>
+        private void AsyncConnectionHandler(IAsyncResult ir)
 		{
 			// If the TCP Listener has been set to null, then we cannot handle any connections.
 			if (_TcpListener == null)
@@ -78,21 +87,35 @@ namespace MantaMTA.Core.Server
 				// SMTP Server stop was done mid connection handshake, just ignore it.
 			}
 		}
-		
-		/// <summary>
-		/// SmtpServer dispose method. Ensures the TcpListener is stopped.
-		/// </summary>
-		public void Dispose()
-		{
-			_TcpListener.Stop();
-			_TcpListener = null;
-		}
 
-		/// <summary>
-		/// Method handles a single connection from a client.
-		/// </summary>
-		/// <param name="obj">Connection with the client.</param>
-		private async Task<bool> HandleSmtpConnection(object obj)
+        /// <summary>
+        /// Gets the hostname for the server that is being connected to by client.
+        /// </summary>
+        /// <param name="client"></param>
+        /// <returns></returns>
+        private async Task<string> GetServerHostnameAsync(TcpClient client)
+        {
+            string serverIPAddress = (client.Client.LocalEndPoint as IPEndPoint).Address.ToString();
+            string serverHost = string.Empty;
+            try
+            {
+                IPHostEntry hostEntry = await Dns.GetHostEntryAsync(serverIPAddress);
+                serverHost = hostEntry.HostName;
+            }
+            catch (Exception)
+            {
+                // Host doesn't have reverse DNS. Use IP Address.
+                serverHost = serverIPAddress;
+            }
+
+            return serverHost;
+        }
+
+        /// <summary>
+        /// Method handles a single connection from a client.
+        /// </summary>
+        /// <param name="obj">Connection with the client.</param>
+        private async Task<bool> HandleSmtpConnection(object obj)
 		{
 			TcpClient client = (TcpClient)obj;
 			client.ReceiveTimeout = MtaParameters.Client.ConnectionReceiveTimeoutInterval * 1000;
@@ -418,29 +441,6 @@ namespace MantaMTA.Core.Server
 			}
 
 			return true;
-		}
-		
-		/// <summary>
-		/// Gets the hostname for the server that is being connected to by client.
-		/// </summary>
-		/// <param name="client"></param>
-		/// <returns></returns>
-		private async Task<string> GetServerHostnameAsync(TcpClient client)
-		{
-			string serverIPAddress = (client.Client.LocalEndPoint as IPEndPoint).Address.ToString();
-			string serverHost = string.Empty;
-			try
-			{
-				IPHostEntry hostEntry = await Dns.GetHostEntryAsync(serverIPAddress);
-				serverHost = hostEntry.HostName;
-			}
-			catch (Exception)
-			{
-				// Host doesn't have reverse DNS. Use IP Address.
-				serverHost = serverIPAddress;
-			}
-
-			return serverHost;
 		}
 	}
 }

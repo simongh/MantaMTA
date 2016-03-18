@@ -47,28 +47,33 @@ namespace MantaMTA.Core.Client
 		/// The Single instance of this class.
 		/// </summary>
 		private static MessageSender _Instance = new MessageSender();
-		
-		/// <summary>
-		/// Instance of the MessageSender class.
-		/// </summary>
-		public static MessageSender Instance
+
+        private MessageSender()
+        {
+            MantaCoreEvents.RegisterStopRequiredInstance(this);
+        }
+
+        /// <summary>
+        /// Instance of the MessageSender class.
+        /// </summary>
+        public static MessageSender Instance
 		{
 			get
 			{
 				return MessageSender._Instance;
 			}
 		}
+        #endregion
 
-		private MessageSender()
-		{
-			MantaCoreEvents.RegisterStopRequiredInstance(this);
-		}
-		#endregion
+        /// <summary>
+        /// If TRUE then request for client to stop has been made.
+        /// </summary>
+        private volatile bool _IsStopping = false;
 
-		/// <summary>
-		/// Holds the maximum amount of Tasks used for sending that should be run at anyone time.
-		/// </summary>
-		private int _MaxSendingWorkerTasks = -1;
+        /// <summary>
+        /// Holds the maximum amount of Tasks used for sending that should be run at anyone time.
+        /// </summary>
+        private int _MaxSendingWorkerTasks = -1;
 		
 		/// <summary>
 		/// Holds the maximum amount of Tasks used for sending that should be run at anyone time.
@@ -99,111 +104,106 @@ namespace MantaMTA.Core.Client
 			}
 		}
 
-		/// <summary>
-		/// If TRUE then request for client to stop has been made.
-		/// </summary>
-		private volatile bool _IsStopping = false;
+        public void Start()
+        {
+            Thread t = new Thread(new ThreadStart(() =>
+            {
+                // Dictionary will hold a single int for each running task. The int means nothing.
+                ConcurrentDictionary<Guid, int> runningTasks = new ConcurrentDictionary<Guid, int>();
 
-		/// <summary>
-		/// IStopRequired method. Will be called by MantaCoreEvents on stopping of MTA.
-		/// </summary>
-		public void Stop()
+                Action<MtaQueuedMessage> taskWorker = (qMsg) =>
+                {
+                    // Generate a unique ID for this task.
+                    Guid taskID = Guid.NewGuid();
+
+                    // Add this task to the running list.
+                    if (!runningTasks.TryAdd(taskID, 1))
+                        return;
+
+                    Task.Factory.StartNew(async () =>
+                    {
+                        try
+                        {
+                            // Loop while there is a task message to send.
+                            while (qMsg != null && !_IsStopping)
+                            {
+                                // Send the message.
+                                await SendMessageAsync(qMsg);
+
+                                if (!qMsg.IsHandled)
+                                {
+                                    Logging.Warn("Message not handled " + qMsg.ID);
+                                    qMsg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(6);
+                                    await RabbitMq.RabbitMqOutboundQueueManager.Enqueue(qMsg);
+                                }
+
+                                // Acknowledge of the message.
+                                RabbitMqOutboundQueueManager.Ack(qMsg);
+
+                                // Try to get another message to send.
+                                qMsg = await RabbitMq.RabbitMqOutboundQueueManager.Dequeue();
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            // Log if we can't send the message.
+                            Logging.Debug("Failed to send message", ex);
+                        }
+                        finally
+                        {
+                            // If there is still a acknowledge of the message.
+                            if (qMsg != null)
+                            {
+                                if (!qMsg.IsHandled)
+                                {
+                                    Logging.Warn("Message not handled " + qMsg.ID);
+                                    qMsg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(6);
+                                    await RabbitMq.RabbitMqOutboundQueueManager.Enqueue(qMsg);
+                                }
+
+                                RabbitMqOutboundQueueManager.Ack(qMsg);
+                            }
+
+                            // Remove this task from the dictionary
+                            int value;
+                            runningTasks.TryRemove(taskID, out value);
+                        }
+                    }, TaskCreationOptions.LongRunning | TaskCreationOptions.PreferFairness);
+                };
+
+                Action startWorkerTasks = () =>
+                {
+                    while ((runningTasks.Count < MAX_SENDING_WORKER_TASKS) && !_IsStopping)
+                    {
+                        MtaQueuedMessage qmsg = RabbitMq.RabbitMqOutboundQueueManager.Dequeue().Result;
+                        if (qmsg == null)
+                            break; // Nothing to do, so don't start anymore workers.
+
+                        taskWorker(qmsg);
+                    }
+                };
+
+                while (!_IsStopping)
+                {
+                    if (runningTasks.Count >= MAX_SENDING_WORKER_TASKS)
+                    {
+                        Thread.Sleep(100);
+                        continue;
+                    }
+
+                    startWorkerTasks();
+                }
+            }));
+            t.Start();
+        }
+
+        /// <summary>
+        /// IStopRequired method. Will be called by MantaCoreEvents on stopping of MTA.
+        /// </summary>
+        public void Stop()
 		{
 			this._IsStopping = true;
 		}
-
-
-		public void Start()
-		{
-			Thread t = new Thread(new ThreadStart(() => {
-				// Dictionary will hold a single int for each running task. The int means nothing.
-				ConcurrentDictionary<Guid, int> runningTasks = new ConcurrentDictionary<Guid, int>();
-
-				Action<MtaQueuedMessage> taskWorker = (qMsg) => {
-					// Generate a unique ID for this task.
-					Guid taskID = Guid.NewGuid();
-					
-					// Add this task to the running list.
-					if (!runningTasks.TryAdd(taskID, 1))
-						return;
-
-                    Task.Factory.StartNew(async () =>
-					{
-						try
-						{
-							// Loop while there is a task message to send.
-							while (qMsg != null && !_IsStopping)
-							{
-								// Send the message.
-								await SendMessageAsync(qMsg);
-
-								if(!qMsg.IsHandled)
-								{
-									Logging.Warn("Message not handled " + qMsg.ID);
-									qMsg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(1);
-									RabbitMq.RabbitMqOutboundQueueManager.Enqueue(qMsg);
-								}
-
-								// Acknowledge of the message.
-								RabbitMqOutboundQueueManager.Ack(qMsg);
-
-								// Try to get another message to send.
-								qMsg = RabbitMq.RabbitMqOutboundQueueManager.Dequeue();
-							}
-						}
-						catch (Exception ex)
-						{
-							// Log if we can't send the message.
-							Logging.Debug("Failed to send message", ex);
-						}
-						finally
-						{
-							// If there is still a acknowledge of the message.
-							if (qMsg != null)
-							{
-								if (!qMsg.IsHandled)
-								{
-									Logging.Warn("Message not handled " + qMsg.ID);
-									qMsg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(1);
-									RabbitMq.RabbitMqOutboundQueueManager.Enqueue(qMsg);
-								}
-
-								RabbitMqOutboundQueueManager.Ack(qMsg);
-							}
-
-							// Remove this task from the dictionary
-							int value;
-							runningTasks.TryRemove(taskID, out value);
-						}
-					}, TaskCreationOptions.LongRunning | TaskCreationOptions.PreferFairness);
-				};
-
-				Action startWorkerTasks = () => {
-					while ((runningTasks.Count < MAX_SENDING_WORKER_TASKS) && !_IsStopping)
-					{
-						MtaQueuedMessage qmsg = RabbitMq.RabbitMqOutboundQueueManager.Dequeue();
-						if (qmsg == null)
-							break; // Nothing to do, so don't start anymore workers.
-
-						taskWorker(qmsg);
-					}
-				};
-
-				while(!_IsStopping)
-				{
-					if (runningTasks.Count >= MAX_SENDING_WORKER_TASKS)
-					{
-						Thread.Sleep(100);
-						continue;
-					}
-
-					startWorkerTasks();
-				}
-			}));
-			t.Start();
-		}
-
-
 		/// <summary>
 		/// Checks to see if the MX record collection contains blacklisted domains/ips.
 		/// </summary>
@@ -226,7 +226,7 @@ namespace MantaMTA.Core.Client
 			// Check that the message next attempt after has passed.
 			if (msg.AttemptSendAfterUtc > DateTime.UtcNow)
 			{
-				RabbitMqOutboundQueueManager.Enqueue(msg);
+				await RabbitMqOutboundQueueManager.Enqueue(msg);
 				await Task.Delay(50); // To prevent a tight loop within a Task thread we should sleep here.
 				return false;
 			}
@@ -248,7 +248,7 @@ namespace MantaMTA.Core.Client
 					return false;
 				// The send is paused, the handle pause state will delay, without deferring, the message for a while so we can move on to other messages.
 				case SendStatus.Paused:
-					msg.HandleSendPaused();
+					await msg.HandleSendPaused();
 					return false;
 				// Send is active so we don't need to do anything.
 				case SendStatus.Active:
@@ -256,7 +256,7 @@ namespace MantaMTA.Core.Client
 				// Unknown send state, requeue the message and log error. Cannot send!
 				default:
 					msg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(1);
-					RabbitMqOutboundQueueManager.Enqueue(msg);
+					await RabbitMqOutboundQueueManager.Enqueue(msg);
 					Logging.Error("Failed to send message. Unknown SendStatus[" + snd.SendStatus + "]!");
 					return false;
 			}
@@ -315,7 +315,7 @@ namespace MantaMTA.Core.Client
 							break;
 						case SmtpOutboundClientDequeueAsyncResult.FailedMaxConnections:
 							msg.AttemptSendAfterUtc = DateTime.UtcNow.AddSeconds(2);
-							RabbitMqOutboundQueueManager.Enqueue(msg);
+							await RabbitMqOutboundQueueManager.Enqueue(msg);
 							break;
 					}
 
