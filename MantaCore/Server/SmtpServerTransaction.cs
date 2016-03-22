@@ -226,7 +226,7 @@ namespace MantaMTA.Core.Server
         private async Task<SmtpServerTransactionAsyncResult> SaveToLocalMailboxAsync()
 		{
 			// Add the MAIL FROM & RCPT TO headers.
-			Data = MessageManager.AddHeader(Data, new MessageHeader("X-Reciepient", string.Join("; ", RcptTo)));
+			Data = MessageManager.AddHeader(Data, new MessageHeader("X-Recipient", string.Join("; ", RcptTo)));
 			if (HasMailFrom && string.IsNullOrWhiteSpace(MailFrom))
 				Data = MessageManager.AddHeader(Data, new MessageHeader("X-Sender", "<>"));
 			else

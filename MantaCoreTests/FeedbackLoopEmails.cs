@@ -558,7 +558,7 @@ cy1pbnRlcnBvbGF0aW9uLW1vZGU6YmljdWJpYzsiPg0KDQo8L2JvZHk+DQo8L2h0bWw+
 
 		#region Hotmail
 		public const string HotmailAbuse = @"X-Sender: staff@hotmail.com
-X-Reciepient: fbl-hotmail@smtp1.snt0.net
+X-Recipient: fbl-hotmail@smtp1.snt0.net
 Received: from bay0-omc2-s25.bay0.hotmail.com[65.54.190.100] by
  mta1-165.smtp1.snt0.net[83.222.233.165] on Wed, 25 Sep 2013 15:17:43 Z
 Received: from BAY0-XMR-018.phx.gbl ([65.54.190.124]) by bay0-omc2-s25.bay0.hotmail.com with Microsoft SMTPSVC(6.0.3790.4675);
@@ -1627,7 +1627,7 @@ aW9uLW1vZGU6YmljdWJpYzsiPg0KDQo8L2JvZHk+DQo8L2h0bWw+
 
 		#region fastmail.co.uk
 		public const string FastMail = @"X-Sender: fblbounces@senderscore.net
-X-Reciepient: fbl-fastmail@smtp1.snt0.net
+X-Recipient: fbl-fastmail@smtp1.snt0.net
 Received: from mrb-fbl.returnpath.net[66.45.29.179] by
  mta1-165.smtp1.snt0.net[83.222.233.165] on Fri, 27 Sep 2013 16:08:18 Z
 Received: from poma00.lan.returnpath.net (unknown [10.2.0.104])
