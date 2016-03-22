@@ -63,7 +63,7 @@ namespace MantaMTA.Core.Events
 
 
 			// "X-Recipient" should contain what Manta originally set as the "return-path" when sending.
-			MessageHeader returnPath = msg.Headers.GetFirstOrDefault("x-recipient");
+			MessageHeader returnPath = msg.Headers.GetFirstOrDefault("X-Recipient");
 			if (returnPath == null)
 			{
 				bounceDetails.ProcessingResult = EmailProcessingResult.ErrorNoReturnPath;
