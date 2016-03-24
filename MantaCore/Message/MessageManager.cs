@@ -410,5 +410,10 @@ namespace MantaMTA.Core.Message
 		/// The return path domain is used to pass in the return path.
 		/// </summary>
 		public const string ReturnPathDomain = HeaderNamePrefix + "ReturnPathDomain";
+
+        /// <summary>
+        /// The priority of the message.
+        /// </summary>
+        public const string Priority = HeaderNamePrefix + "Priority";
 	}
 }

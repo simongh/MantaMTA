@@ -53,7 +53,8 @@ namespace MantaMTA.Core.Client.BO
 				QueuedTimestampUtc = DateTime.UtcNow,
 				RcptTo = inbound.RcptTo,
 				VirtualMTAGroupID = inbound.VirtualMTAGroupID,
-				IsHandled = false
+				IsHandled = false,
+                RabbitMqPriority = inbound.RabbitMqPriority
 			};
 
 			return outbound;

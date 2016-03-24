@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MantaMTA.Core.RabbitMq;
+using System;
 using System.Collections.Generic;
 
 namespace MantaMTA.Core.Client.BO
@@ -12,6 +13,11 @@ namespace MantaMTA.Core.Client.BO
 		/// ID of the RabbitMQ delivery that this message represents.
 		/// </summary>
 		public ulong RabbitMqDeliveryTag { get; set; }
+
+        /// <summary>
+        /// Priority of this message in RabbitMQ.
+        /// </summary>
+        public RabbitMqPriority RabbitMqPriority { get; set; }
 
 		/// <summary>
 		/// Unique identifier for this message.
@@ -50,20 +56,6 @@ namespace MantaMTA.Core.Client.BO
 		/// </summary>
 		public MtaMessage()
 		{
-			RabbitMqDeliveryTag = 0;
-		}
-
-		/// <summary>
-		/// Create a new RabbitMqInboundMessage instance.
-		/// </summary>
-		public MtaMessage(Guid messageID, int virtualMtaGroupID, int internalSendID, string mailFrom, string[] rcptTo, string message)
-		{
-			ID = messageID;
-			VirtualMTAGroupID = virtualMtaGroupID;
-			InternalSendID = internalSendID;
-			MailFrom = mailFrom;
-			RcptTo = rcptTo;
-			Message = message;
 			RabbitMqDeliveryTag = 0;
 		}
 	}

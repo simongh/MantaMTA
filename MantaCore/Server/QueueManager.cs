@@ -13,7 +13,7 @@ namespace MantaMTA.Core.Server
         /// <summary>
         /// The maximum time between looking for messages that have been queued in RabbitMQ.
         /// </summary>
-        private const int RABBITMQ_MAX_TIME_IN_QUEUE = 5 * 1000;
+        private readonly TimeSpan RABBITMQ_EMPTY_QUEUE_SLEEP_TIME = TimeSpan.FromSeconds(10);
 
         private static QueueManager _Instance = new QueueManager();
         /// <summary>
@@ -43,33 +43,22 @@ namespace MantaMTA.Core.Server
         /// <param name="mailFrom">The envelope mailfrom, should be return-path in most instances.</param>
         /// <param name="rcptTo">The envelope rcpt to.</param>
         /// <param name="message">The Email.</param>
+        /// <param name="priority">Priority of message.</param>
         /// <returns>True if the Message has been queued, false if not.</returns>
-        public async Task<bool> Enqueue(Guid messageID, int ipGroupID, int internalSendID, string mailFrom, string[] rcptTo, string message)
+        public async Task<bool> Enqueue(Guid messageID, int ipGroupID, int internalSendID, string mailFrom, string[] rcptTo, string message, RabbitMq.RabbitMqPriority priority)
 		{
-			// Try to queue the message in RabbitMQ.
-			if (MtaParameters.RabbitMQ.IsEnabled)
-				return await RabbitMq.RabbitMqInboundQueueManager.Enqueue(messageID, ipGroupID, internalSendID, mailFrom, rcptTo, message);
-
-			return false;
+            return await RabbitMq.RabbitMqInboundQueueManager.Enqueue(messageID, ipGroupID, internalSendID, mailFrom, rcptTo, message, priority);
 		}
 		/// <summary>
 		/// Start the bulk importer.
 		/// </summary>
 		public void Start()
 		{
-			if (MtaParameters.RabbitMQ.IsEnabled)
-			{
-				_bulkInsertThread = new Thread(new ThreadStart(DoSqlBulkInsertFromRabbitMQ));
-				_bulkInsertThread.IsBackground = true;
-				_bulkInsertThread.Priority = ThreadPriority.AboveNormal;
-				_bulkInsertThread.Start();
-				//MantaCoreEvents.RegisterStopRequiredInstance(_Instance);
-			}
-			else
-			{
-				// Nothing to Start or Stop if not using RabbitMQ.
-				_hasStopped = true;
-			}
+			_bulkInsertThread = new Thread(new ThreadStart(DoSqlBulkInsertFromRabbitMQ));
+			_bulkInsertThread.IsBackground = true;
+			_bulkInsertThread.Priority = ThreadPriority.AboveNormal;
+			_bulkInsertThread.Start();
+			MantaCoreEvents.RegisterStopRequiredInstance(this);
 		}
 
 		/// <summary>
@@ -111,7 +100,7 @@ namespace MantaMTA.Core.Server
 					// If there are no messages to import then sleep and try again.
 					if(recordsToImportToSql == null || recordsToImportToSql.Count == 0)
 					{
-						Thread.Sleep(RABBITMQ_MAX_TIME_IN_QUEUE);
+						Thread.Sleep(RABBITMQ_EMPTY_QUEUE_SLEEP_TIME);
 						continue;
 					}
 

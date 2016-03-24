@@ -59,7 +59,7 @@ namespace MantaMTA.Core.RabbitMq
 					queue = RabbitMqManager.RabbitMqQueue.OutboundWait300;
 			}
 
-            var published = await RabbitMqManager.Publish(msg, queue);
+            var published = await RabbitMqManager.Publish(msg, queue, priority: msg.RabbitMqPriority);
 
             if (published)
 			    msg.IsHandled = true;

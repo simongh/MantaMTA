@@ -30,27 +30,32 @@ namespace MantaMTA.Core.RabbitMq
 			return messages;
 		}
 
-		/// <summary>
-		/// Enqueues the Email that we are going to relay in RabbitMQ.
-		/// </summary>
-		/// <param name="messageID">ID of the Message being Queued.</param>
-		/// <param name="ipGroupID">ID of the Virtual MTA Group to send the Message through.</param>
-		/// <param name="internalSendID">ID of the Send the Message is apart of.</param>
-		/// <param name="mailFrom">The envelope mailfrom, should be return-path in most instances.</param>
-		/// <param name="rcptTo">The envelope rcpt to.</param>
-		/// <param name="message">The Email.</param>
-		/// <returns>True if the Email has been enqueued in RabbitMQ.</returns>
-		public static async Task<bool> Enqueue(Guid messageID, int ipGroupID, int internalSendID, string mailFrom, string[] rcptTo, string message)
+        /// <summary>
+        /// Enqueues the Email that we are going to relay in RabbitMQ.
+        /// </summary>
+        /// <param name="messageID">ID of the Message being Queued.</param>
+        /// <param name="ipGroupID">ID of the Virtual MTA Group to send the Message through.</param>
+        /// <param name="internalSendID">ID of the Send the Message is apart of.</param>
+        /// <param name="mailFrom">The envelope mailfrom, should be return-path in most instances.</param>
+        /// <param name="rcptTo">The envelope rcpt to.</param>
+        /// <param name="message">The Email.</param>
+        /// <param name="priority">Priority of message.</param>
+        /// <returns>True if the Email has been enqueued in RabbitMQ.</returns>
+        public static async Task<bool> Enqueue(Guid messageID, int ipGroupID, int internalSendID, string mailFrom, string[] rcptTo, string message, RabbitMqPriority priority)
 		{
-			// Create the thing we are going to queue in RabbitMQ.
-			MtaMessage recordToSave = new MtaMessage(messageID,
-				ipGroupID,
-				internalSendID,
-				mailFrom,
-				rcptTo,
-				message);
+            // Create the thing we are going to queue in RabbitMQ.
+            var recordToSave = new MtaMessage
+            {
+                ID = messageID,
+                InternalSendID = internalSendID,
+                MailFrom = mailFrom,
+                Message = message,
+                RcptTo = rcptTo,
+                VirtualMTAGroupID = ipGroupID,
+                RabbitMqPriority = priority
+            };
 
-			return await RabbitMqManager.Publish(MtaQueuedMessage.CreateNew(recordToSave), RabbitMqManager.RabbitMqQueue.InboundStaging, true);
+			return await RabbitMqManager.Publish(MtaQueuedMessage.CreateNew(recordToSave), RabbitMqManager.RabbitMqQueue.InboundStaging, true, priority);
 		}
 	}
 }

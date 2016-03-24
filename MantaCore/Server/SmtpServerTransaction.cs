@@ -203,6 +203,21 @@ namespace MantaMTA.Core.Server
             Data = MessageManager.AddHeader(Data, new MessageHeader("Message-ID", msgIDHeaderVal));
             #endregion
 
+            #region Get message priority
+            var msgPriority = RabbitMq.RabbitMqPriority.Low;
+            var priorityHeader = headers.GetFirstOrDefault(MessageHeaderNames.Priority);
+            if(priorityHeader != null)
+            {
+                var outVal = 0;
+                if(int.TryParse(priorityHeader.Value, out outVal))
+                {
+                    if (outVal >= 0)
+                        msgPriority = outVal < 3 ? (RabbitMq.RabbitMqPriority)(byte)outVal 
+                                                 : RabbitMq.RabbitMqPriority.High;
+                }
+            }
+            #endregion
+
             // Remove any control headers.
             headers = new MessageHeaderCollection(headers.Where(h => h.Name.StartsWith(MessageHeaderNames.HeaderNamePrefix, StringComparison.OrdinalIgnoreCase)));
             foreach (MessageHeader header in headers)
@@ -214,10 +229,9 @@ namespace MantaMTA.Core.Server
                 ipGroupID = VirtualMta.VirtualMtaManager.GetDefaultVirtualMtaGroup().ID;
 
             // Attempt to Enqueue the Email for Relaying.
-            if (!await QueueManager.Instance.Enqueue(messageID, ipGroupID, internalSendId, returnPath, RcptTo.ToArray(), Data))
-                return SmtpServerTransactionAsyncResult.FailedToEnqueue;
-
-            return SmtpServerTransactionAsyncResult.SuccessMessageQueued;
+            var enqueued = await QueueManager.Instance.Enqueue(messageID, ipGroupID, internalSendId, returnPath, RcptTo.ToArray(), Data, msgPriority);
+            return enqueued ? SmtpServerTransactionAsyncResult.SuccessMessageQueued
+                            : SmtpServerTransactionAsyncResult.FailedToEnqueue;
         }
 
         /// <summary>

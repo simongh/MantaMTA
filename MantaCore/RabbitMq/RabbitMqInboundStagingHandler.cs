@@ -41,11 +41,18 @@ namespace MantaMTA.Core.RabbitMq
 					continue;
 				}
 
-				MtaQueuedMessage qmsg = await Serialisation.Deserialise<MtaQueuedMessage>(ea.Body);
-				MtaMessage msg = new MtaMessage(qmsg.ID, qmsg.VirtualMTAGroupID, qmsg.InternalSendID, qmsg.MailFrom, qmsg.RcptTo, string.Empty);
+                MtaQueuedMessage qmsg = await Serialisation.Deserialise<MtaQueuedMessage>(ea.Body);
+                MtaMessage msg = new MtaMessage
+                {
+                    ID = qmsg.ID,
+                    InternalSendID = qmsg.InternalSendID,
+                    MailFrom = qmsg.MailFrom,
+                    RcptTo = qmsg.RcptTo,
+                    VirtualMTAGroupID = qmsg.VirtualMTAGroupID
+                };
 
-				await RabbitMqManager.Publish(msg, RabbitMqManager.RabbitMqQueue.Inbound, true);
-				await RabbitMqManager.Publish(qmsg, RabbitMqManager.RabbitMqQueue.OutboundWaiting, true);
+				await RabbitMqManager.Publish(msg, RabbitMqManager.RabbitMqQueue.Inbound, true, (RabbitMqPriority)qmsg.RabbitMqPriority);
+                await RabbitMqManager.Publish(qmsg, RabbitMqManager.RabbitMqQueue.OutboundWaiting, true, (RabbitMqPriority)qmsg.RabbitMqPriority);
 				RabbitMqManager.Ack(RabbitMqManager.RabbitMqQueue.InboundStaging, ea.DeliveryTag, false);
 			}
 		}

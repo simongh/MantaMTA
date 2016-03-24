@@ -136,34 +136,33 @@ namespace MantaMTA.Core.RabbitMq
 		/// </summary>
 		/// <param name="message">Message to queue.</param>
 		/// <param name="queue">Queue to place message in.</param>
-		public static bool Publish(byte[] message, RabbitMqQueue queue, bool noConfirm)
+        /// <param name="priority">Priority of message.</param>
+		public static bool Publish(byte[] message, RabbitMqQueue queue, bool noConfirm, RabbitMqPriority priority)
 		{
-			PublishChannel pChannel = GetPublishChannel(queue, noConfirm);
+			var pChannel = GetPublishChannel(queue, noConfirm);
 			lock (pChannel.Lock)
 			{
-				IModel channel = pChannel.Channel;
-				IBasicProperties msgProps = channel.CreateBasicProperties();
+				var channel = pChannel.Channel;
+				var msgProps = channel.CreateBasicProperties();
 				msgProps.Persistent = true;
+                msgProps.Priority = (byte)priority;
 				channel.BasicPublish(string.Empty, GetQueueNameFromEnum(queue), true, msgProps, message);
-				if (noConfirm)
-					return true;
 
-				if (!channel.WaitForConfirms())
-					return false;
-
-				return true;
+                return noConfirm ? true
+                                 : channel.WaitForConfirms();
 			}
 		}
 
-		/// <summary>
-		/// Publishes the specified message to the specified queue.
-		/// </summary>
-		/// <param name="message">Message to queue.</param>
-		/// <param name="queue">Queue to place message in.</param>
-		public static async Task<bool> Publish(object obj, RabbitMqQueue queue, bool confirm = true)
+        /// <summary>
+        /// Publishes the specified message to the specified queue.
+        /// </summary>
+        /// <param name="message">Message to queue.</param>
+        /// <param name="queue">Queue to place message in.</param>
+        /// <param name="priority">Priority of message.</param>
+        public static async Task<bool> Publish(object obj, RabbitMqQueue queue, bool confirm = true, RabbitMqPriority priority = RabbitMqPriority.Low)
 		{
 			byte[] bytes = await Serialisation.Serialise(obj);
-			return Publish(bytes, queue, !confirm);
+			return Publish(bytes, queue, !confirm, priority);
 		}
 
 		/// <summary>
@@ -232,7 +231,10 @@ namespace MantaMTA.Core.RabbitMq
 						}.CreateConnection();
 
 					channel = LocalhostConnection.CreateModel();
-					Dictionary<string, object> queueArgs = null;
+
+                    var queueArgs = new Dictionary<string, object>();
+                    queueArgs.Add("x-max-priority", 3);
+                    queueArgs.Add("x-queue-mode", "lazy");
 					bool isOutboundWaitingQueue = false;
 
 					switch(queue)
@@ -263,7 +265,6 @@ namespace MantaMTA.Core.RabbitMq
 								messageTTL = 300 * 1000;
 
 							// We are creating a queue with additional arguments for dead letter routing to the OutboundWaiting queue so set them here.
-							queueArgs = new Dictionary<string, object>();
 							queueArgs.Add("x-message-ttl", messageTTL);
 							queueArgs.Add("x-dead-letter-exchange", MANTA_WAIT_DEAD_LETTER_EXCHANGE);
 							queueArgs.Add("x-dead-letter-routing-key", MANTA_WAIT_DEAD_LETTER_EXCHANGE_ROUTING_KEY);
@@ -318,11 +319,7 @@ namespace MantaMTA.Core.RabbitMq
 				if (consumer == null)
 				{
 					IModel channel = GetChannel(queue);
-					if(queue == RabbitMqQueue.Inbound)
-						channel.BasicQos(0, 300, false);
-					else
-						channel.BasicQos(0, 750, false);
-
+                    channel.BasicQos(0, 250, false);
 					consumer = new QueueingBasicConsumer(channel);
 					channel.BasicConsume(GetQueueNameFromEnum(queue), false, consumer);
 				}
