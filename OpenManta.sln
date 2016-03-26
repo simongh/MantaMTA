@@ -1,0 +1,66 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+VisualStudioVersion = 14.0.23107.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenManta.Data", "OpenManta.Data\OpenManta.Data.csproj", "{91B948F6-C85D-4846-9356-F54EB66AE280}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenManta.Core", "OpenManta.Core\OpenManta.Core.csproj", "{34989F0C-49A3-4017-A8D6-3EB00B4A9487}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenManta.Framework", "OpenManta.Framework\OpenManta.Framework.csproj", "{DE89FBF3-7885-45CE-8F35-373FA275759F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenManta.Service", "OpenManta.Service\OpenManta.Service.csproj", "{915935CA-7B88-466A-AADD-46BA64BA8021}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenManta.Console", "OpenManta.Console\OpenManta.Console.csproj", "{2AB901CF-C93E-45B8-87E0-922AAC59EDA5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenManta.WebLib", "OpenManta.WebLib\OpenManta.WebLib.csproj", "{2C57AF28-F471-4D88-83BF-89E3A8A2AD50}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenManta.Web", "OpenManta.Web\OpenManta.Web.csproj", "{68455DD6-1DA9-4897-90B9-41A8E0A8AA59}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2AB901CF-C93E-45B8-87E0-922AAC59EDA5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2AB901CF-C93E-45B8-87E0-922AAC59EDA5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2AB901CF-C93E-45B8-87E0-922AAC59EDA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2AB901CF-C93E-45B8-87E0-922AAC59EDA5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2C57AF28-F471-4D88-83BF-89E3A8A2AD50}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2C57AF28-F471-4D88-83BF-89E3A8A2AD50}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2C57AF28-F471-4D88-83BF-89E3A8A2AD50}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2C57AF28-F471-4D88-83BF-89E3A8A2AD50}.Release|Any CPU.Build.0 = Release|Any CPU
+		{34989F0C-49A3-4017-A8D6-3EB00B4A9487}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34989F0C-49A3-4017-A8D6-3EB00B4A9487}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34989F0C-49A3-4017-A8D6-3EB00B4A9487}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{34989F0C-49A3-4017-A8D6-3EB00B4A9487}.Release|Any CPU.Build.0 = Release|Any CPU
+		{68455DD6-1DA9-4897-90B9-41A8E0A8AA59}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{68455DD6-1DA9-4897-90B9-41A8E0A8AA59}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{68455DD6-1DA9-4897-90B9-41A8E0A8AA59}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{68455DD6-1DA9-4897-90B9-41A8E0A8AA59}.Release|Any CPU.Build.0 = Release|Any CPU
+		{915935CA-7B88-466A-AADD-46BA64BA8021}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{915935CA-7B88-466A-AADD-46BA64BA8021}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{915935CA-7B88-466A-AADD-46BA64BA8021}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{915935CA-7B88-466A-AADD-46BA64BA8021}.Release|Any CPU.Build.0 = Release|Any CPU
+		{91B948F6-C85D-4846-9356-F54EB66AE280}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{91B948F6-C85D-4846-9356-F54EB66AE280}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{91B948F6-C85D-4846-9356-F54EB66AE280}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{91B948F6-C85D-4846-9356-F54EB66AE280}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DE89FBF3-7885-45CE-8F35-373FA275759F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DE89FBF3-7885-45CE-8F35-373FA275759F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DE89FBF3-7885-45CE-8F35-373FA275759F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DE89FBF3-7885-45CE-8F35-373FA275759F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		Policies = $0
+		$0.DotNetNamingPolicy = $1
+		$1.DirectoryNamespaceAssociation = None
+		$1.ResourceNamePolicy = FileFormatDefault
+		$0.VersionControlPolicy = $2
+		$2.inheritsSet = Mono
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
