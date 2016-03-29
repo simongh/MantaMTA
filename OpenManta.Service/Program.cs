@@ -9,7 +9,7 @@ namespace OpenManta.Service
 		/// </summary>
 		static void Main()
 		{
-			ServiceBase.Run(new MantaMTA());
+			ServiceBase.Run(new OpenMantaService());
 		}
 	}
 }
