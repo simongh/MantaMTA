@@ -6,23 +6,8 @@ namespace OpenManta.Core
 	/// Holds an outbound MX pattern, this is used to match against
 	/// an MX servers host name in it's MX record.
 	/// </summary>
-	public class OutboundMxPattern
+	public class OutboundMxPattern : NamedEntity
 	{
-		/// <summary>
-		/// ID of this pattern.
-		/// </summary>
-		public int ID { get; set; }
-
-		/// <summary>
-		/// Name of this pattern.
-		/// </summary>
-		public string Name { get; set; }
-
-		/// <summary>
-		/// Description of this pattern.
-		/// </summary>
-		public string Description { get; set; }
-
 		/// <summary>
 		/// The type of this pattern.
 		/// </summary>
@@ -41,14 +26,9 @@ namespace OpenManta.Core
 
 		public OutboundMxPattern()
 		{
-			this.ID = 0;
-			this.Name = string.Empty;
-			this.Description = string.Empty;
-
 			// Default to Regex match all.
 			this.Type = OutboundMxPatternType.Regex;
 			this.Value = ".";
-			this.LimitedToOutboundIpAddressID = null;
 		}
 	}
 }

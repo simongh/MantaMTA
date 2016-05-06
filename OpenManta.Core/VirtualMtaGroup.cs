@@ -8,24 +8,13 @@ namespace OpenManta.Core
 	/// Represents a grouping of IP Address that can be used by the MTA for 
 	/// sending of messages.
 	/// </summary>
-	public class VirtualMtaGroup
+	public class VirtualMtaGroup : NamedEntity
 	{
-		/// <summary>
-		/// The groups unique identifier.
-		/// </summary>
-		public int ID { get; set; }
-		/// <summary>
-		/// Name of the Group
-		/// </summary>
-		public string Name { get; set; }
-		/// <summary>
-		/// Optional: Group description.
-		/// </summary>
-		public string Description { get; set; }
 		/// <summary>
 		/// Collection of the Virtual MTAs that make up this group.
 		/// </summary>
 		public IList<VirtualMTA> VirtualMtaCollection { get; set; }
+
 		/// <summary>
 		/// Timestamp of when this MtaIPGroup instance was created; used for caching.
 		/// </summary>
@@ -82,9 +71,6 @@ namespace OpenManta.Core
 		/// </summary>
 		public VirtualMtaGroup()
 		{
-			this.Description = string.Empty;
-			this.ID = 0;
-			this.Name = string.Empty;
 			this.VirtualMtaCollection = new List<VirtualMTA>();
 		}
 	}

@@ -5,13 +5,8 @@ using System.Net.Sockets;
 
 namespace OpenManta.Core
 {
-	public class VirtualMTA
+	public class VirtualMTA : BaseEntity
 	{
-		/// <summary>
-		/// ID of the Virtual MTA.
-		/// </summary>
-		public int ID { get; set; }
-
 		/// <summary>
 		/// The Hostname of specified for this IP Address.
 		/// </summary>
@@ -55,9 +50,6 @@ namespace OpenManta.Core
 		/// </summary>
 		public VirtualMTA()
 		{
-			this.Hostname = string.Empty;
-			this.ID = 0;
-			this.IPAddress = null;
 			this.IsSmtpInbound = true;
 			this.IsSmtpOutbound = true;
 		}

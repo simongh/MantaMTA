@@ -6,7 +6,7 @@ namespace OpenManta.Core
 	/// <summary>
 	/// Represents an Inbound Email that is going to be queued for relaying, but has not yet been.
 	/// </summary>
-	public class MtaMessage
+	public class MtaMessage : BaseEntity<Guid>
 	{
 		/// <summary>
 		/// ID of the RabbitMQ delivery that this message represents.
@@ -17,11 +17,6 @@ namespace OpenManta.Core
 		/// Priority of this message in RabbitMQ.
 		/// </summary>
 		public RabbitMqPriority RabbitMqPriority { get; set; }
-
-		/// <summary>
-		/// Unique identifier for this message.
-		/// </summary>
-		public Guid ID { get; set; }
 
 		/// <summary>
 		/// The VirtualMTA group that the message should be sent through.
@@ -49,22 +44,5 @@ namespace OpenManta.Core
 		/// The raw Email itself.
 		/// </summary>
 		public string Message { get; set; }
-
-		/// <summary>
-		/// Create a new RabbitMqInboundMessage instance.
-		/// </summary>
-		public MtaMessage()
-		{
-			RabbitMqDeliveryTag = 0;
-		}
-	}
-
-	/// <summary>
-	/// Holds a collection of MtaMessages.
-	/// </summary>
-	internal class MtaMessageCollection : List<MtaMessage>
-	{
-		public MtaMessageCollection(IEnumerable<MtaMessage> collection) : base(collection) { }
-		public MtaMessageCollection() { }
 	}
 }

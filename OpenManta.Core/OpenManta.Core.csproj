@@ -68,6 +68,7 @@
     <Compile Include="VirtualMtaGroup.cs" />
     <Compile Include="LocalDomain.cs" />
     <Compile Include="RabbitMqPriority.cs" />
+    <Compile Include="EntityBaseClasses.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

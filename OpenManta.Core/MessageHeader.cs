@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace OpenManta.Core
 {
@@ -11,6 +12,7 @@ namespace OpenManta.Core
 		/// Name of the message header.
 		/// </summary>
 		public string Name { get; set; }
+
 		/// <summary>
 		/// Message header value.
 		/// </summary>

@@ -27,6 +27,7 @@ namespace OpenManta.Core
 		/// Timestamp of when the message was originally queued.
 		/// </summary>
 		public DateTime QueuedTimestampUtc { get; set; }
+
 		/// <summary>
 		/// Create a new MtaOutboundMessage from the InboundMessage.
 		/// </summary>
@@ -34,7 +35,7 @@ namespace OpenManta.Core
 		/// <returns>The outbound message.</returns>
 		public static MtaQueuedMessage CreateNew(MtaMessage inbound)
 		{
-			MtaQueuedMessage outbound = new MtaQueuedMessage
+			return new MtaQueuedMessage
 			{
 				DeferredCount = 0,
 				InternalSendID = inbound.InternalSendID,
@@ -48,8 +49,6 @@ namespace OpenManta.Core
 				IsHandled = false,
 				RabbitMqPriority = inbound.RabbitMqPriority
 			};
-
-			return outbound;
 		}
 	}
 }
