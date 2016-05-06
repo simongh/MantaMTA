@@ -83,11 +83,11 @@ namespace OpenManta.Data
 		{
 			var obj = default(T);
 
-			await command.Connection.OpenAsync();
+			await command.Connection.OpenAsync().ConfigureAwait(false);
 
-			using (var reader = await command.ExecuteReaderAsync())
+			using (var reader = await command.ExecuteReaderAsync().ConfigureAwait(false))
 			{
-				if (await reader.ReadAsync())
+				if (await reader.ReadAsync().ConfigureAwait(false))
 					obj = createObjectMethod(reader);
 			}
 

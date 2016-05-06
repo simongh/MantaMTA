@@ -36,7 +36,7 @@ FROM man_mta_send WITH(nolock)
 WHERE mta_send_id = @sndID";
 				cmd.Parameters.AddWithValue("@sndID", sendID);
 				cmd.Parameters.AddWithValue("@activeStatusID", (int)SendStatus.Active);
-				return await DataRetrieval.GetSingleObjectFromDatabaseAsync<Send>(cmd, CreateAndFillSendFromRecord);
+				return await DataRetrieval.GetSingleObjectFromDatabaseAsync<Send>(cmd, CreateAndFillSendFromRecord).ConfigureAwait(false);
 			}
 		}
 
