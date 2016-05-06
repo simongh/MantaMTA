@@ -34,22 +34,22 @@
 		</tr>
 	</thead>
 	<tbody>
-		@foreach(WebInterfaceLib.BO.BounceInfo bounce in Model.BounceInfo)
+		@foreach(OpenManta.WebLib.BO.BounceInfo bounce in Model.BounceInfo)
 		{
 			<tr>
 				<td>@bounce.LocalHostname<br /><small>@bounce.LocalIpAddress</small></td>
 				@switch (bounce.TransactionStatus)
 				{
-					case MantaMTA.Core.Enums.TransactionStatus.Deferred:
+					case OpenManta.Core.TransactionStatus.Deferred:
 						<td class="stat-blue">Deferred</td>
 						break;
-					case MantaMTA.Core.Enums.TransactionStatus.Discarded:
+					case OpenManta.Core.TransactionStatus.Discarded:
 						<td class="stat-red">Discarded</td>
 						break;
-					case MantaMTA.Core.Enums.TransactionStatus.Failed:
+					case OpenManta.Core.TransactionStatus.Failed:
 						<td class="stat-red">Rejected</td>
 						break;
-					case MantaMTA.Core.Enums.TransactionStatus.TimedOut:
+					case OpenManta.Core.TransactionStatus.TimedOut:
 						<td class="stat-red">Timed Out In Queue</td>
 						break;
 				}

@@ -5,7 +5,7 @@
 
 <script type="text/javascript">
 	function Save() {
-		PostToWebService("/services/settingsservice.asmx/Update", "{ 'clientIdleTimeout':'" + $('#txtClientIdleTimeout').val() + "',\
+		PostToWebService("/api/v1/Settings/Update", "{ 'clientIdleTimeout':'" + $('#txtClientIdleTimeout').val() + "',\
 																	 'receiveTimeout':'" + $('#txtReveiveTimeout').val() + "',\
 																	 'sendTimeout':'" + $('#txtSendTimeout').val() + "',\
 																	 'defaultVirtualMtaGroupID':'" + $('#ddlDefaultVirtualMtaGroup').val() + "',\
@@ -17,7 +17,7 @@
 																	 'returnPathLocalDomainID':'" + $('#ddlDefaultReturnPathLocalDomain').val() + "',\
 																	 'localDomains':" + JSON.stringify($('#txtLocalDomains').val().split('\n')).replace(/"/gi, "'") + "}",
 			function (data) {
-				if (data.d)
+				if (data)
 					window.location = window.location;
 				else
 					alert('Failed to save');
@@ -52,7 +52,7 @@
 			<th>Default ReturnPath Domain</th>
 			<td>
 				<select id="ddlDefaultReturnPathLocalDomain">
-					@foreach (MantaMTA.Core.LocalDomain localDomain in Model.LocalDomains)
+					@foreach (OpenManta.Core.LocalDomain localDomain in Model.LocalDomains)
 					 {
 						<option value="@localDomain.ID" selected="@localDomain.Hostname.Equals(Model.ReturnPathDomain, StringComparison.OrdinalIgnoreCase)">@localDomain.Hostname</option>
 					 }
@@ -63,7 +63,7 @@
 			<th>Default Virtual MTA Group</th>
 			<td>
 				<select id="ddlDefaultVirtualMtaGroup">
-					@foreach (MantaMTA.Core.VirtualMta.VirtualMtaGroup grp in Model.VirtualMtaGroupCollection)
+					@foreach (OpenManta.Core.VirtualMtaGroup grp in Model.VirtualMtaGroupCollection)
 					 {
 						<option value="@grp.ID" selected="@(grp.ID == Model.DefaultVirtualMtaGroupID)">@grp.Name</option>
 					 }
@@ -79,7 +79,7 @@
 		</tr>
 		<tr>
 			<th>Local Domains</th>
-			<td><textarea id="txtLocalDomains">@string.Join(Environment.NewLine, ((MantaMTA.Core.LocalDomainCollection)Model.LocalDomains).Select(ld=>ld.Hostname))</textarea></td>
+			<td><textarea id="txtLocalDomains">@string.Join(Environment.NewLine, ((IList<OpenManta.Core.LocalDomain>)Model.LocalDomains).Select(ld=>ld.Hostname))</textarea></td>
 		</tr>
 		<tr>
 			<th>Message Max Time in Queue</th>

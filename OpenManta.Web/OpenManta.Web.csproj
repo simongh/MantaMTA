@@ -47,6 +47,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.8.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
@@ -62,7 +66,6 @@
     <Reference Include="System.Web.Routing" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Configuration" />
-    <Reference Include="System.Web.Services" />
     <Reference Include="System.EnterpriseServices" />
     <Reference Include="System.Net.Http">
     </Reference>
@@ -113,15 +116,15 @@
     <Reference Include="WebGrease, Version=1.5.2.14234, Culture=neutral, PublicKeyToken=31bf3856ad364e35">
       <HintPath>..\packages\WebGrease.1.5.2\lib\WebGrease.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\packages\Newtonsoft.Json.8.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AppendSendMetadata.ashx.cs">
       <DependentUpon>AppendSendMetadata.ashx</DependentUpon>
     </Compile>
     <Compile Include="App_Start\BundleConfig.cs" />
+    <Compile Include="Controllers\API\v1\OutboundRulesController.cs" />
+    <Compile Include="Controllers\API\v1\SettingsController.cs" />
+    <Compile Include="Controllers\API\v1\VirtualMtaController.cs" />
     <Compile Include="Controllers\BouncesController.cs" />
     <Compile Include="Controllers\DashboardController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
@@ -137,24 +140,15 @@
     <Compile Include="Models\BounceModel.cs" />
     <Compile Include="Models\DashboardModel.cs" />
     <Compile Include="Models\OutboundRules.cs" />
+    <Compile Include="Models\API\v1\OutboundRulesViewModels.cs" />
     <Compile Include="Models\RabbitMqModel.cs" />
     <Compile Include="Models\Sends.cs" />
     <Compile Include="Models\ServerStatusModel.cs" />
     <Compile Include="Models\SettingsModel.cs" />
+    <Compile Include="Models\API\v1\SettingsViewModels.cs" />
     <Compile Include="Models\VirtualMTA.cs" />
+    <Compile Include="Models\API\v1\VirtualMtaViewModels.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Services\OutboundRulesService.asmx.cs">
-      <DependentUpon>OutboundRulesService.asmx</DependentUpon>
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="Services\SettingsService.asmx.cs">
-      <DependentUpon>SettingsService.asmx</DependentUpon>
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="Services\VirtualMtaService.asmx.cs">
-      <DependentUpon>VirtualMtaService.asmx</DependentUpon>
-      <SubType>Component</SubType>
-    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Start\FilterConfig.cs" />
@@ -258,9 +252,6 @@
     <Content Include="Scripts\jqPlot\usage.txt" />
     <Content Include="Scripts\jquery-1.9.1.js" />
     <Content Include="Scripts\jquery-1.9.1.min.js" />
-    <Content Include="Services\OutboundRulesService.asmx" />
-    <Content Include="Services\SettingsService.asmx" />
-    <Content Include="Services\VirtualMtaService.asmx" />
     <Content Include="Web.config" />
     <Content Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>

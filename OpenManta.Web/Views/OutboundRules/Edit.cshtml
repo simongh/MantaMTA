@@ -1,21 +1,24 @@
 ﻿@{
-    ViewBag.Title = (Model.Pattern.ID == WebInterfaceLib.WebInterfaceParameters.OUTBOUND_RULES_NEW_PATTERN_ID ? "Create New" : "Edit") + " Outbound Rule";
+    ViewBag.Title = (Model.Pattern.ID == OpenManta.WebLib.WebInterfaceParameters.OUTBOUND_RULES_NEW_PATTERN_ID ? "Create New" : "Edit") + " Outbound Rule";
     Layout = "~/Views/_Layout.cshtml";
 }
 
 <script type="text/javascript">
 	function Update() {
-		PostToWebService("/services/outboundrulesservice.asmx/Update", "{ 'patternID':'@Model.Pattern.ID',\
+		PostToWebService("/api/v1/OutboundRules/Update", "{ 'patternID':'@Model.Pattern.ID',\
 					 'name':'" + $('#txtName').val() + "',\
 					 'description':'" + $('#txtDescription').val() + "',\
 					 'virtualMTA':'" + $('#ddlVMTA').val() + "',\
 					 'type':'" + $('#ddlType').val() + "',\
 					 'patternValue':'" + $('#txtPattern').val().replace(/\\/g, '\\\\') + "',\
-					 'maxConnections':'" + $('input[data-rule-type="@((int)MantaMTA.Core.OutboundRules.OutboundRuleType.MaxConnections)"]').val().replace(/,/g, '') + "',\
-					 'maxMessagesConn':'" + $('input[data-rule-type="@((int)MantaMTA.Core.OutboundRules.OutboundRuleType.MaxMessagesConnection)"]').val().replace(/,/g, '') + "',\
-					 'maxMessagesHour':'" + $('input[data-rule-type="@((int)MantaMTA.Core.OutboundRules.OutboundRuleType.MaxMessagesPerHour)"]').val().replace(/,/g, '') + "'}",
+					 'maxConnections':'" + $('input[data-rule-type="@((int)OpenManta.Core.OutboundRuleType.MaxConnections)"]').val().replace(/,/g, '') + "',\
+					 'maxMessagesConn':'" + $('input[data-rule-type="@((int)OpenManta.Core.OutboundRuleType.MaxMessagesConnection)"]').val().replace(/,/g, '') + "',\
+					 'maxMessagesHour':'" + $('input[data-rule-type="@((int)OpenManta.Core.OutboundRuleType.MaxMessagesPerHour)"]').val().replace(/,/g, '') + "'}",
 			function (data) {
-				window.location = '/OutboundRules';
+			    if (data)
+			        window.location = '/OutboundRules';
+			    else
+			        alert("Save failed!");
 			},
 			function (jqXHR, textStatus, errorThrown) {
 				alert(JSON.parse(jqXHR.responseText).Message);
@@ -38,7 +41,7 @@
 			<td>
 				<select id="ddlVMTA">
 					<option value="-1">All</option>
-					@foreach (MantaMTA.Core.VirtualMta.VirtualMTA vMta in Model.VirtualMtaCollection)
+					@foreach (OpenManta.Core.VirtualMTA vMta in Model.VirtualMtaCollection)
 					 {
 						<option value="@vMta.ID" @(Model.Pattern.LimitedToOutboundIpAddressID == vMta.ID ? "selected=selected" : string.Empty)>@vMta.Hostname</option>
 					 }
@@ -49,8 +52,8 @@
 			<th>Type</th>
 			<td>
 				<select id="ddlType">
-					<option value="@((int)MantaMTA.Core.OutboundRules.OutboundMxPatternType.Regex)" @(Model.Pattern.Type == MantaMTA.Core.OutboundRules.OutboundMxPatternType.Regex ? "selected=selected" : string.Empty)>Regex</option>
-					<option value="@((int)MantaMTA.Core.OutboundRules.OutboundMxPatternType.CommaDelimited)" @(Model.Pattern.Type == MantaMTA.Core.OutboundRules.OutboundMxPatternType.CommaDelimited ? "selected=selected" : string.Empty)>List</option>
+					<option value="@((int)OpenManta.Core.OutboundMxPatternType.Regex)" @(Model.Pattern.Type == OpenManta.Core.OutboundMxPatternType.Regex ? "selected=selected" : string.Empty)>Regex</option>
+					<option value="@((int)OpenManta.Core.OutboundMxPatternType.CommaDelimited)" @(Model.Pattern.Type == OpenManta.Core.OutboundMxPatternType.CommaDelimited ? "selected=selected" : string.Empty)>List</option>
 				</select>
 			</td>
 		</tr>
@@ -58,18 +61,18 @@
 			<th>Pattern</th>
 			<td><textarea id="txtPattern">@Model.Pattern.Value</textarea></td>
 		</tr>
-		@foreach (MantaMTA.Core.OutboundRules.OutboundRule rule in Model.OutboundRules)
+		@foreach (OpenManta.Core.OutboundRule rule in Model.OutboundRules)
 		{
 			<tr>
 				<th>@switch (rule.Type)
 					{
-						case MantaMTA.Core.OutboundRules.OutboundRuleType.MaxConnections:
+						case OpenManta.Core.OutboundRuleType.MaxConnections:
 							@:Maximum Connections
 							break;
-						case MantaMTA.Core.OutboundRules.OutboundRuleType.MaxMessagesConnection:
+						case OpenManta.Core.OutboundRuleType.MaxMessagesConnection:
 							@:Maximum Messages / Connection
 							break;
-						case MantaMTA.Core.OutboundRules.OutboundRuleType.MaxMessagesPerHour:
+						case OpenManta.Core.OutboundRuleType.MaxMessagesPerHour:
 							@:Maximum Messages / Hour
 							break;
 					}
@@ -82,7 +85,7 @@
 		<tr>
 			<td></td>
 			<td>
-				<a href="javascript:Update();" class="btn btn-success">@(Model.Pattern.ID == WebInterfaceLib.WebInterfaceParameters.OUTBOUND_RULES_NEW_PATTERN_ID ? "Create" : "Update")</a>
+				<a href="javascript:Update();" class="btn btn-success">@(Model.Pattern.ID == OpenManta.WebLib.WebInterfaceParameters.OUTBOUND_RULES_NEW_PATTERN_ID ? "Create" : "Update")</a>
 				<a href="/OutboundRules" class="btn">Cancel</a>
 			</td>
 		</tr>

@@ -1,5 +1,5 @@
 ﻿@{
-    ViewBag.Title = (Model.VirtualMtaGroup.ID == WebInterfaceLib.WebInterfaceParameters.VIRTUALMTAGROUP_NEW_ID ? "Create" : "Edit") + " Virtual MTA Group";
+    ViewBag.Title = (Model.VirtualMtaGroup.ID == OpenManta.WebLib.WebInterfaceParameters.VIRTUALMTAGROUP_NEW_ID ? "Create" : "Edit") + " Virtual MTA Group";
     Layout = "~/Views/_Layout.cshtml";
 }
 
@@ -15,13 +15,13 @@
 			return;
 		}
 
-		PostToWebService("/services/VirtualMtaService.asmx/SaveGroup", 
+		PostToWebService("/api/v1/VirtualMta/SaveGroup", 
 			"{ 'id':'" + @Model.VirtualMtaGroup.ID + "',\
 'name':'" + $('#txtName').val() + "',\
 'description':'" + $('#txtDescription').val() + "',\
 'mtaIDs':" + JSON.stringify(mtas) + "}",
 			function (data) {
-				if (data.d)
+				if (data)
 					window.location = '/VirtualMTA';
 				else
 					alert('Save failed');
@@ -46,10 +46,10 @@
 		<tr>
 			<th>Virtual MTAs</th>
 			<td>
-				@foreach(MantaMTA.Core.VirtualMta.VirtualMTA vmta in Model.VirtualMTACollection)
+				@foreach(OpenManta.Core.VirtualMTA vmta in Model.VirtualMTACollection)
 				{
 					<label class="checkbox" style="display: inline-block;">
-						<input data-mta-id="@vmta.ID" type="checkbox" checked="@(((MantaMTA.Core.VirtualMta.VirtualMTACollection)Model.VirtualMtaGroup.VirtualMtaCollection).Count(i=>i.ID == vmta.ID) == 1)" > @vmta.Hostname
+						<input data-mta-id="@vmta.ID" type="checkbox" checked="@(((IList<OpenManta.Core.VirtualMTA>)Model.VirtualMtaGroup.VirtualMtaCollection).Count(i=>i.ID == vmta.ID) == 1)" > @vmta.Hostname
 					</label>
 				}
 			</td>
@@ -59,7 +59,7 @@
 		<tr>
 			<td></td>
 			<td>
-				<a href="javascript:Save();" class="btn btn-success">@(Model.VirtualMtaGroup.ID == WebInterfaceLib.WebInterfaceParameters.VIRTUALMTAGROUP_NEW_ID ? "Create" : "Update")</a>
+				<a href="javascript:Save();" class="btn btn-success">@(Model.VirtualMtaGroup.ID == OpenManta.WebLib.WebInterfaceParameters.VIRTUALMTAGROUP_NEW_ID ? "Create" : "Update")</a>
 				<a href="/VirtualMTA" class="btn btn-warning">Cancel</a>
 			</td>
 		</tr>

@@ -15,7 +15,7 @@
 		</tr>
 	</thead>
 	<tbody>
-		@foreach (WebInterfaceLib.BO.BounceInfo bounce in ((WebInterfaceLib.BO.BounceInfo[])Model.BounceInfo).OrderByDescending(b=>b.LastOccurred).ThenByDescending(b=>b.Count))
+		@foreach (OpenManta.WebLib.BO.BounceInfo bounce in ((OpenManta.WebLib.BO.BounceInfo[])Model.BounceInfo).OrderByDescending(b=>b.LastOccurred).ThenByDescending(b=>b.Count))
 		{
 			<tr>
 				<td>@bounce.LocalHostname<br /><small>@bounce.LocalIpAddress</small></td>

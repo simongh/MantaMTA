@@ -33,11 +33,11 @@
 			</tr>
 		</thead>
 		<tbody>
-			@foreach (WebInterfaceLib.BO.SendInfo sndInfo in Model.SendInfo)
+			@foreach (OpenManta.WebLib.BO.SendInfo sndInfo in Model.SendInfo)
 			{
 				<tr>
 					<td>@sndInfo.ID</td>
-					<td>@foreach (WebInterfaceLib.BO.SendMetadata meta in sndInfo.GetMetaData())
+					<td>@foreach (OpenManta.WebLib.BO.SendMetadata meta in sndInfo.GetMetaData())
 					 {
 						<span><strong>@meta.Value</strong><br/></span>
 					 }
@@ -45,13 +45,13 @@
 					<td class="td-align-center">
 						@switch (sndInfo.SendStatus)
 						 {
-							case MantaMTA.Core.Enums.SendStatus.Active:
+							case OpenManta.Core.SendStatus.Active:
 								<span class="label label-success">Active</span>
 								break;
-							case MantaMTA.Core.Enums.SendStatus.Discard:
+							case OpenManta.Core.SendStatus.Discard:
 								<span class="label label-important">Discarding</span>
 								break;
-							case MantaMTA.Core.Enums.SendStatus.Paused:
+							case OpenManta.Core.SendStatus.Paused:
 								<span class="label label-warning">Paused</span>
 								break;
 						 }

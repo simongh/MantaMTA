@@ -6,7 +6,7 @@
 <script type="text/javascript">
 	function Delete(id) {
 		if (confirm("Delete the Virtual MTA?")) {
-			PostToWebService("/services/VirtualMtaService.asmx/Delete", "{ 'id':'" + id + "'}",
+			PostToWebService("/api/v1/VirtualMta/Delete", "{ 'id':'" + id + "'}",
 				function (data) {
 					window.location = '/VirtualMTA';
 				},
@@ -19,7 +19,7 @@
 
 	function DeleteGroup(id) {
 		if (confirm("Delete the Virtual MTA Group?")) {
-			PostToWebService("/services/VirtualMtaService.asmx/DeleteGroup", "{ 'id':'" + id + "'}",
+			PostToWebService("/api/v1/VirtualMta/DeleteGroup", "{ 'id':'" + id + "'}",
 				function (data) {
 					window.location = '/VirtualMTA';
 				},
@@ -84,7 +84,7 @@
 		</tr>
 	</thead>
 	<tbody>
-		@foreach (MantaMTA.Core.VirtualMta.VirtualMtaGroup vMtaGroup in Model.IpGroups)
+		@foreach (OpenManta.Core.VirtualMtaGroup vMtaGroup in Model.IpGroups)
 		{
 			<tr>
 				<td>@vMtaGroup.Name</td>
