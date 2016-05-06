@@ -99,7 +99,11 @@ WHERE ip_group_id = @id
 COMMIT TRANSACTION";
 				cmd.Parameters.AddWithValue("@id", grp.ID);
 				cmd.Parameters.AddWithValue("@name", grp.Name);
-				cmd.Parameters.AddWithValue("@description", grp.Description);
+
+				if(grp.Description == null)
+					cmd.Parameters.AddWithValue("@description", DBNull.Value);
+				else
+					cmd.Parameters.AddWithValue("@description", grp.Description);
 				conn.Open();
 				cmd.ExecuteNonQuery();
 			}

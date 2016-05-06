@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using OpenManta.Core;
@@ -73,7 +74,11 @@ ELSE
 				cmd.Parameters.AddWithValue("@id", localDomain.ID);
 				cmd.Parameters.AddWithValue("@domain", localDomain.Hostname);
 				cmd.Parameters.AddWithValue("@name", localDomain.Name);
-				cmd.Parameters.AddWithValue("@description", localDomain.Description);
+
+				if (localDomain.Description == null)
+					cmd.Parameters.AddWithValue("@description", DBNull.Value);
+				else
+					cmd.Parameters.AddWithValue("@description", localDomain.Description);
 				conn.Open();
 				cmd.ExecuteNonQuery();
 			}

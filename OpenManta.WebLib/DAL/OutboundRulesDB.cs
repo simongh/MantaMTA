@@ -93,7 +93,10 @@ ELSE
 ";
 				cmd.Parameters.AddWithValue("@mxPatternID", mxPattern.ID);
 				cmd.Parameters.AddWithValue("@name", mxPattern.Name);
-				cmd.Parameters.AddWithValue("@description", mxPattern.Description);
+				if (mxPattern.Description == null)
+					cmd.Parameters.AddWithValue("@description", DBNull.Value);
+				else
+					cmd.Parameters.AddWithValue("@description", mxPattern.Description);
 				cmd.Parameters.AddWithValue("@type", (int)mxPattern.Type);
 				cmd.Parameters.AddWithValue("@value", mxPattern.Value);
 				if (mxPattern.LimitedToOutboundIpAddressID.HasValue)
