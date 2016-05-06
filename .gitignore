@@ -8,3 +8,4 @@ Database/MtaDB/scriptDb.log
 /packages/
 /.vs/
 *.userprefs
+OpenManta.Web/bower_components/

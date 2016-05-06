@@ -47,10 +47,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.8.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
@@ -116,6 +112,9 @@
     <Reference Include="WebGrease, Version=1.5.2.14234, Culture=neutral, PublicKeyToken=31bf3856ad364e35">
       <HintPath>..\packages\WebGrease.1.5.2\lib\WebGrease.dll</HintPath>
     </Reference>
+    <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed">
+      <HintPath>..\packages\Newtonsoft.Json.8.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AppendSendMetadata.ashx.cs">
@@ -155,10 +154,6 @@
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="App_Start\WebApiConfig.cs" />
     <Content Include="Content\app.css" />
-    <Content Include="Content\bootstrap-responsive.css" />
-    <Content Include="Content\bootstrap-responsive.min.css" />
-    <Content Include="Content\bootstrap.css" />
-    <Content Include="Content\bootstrap.min.css" />
     <Content Include="Content\fonts.css" />
     <Content Include="Content\fonts\OFL.txt" />
     <Content Include="favicon.ico" />
@@ -167,91 +162,7 @@
     <Content Include="Content\fonts\ArchivoNarrow-BoldItalic.ttf" />
     <Content Include="Content\fonts\ArchivoNarrow-Italic.ttf" />
     <Content Include="Content\fonts\ArchivoNarrow-Regular.ttf" />
-    <None Include="Scripts\jquery-1.9.1.intellisense.js" />
-    <Content Include="img\glyphicons-halflings-white.png" />
-    <Content Include="img\glyphicons-halflings.png" />
     <Content Include="img\manta-logo.png" />
-    <Content Include="Scripts\bootstrap.js" />
-    <Content Include="Scripts\bootstrap.min.js" />
-    <Content Include="Scripts\jqPlot\changes.txt" />
-    <Content Include="Scripts\jqPlot\copyright.txt" />
-    <Content Include="Scripts\jqPlot\excanvas.js" />
-    <Content Include="Scripts\jqPlot\excanvas.min.js" />
-    <Content Include="Scripts\jqPlot\gpl-2.0.txt" />
-    <Content Include="Scripts\jqPlot\jqPlotCssStyling.txt" />
-    <Content Include="Scripts\jqPlot\jqPlotOptions.txt" />
-    <Content Include="Scripts\jqPlot\jquery.jqplot.css" />
-    <Content Include="Scripts\jqPlot\jquery.jqplot.js" />
-    <Content Include="Scripts\jqPlot\jquery.jqplot.min.css" />
-    <Content Include="Scripts\jqPlot\jquery.jqplot.min.js" />
-    <Content Include="Scripts\jqPlot\jquery.js" />
-    <Content Include="Scripts\jqPlot\jquery.min.js" />
-    <Content Include="Scripts\jqPlot\MIT-LICENSE.txt" />
-    <Content Include="Scripts\jqPlot\optionsTutorial.txt" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.barRenderer.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.barRenderer.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.BezierCurveRenderer.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.BezierCurveRenderer.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.blockRenderer.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.blockRenderer.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.bubbleRenderer.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.bubbleRenderer.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.canvasAxisLabelRenderer.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.canvasAxisLabelRenderer.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.canvasAxisTickRenderer.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.canvasAxisTickRenderer.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.canvasOverlay.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.canvasOverlay.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.canvasTextRenderer.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.canvasTextRenderer.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.categoryAxisRenderer.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.categoryAxisRenderer.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.ciParser.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.ciParser.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.cursor.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.cursor.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.dateAxisRenderer.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.dateAxisRenderer.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.donutRenderer.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.donutRenderer.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.dragable.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.dragable.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.enhancedLegendRenderer.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.enhancedLegendRenderer.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.funnelRenderer.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.funnelRenderer.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.highlighter.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.highlighter.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.json2.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.json2.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.logAxisRenderer.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.logAxisRenderer.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.mekkoAxisRenderer.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.mekkoAxisRenderer.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.mekkoRenderer.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.mekkoRenderer.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.meterGaugeRenderer.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.meterGaugeRenderer.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.mobile.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.mobile.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.ohlcRenderer.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.ohlcRenderer.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.pieRenderer.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.pieRenderer.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.pointLabels.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.pointLabels.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.pyramidAxisRenderer.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.pyramidAxisRenderer.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.pyramidGridRenderer.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.pyramidGridRenderer.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.pyramidRenderer.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.pyramidRenderer.min.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.trendline.js" />
-    <Content Include="Scripts\jqPlot\plugins\jqplot.trendline.min.js" />
-    <Content Include="Scripts\jqPlot\README.txt" />
-    <Content Include="Scripts\jqPlot\usage.txt" />
-    <Content Include="Scripts\jquery-1.9.1.js" />
-    <Content Include="Scripts\jquery-1.9.1.min.js" />
     <Content Include="Web.config" />
     <Content Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
@@ -316,7 +227,6 @@
     <Content Include="Views\Sends\Failed.cshtml" />
     <None Include="Properties\PublishProfiles\MantaMTA.pubxml" />
     <Content Include="Views\RabbitMQ\Index.cshtml" />
-    <Content Include="Scripts\jquery-1.9.1.min.map" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

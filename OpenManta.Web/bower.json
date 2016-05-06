@@ -1,0 +1,13 @@
+{
+  "name": "openmanta.web",
+  "homepage": "https://github.com/OpenManta/MantaMTA",
+  "description": "",
+  "main": "",
+  "license": "MIT",
+  "private": true,
+  "devDependencies": {
+    "jquery": "jquery#1.9.1",
+    "gbelmm-jqplot": "gbelmm-jqplot#1.0.9",
+    "bootstrap": "bootstrap#2.3.2"
+  }
+}
