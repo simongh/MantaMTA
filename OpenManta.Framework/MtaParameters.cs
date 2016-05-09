@@ -373,8 +373,10 @@ namespace OpenManta.Framework
 			{
 				if (string.IsNullOrEmpty(_EventForwardingHttpPostUrl))
 					_EventForwardingHttpPostUrl = CfgPara.GetEventForwardingHttpPostUrl();
+                if (string.IsNullOrEmpty(_EventForwardingHttpPostUrl))
+                    return null;
 
-				return new Uri(_EventForwardingHttpPostUrl);
+                return new Uri(_EventForwardingHttpPostUrl);
 			}
 		}
 		private static string _EventForwardingHttpPostUrl = string.Empty;

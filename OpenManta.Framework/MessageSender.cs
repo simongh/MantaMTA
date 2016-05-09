@@ -178,7 +178,7 @@ namespace OpenManta.Framework
                     }
                 };
 
-                while (!_IsStopping)
+                do
                 {
                     if (runningTasks.Count >= MAX_SENDING_WORKER_TASKS)
                     {
@@ -187,7 +187,7 @@ namespace OpenManta.Framework
                     }
 
                     startWorkerTasks();
-                }
+                } while (!_IsStopping);
             }));
             t.Start();
         }
@@ -197,7 +197,7 @@ namespace OpenManta.Framework
         /// </summary>
         public void Stop()
 		{
-			this._IsStopping = true;
+			_IsStopping = true;
 		}
 		/// <summary>
 		/// Checks to see if the MX record collection contains blacklisted domains/ips.
@@ -216,35 +216,34 @@ namespace OpenManta.Framework
 			return false;
 		}
 
-		private async Task<bool> SendMessageAsync(MtaQueuedMessage msg)
+		private async Task SendMessageAsync(MtaQueuedMessage msg)
 		{
 			// Check that the message next attempt after has passed.
 			if (msg.AttemptSendAfterUtc > DateTime.UtcNow)
 			{
 				await RabbitMqOutboundQueueManager.Enqueue(msg);
 				await Task.Delay(50); // To prevent a tight loop within a Task thread we should sleep here.
-				return false;
+				return;
 			}
 
 			if (await Data.MtaTransaction.HasBeenHandledAsync(msg.ID))
 			{
 				msg.IsHandled = true;
-				return true;
+				return;
 			}
 
 			// Get the send that this message belongs to so that we can check the send state.
-			Send snd = await SendManager.Instance.GetSendAsync(msg.InternalSendID);
-
+			var snd = await SendManager.Instance.GetSendAsync(msg.InternalSendID);
 			switch(snd.SendStatus)
 			{
 				// The send is being discarded so we should discard the message.
 				case SendStatus.Discard:
 				await MtaMessageHelper.HandleMessageDiscardAsync(msg);
-					return false;
+					return;
 				// The send is paused, the handle pause state will delay, without deferring, the message for a while so we can move on to other messages.
 				case SendStatus.Paused:
 				await MtaMessageHelper.HandleSendPaused(msg);
-					return false;
+					return;
 				// Send is active so we don't need to do anything.
 				case SendStatus.Active:
 					break;
@@ -253,11 +252,9 @@ namespace OpenManta.Framework
 					msg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(1);
 					await RabbitMqOutboundQueueManager.Enqueue(msg);
 					Logging.Error("Failed to send message. Unknown SendStatus[" + snd.SendStatus + "]!");
-					return false;
+					return;
 			}
 			
-
-			bool result;
 			// Check the message hasn't timed out. If it has don't attempt to send it.
 			// Need to do this here as there may be a massive backlog on the server
 			// causing messages to be waiting for ages after there AttemptSendAfter
@@ -265,133 +262,59 @@ namespace OpenManta.Framework
 			if (msg.AttemptSendAfterUtc - msg.QueuedTimestampUtc > new TimeSpan(0, MtaParameters.MtaMaxTimeInQueue, 0))
 			{
 				await MtaMessageHelper.HandleDeliveryFailAsync(msg, MtaParameters.TIMED_OUT_IN_QUEUE_MESSAGE, null, null);
-				result = false;
 			}
 			else
 			{
-				MailAddress mailAddress = new MailAddress(msg.RcptTo[0]);
+				MailAddress rcptTo = new MailAddress(msg.RcptTo[0]);
 				MailAddress mailFrom = new MailAddress(msg.MailFrom);
-				MXRecord[] mXRecords = DNSManager.GetMXRecords(mailAddress.Host);
+				MXRecord[] mXRecords = DNSManager.GetMXRecords(rcptTo.Host);
 				// If mxs is null then there are no MX records.
 				if (mXRecords == null || mXRecords.Length < 1)
 				{
 					await MtaMessageHelper.HandleDeliveryFailAsync(msg, "550 Domain Not Found.", null, null);
-					result = false;
 				}
 				else if(IsMxBlacklisted(mXRecords))
 				{
 					await MtaMessageHelper.HandleDeliveryFailAsync(msg, "550 Domain blacklisted.", null, mXRecords[0]);
-					result = false;
 				}
 				else
 				{
-					
-
-					// The IP group that will be used to send the queued message.
-					VirtualMtaGroup virtualMtaGroup = VirtualMtaManager.GetVirtualMtaGroup(msg.VirtualMTAGroupID);
-					VirtualMTA sndIpAddress = virtualMtaGroup.GetVirtualMtasForSending(mXRecords[0]);
-
-					SmtpOutboundClientDequeueResponse dequeueResponse = await SmtpClientPool.Instance.DequeueAsync(sndIpAddress, mXRecords);
-					switch (dequeueResponse.DequeueResult)
-					{
-						case SmtpOutboundClientDequeueAsyncResult.Success:
-						case SmtpOutboundClientDequeueAsyncResult.NoMxRecords:
-						case SmtpOutboundClientDequeueAsyncResult.FailedToAddToSmtpClientQueue:
-						case SmtpOutboundClientDequeueAsyncResult.Unknown:
-							break; // Don't need to do anything for these results.
-						case SmtpOutboundClientDequeueAsyncResult.FailedToConnect:
-							await MtaMessageHelper.HandleFailedToConnectAsync(msg, sndIpAddress, mXRecords[0]);
-							break;
-						case SmtpOutboundClientDequeueAsyncResult.ServiceUnavalible:
-							await MtaMessageHelper.HandleServiceUnavailableAsync(msg, sndIpAddress);
-							break;
-						case SmtpOutboundClientDequeueAsyncResult.Throttled:
-							await MtaMessageHelper.HandleDeliveryThrottleAsync(msg, sndIpAddress, mXRecords[0]);
-							break;
-						case SmtpOutboundClientDequeueAsyncResult.FailedMaxConnections:
-							msg.AttemptSendAfterUtc = DateTime.UtcNow.AddSeconds(2);
-							await RabbitMqOutboundQueueManager.Enqueue(msg);
-							break;
-					}
-
-					SmtpOutboundClient smtpClient = dequeueResponse.SmtpOutboundClient;
-
-					// If no client was dequeued then we can't currently send.
-					// This is most likely a max connection issue. Return false but don't
-					// log any deferal or throttle.
-					if (smtpClient == null)
-					{
-						result = false;
-					}
-					else
-					{
-						try
-						{
-							Action<string> failedCallback = delegate(string smtpResponse)
-							{
-								// If smtpRespose starts with 5 then perm error should cause fail
-								if (smtpResponse.StartsWith("5"))
-									MtaMessageHelper.HandleDeliveryFailAsync(msg, smtpResponse, sndIpAddress, smtpClient.MXRecord).Wait();
-								else
-								{
-									// If the MX is actively denying use service access, SMTP code 421 then we should inform
-									// the ServiceNotAvailableManager manager so it limits our attepts to this MX to 1/minute.
-									if (smtpResponse.StartsWith("421"))
-									{
-										ServiceNotAvailableManager.Add(smtpClient.SmtpStream.LocalAddress.ToString(), smtpClient.MXRecord.Host, DateTime.UtcNow);
-										MtaMessageHelper.HandleDeliveryDeferral(msg, smtpResponse, sndIpAddress, smtpClient.MXRecord, true);
-									}
-									else
-									{
-										// Otherwise message is deferred
-										MtaMessageHelper.HandleDeliveryDeferral(msg, smtpResponse, sndIpAddress, smtpClient.MXRecord, false);
-									}
-								}
-								throw new SmtpTransactionFailedException();
-							};
-							// Run each SMTP command after the last.
-							await smtpClient.ExecHeloOrRsetAsync(failedCallback);
-							await smtpClient.ExecMailFromAsync(mailFrom, failedCallback);
-							await smtpClient.ExecRcptToAsync(mailAddress, failedCallback);
-							await smtpClient.ExecDataAsync(msg.Message, failedCallback, async (response) => {
-								await MtaMessageHelper.HandleDeliverySuccessAsync(msg, sndIpAddress, smtpClient.MXRecord, response);
-							});
-							SmtpClientPool.Instance.Enqueue(smtpClient);
-							
-							result = true;
-						}
-						catch (SmtpTransactionFailedException)
-						{
-							// Exception is thrown to exit transaction, logging of deferrals/failers already handled.
-							result = false;
-						}
-						catch (Exception ex)
-						{
-							Logging.Error("MessageSender error.", ex);
-							if (msg != null)
-								MtaMessageHelper.HandleDeliveryDeferral(msg, "Connection was established but ended abruptly.", sndIpAddress, smtpClient.MXRecord, false);
-							result = false;
-						}
-						finally
-						{
-							if (smtpClient != null)
-							{
-								smtpClient.IsActive = false;
-								smtpClient.LastActive = DateTime.UtcNow;
-							}
-						}
-					}
+                    var vMtaGroup = VirtualMtaManager.GetVirtualMtaGroup(msg.VirtualMTAGroupID);
+                    var sendResult = await MantaSmtpClientPoolCollection.Instance.SendAsync(mailFrom, rcptTo, vMtaGroup, mXRecords, msg.Message);
+                    switch(sendResult.MantaOutboundClientResult)
+                    {
+                        case MantaOutboundClientResult.FailedToConnect:
+                            await MtaMessageHelper.HandleFailedToConnectAsync(msg, sendResult.VirtualMTA, sendResult.MXRecord);
+                            break;
+                        case MantaOutboundClientResult.MaxConnections:
+                        case MantaOutboundClientResult.MaxMessages:
+                            await RabbitMqOutboundQueueManager.Enqueue(msg);
+                            break;
+                        case MantaOutboundClientResult.RejectedByRemoteServer:
+                            if(string.IsNullOrWhiteSpace(sendResult.Message))
+                            {
+                                Logging.Error("RejectedByRemoteServer but no message!");
+                                await MtaMessageHelper.HandleDeliveryDeferralAsync(msg, sendResult.Message, sendResult.VirtualMTA, sendResult.MXRecord);
+                            }
+                            if (sendResult.Message[0] == '4')
+                                await MtaMessageHelper.HandleDeliveryDeferralAsync(msg, sendResult.Message, sendResult.VirtualMTA, sendResult.MXRecord);
+                            else
+                                await MtaMessageHelper.HandleDeliveryFailAsync(msg, sendResult.Message, sendResult.VirtualMTA, sendResult.MXRecord);
+                            break;
+                        case MantaOutboundClientResult.ServiceNotAvalible:
+                            await MtaMessageHelper.HandleServiceUnavailableAsync(msg, sendResult.VirtualMTA);
+                            break;
+                        case MantaOutboundClientResult.Success:
+                            await MtaMessageHelper.HandleDeliverySuccessAsync(msg, sendResult.VirtualMTA, sendResult.MXRecord, sendResult.Message);
+                            break;
+                        default:
+                            // Something weird happening with this message, get it out of the way for a bit.
+                            msg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(5);
+                            await RabbitMqOutboundQueueManager.Enqueue(msg);
+                            break;
+                    }
 				}
 			}
-			return result;
 		}
-
-		/// <summary>
-		/// Exception is used to halt SMTP transaction if the server responds with unexpected code.
-		/// </summary>
-		[Serializable]
-		private class SmtpTransactionFailedException : Exception { }
 	}
-
-	
 }

@@ -118,7 +118,7 @@ namespace OpenManta.Framework
 			catch (Exception ex)
 			{
 				// Warn if anything went wrong.
-				Logging.Warn("DoBounceFileProcessing something went wrong.", ex);
+				Logging.Debug("DoBounceFileProcessing something went wrong.", ex);
 			}
 			finally
 			{

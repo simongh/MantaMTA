@@ -1,47 +1,48 @@
 ﻿using OpenManta.Core;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using RabbitMQ.Client.Events;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace OpenManta.Framework.RabbitMq
 {
-	public static class RabbitMqInboundStagingHandler
+    public class RabbitMqInboundStagingHandler : IStopRequired
 	{
-		public const int STAGING_DEQUEUE_THREADS = 25;
-		public static int _StartedThreads = 0;
+        private const int STAGING_DEQUEUE_TASKS = 25;
+        public int _StartedThreads = 0;
+        private static RabbitMqInboundStagingHandler _Instance = new RabbitMqInboundStagingHandler();
+        private bool IsStopping = false;
+        private RabbitMqInboundStagingHandler()
+        {
+            MantaCoreEvents.RegisterStopRequiredInstance(this);
+        }
 
-		public static void Start()
+        public static RabbitMqInboundStagingHandler Instance { get { return _Instance; } }
+        public void Start()
 		{
-			for (int i = 0; i < STAGING_DEQUEUE_THREADS; i++)
-			{
-                Task.Factory.StartNew(HandleDequeue, TaskCreationOptions.LongRunning);
-				/*Thread t = new Thread(new ThreadStart(HandleDequeue));
-				t.IsBackground = true;
-				t.Start();*/
-			}
+            Parallel.For(0, STAGING_DEQUEUE_TASKS, (i) => {
+                var t = new System.Threading.Thread(new System.Threading.ThreadStart(HandleDequeue));
+                t.Start();
+            });
 		}
 
-		private static async Task HandleDequeue()
-		{
-			if (_StartedThreads >= STAGING_DEQUEUE_THREADS)
-				return;
+        public void Stop()
+        {
+            IsStopping = true;
+        }
 
-			_StartedThreads++;
-
-			while(true)
+        private void HandleDequeue()
+        {
+			while(!IsStopping)
 			{
 				BasicDeliverEventArgs ea = RabbitMq.RabbitMqManager.Dequeue(RabbitMqManager.RabbitMqQueue.InboundStaging, 1, 100).FirstOrDefault();
 				if(ea == null)
 				{
-                    await Task.Delay(1000);
+                    //await Task.Delay(1000);
+                    System.Threading.Thread.Sleep(1000);
 					continue;
 				}
 
-                MtaQueuedMessage qmsg = await Serialisation.Deserialise<MtaQueuedMessage>(ea.Body);
+                MtaQueuedMessage qmsg = Serialisation.Deserialise<MtaQueuedMessage>(ea.Body).Result;
                 MtaMessage msg = new MtaMessage
                 {
                     ID = qmsg.ID,
@@ -51,10 +52,10 @@ namespace OpenManta.Framework.RabbitMq
                     VirtualMTAGroupID = qmsg.VirtualMTAGroupID
                 };
 
-				await RabbitMqManager.Publish(msg, RabbitMqManager.RabbitMqQueue.Inbound, true, (RabbitMqPriority)qmsg.RabbitMqPriority);
-                await RabbitMqManager.Publish(qmsg, RabbitMqManager.RabbitMqQueue.OutboundWaiting, true, (RabbitMqPriority)qmsg.RabbitMqPriority);
+                RabbitMqManager.Publish(msg, RabbitMqManager.RabbitMqQueue.Inbound, true, qmsg.RabbitMqPriority).Wait();
+                RabbitMqManager.Publish(qmsg, RabbitMqManager.RabbitMqQueue.OutboundWaiting, true, qmsg.RabbitMqPriority).Wait();
 				RabbitMqManager.Ack(RabbitMqManager.RabbitMqQueue.InboundStaging, ea.DeliveryTag, false);
 			}
 		}
-	}
+    }
 }

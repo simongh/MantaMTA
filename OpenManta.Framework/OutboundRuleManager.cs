@@ -267,14 +267,20 @@ namespace OpenManta.Framework
 			return 1;
 		}
 
-		/// <summary>
-		/// Gets the maximum amount of messages to send per hour from each ip address to mx.
-		/// </summary>
-		/// <param name="ipAddress">Outbound IP address</param>
-		/// <param name="record">MX Record of destination server.</param>
-		/// <param name="mxPatternID">ID of the pattern used to identify the rule.</param>
-		/// <returns>Maximum number of messages per hour or -1 for unlimited.</returns>
-		public static int GetMaxMessagesDestinationHour(VirtualMTA ipAddress, MXRecord record, out int mxPatternID)
+        public static int GetMaxMessagesDestinationHour(VirtualMTA vmta, MXRecord mx)
+        {
+            int tmp;
+            return GetMaxMessagesDestinationHour(vmta, mx, out tmp);
+        }
+
+        /// <summary>
+        /// Gets the maximum amount of messages to send per hour from each ip address to mx.
+        /// </summary>
+        /// <param name="ipAddress">Outbound IP address</param>
+        /// <param name="record">MX Record of destination server.</param>
+        /// <param name="mxPatternID">ID of the pattern used to identify the rule.</param>
+        /// <returns>Maximum number of messages per hour or -1 for unlimited.</returns>
+        public static int GetMaxMessagesDestinationHour(VirtualMTA ipAddress, MXRecord record, out int mxPatternID)
 		{
 			IList<OutboundRule>  rules = OutboundRuleManager.GetRules(record, ipAddress, out mxPatternID);
 			for (int i = 0; i < rules.Count; i++)

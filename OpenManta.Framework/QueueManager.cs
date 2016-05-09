@@ -17,23 +17,16 @@ namespace OpenManta.Framework
         /// </summary>
         private readonly TimeSpan RABBITMQ_EMPTY_QUEUE_SLEEP_TIME = TimeSpan.FromSeconds(10);
 
-        private static QueueManager _Instance = new QueueManager();
-        /// <summary>
-        /// Thread used for copying data from RabbitMQ to SQL Server.
-        /// </summary>
-        private Thread _bulkInsertThread = null;
-
-        /// <summary>
-        /// Will be set to true when the _bulkInsertThread has stopped.
-        /// </summary>
-        private bool _hasStopped = false;
+        private readonly static QueueManager _Instance = new QueueManager();
 
         /// <summary>
         /// Will be set to true when the Stop() method is called.
         /// </summary>
         private volatile bool _isStopping = false;
 
-        private QueueManager() { }
+        private QueueManager() {
+            MantaCoreEvents.RegisterStopRequiredInstance(this);
+        }
 
         public static QueueManager Instance { get { return _Instance; } }
         /// <summary>
@@ -56,11 +49,8 @@ namespace OpenManta.Framework
 		/// </summary>
 		public void Start()
 		{
-			_bulkInsertThread = new Thread(new ThreadStart(DoSqlBulkInsertFromRabbitMQ));
-			_bulkInsertThread.IsBackground = true;
-			_bulkInsertThread.Priority = ThreadPriority.AboveNormal;
-			_bulkInsertThread.Start();
-			MantaCoreEvents.RegisterStopRequiredInstance(this);
+            Thread t = new Thread(new ThreadStart(DoSqlBulkInsertFromRabbitMQ));
+            t.Start();
 		}
 
 		/// <summary>
@@ -68,22 +58,7 @@ namespace OpenManta.Framework
 		/// </summary>
 		public void Stop()
 		{
-			Logging.Info("Stopping Bulk Inserter");
 			_isStopping = true;
-
-			int count = 0;
-			while (!_hasStopped)
-			{
-				if(count > 100)
-				{
-					Logging.Error("Failed to stop Bulk Inserter");
-					return;
-				}
-				Thread.Sleep(100);
-				count++;
-			}
-
-			Logging.Info("Stopped Bulk Inserter");
 		}
 
 		/// <summary>
@@ -94,15 +69,22 @@ namespace OpenManta.Framework
 			// Keep going until Manta is stopping.
 			while(!_isStopping)
 			{
-				try
-				{
+                try
+                {
                     // Get queued messages for bulk importing.
                     IList<MtaMessage> recordsToImportToSql = RabbitMq.RabbitMqInboundQueueManager.Dequeue(100).Result;
-					
+
+                    
 					// If there are no messages to import then sleep and try again.
 					if(recordsToImportToSql == null || recordsToImportToSql.Count == 0)
 					{
-						Thread.Sleep(RABBITMQ_EMPTY_QUEUE_SLEEP_TIME);
+                        var sleepCount = RABBITMQ_EMPTY_QUEUE_SLEEP_TIME.TotalSeconds / 2;
+                        for (int i = 0; i < sleepCount; i++)
+                        {
+                            Thread.Sleep(2000);
+                            if (_isStopping)
+                                break;
+                        }
 						continue;
 					}
 
@@ -112,7 +94,7 @@ namespace OpenManta.Framework
 					dt.Columns.Add("mta_msg_rcptTo", typeof(string));
 					dt.Columns.Add("mta_msg_mailFrom", typeof(string));
 
-					foreach(MtaMessage msg in recordsToImportToSql)
+                    foreach (MtaMessage msg in recordsToImportToSql)
 						dt.Rows.Add(new object[]{msg.ID, msg.InternalSendID, msg.RcptTo[0], msg.MailFrom});
 					
 					try
@@ -154,8 +136,6 @@ COMMIT TRANSACTION";
 					//Logging.Error("Bulk Importer Error", ex);
 				}
 			}
-
-			_hasStopped = true;
 		}
 	}
 }

@@ -119,7 +119,7 @@ namespace OpenManta.Framework.Smtp
             }
             catch (Exception)
             {
-                return line;
+                return "421 Connection ended abruptly";
             }
 
             while (line[3] == '-')
@@ -131,6 +131,8 @@ namespace OpenManta.Framework.Smtp
                 }
                 catch (Exception)
                 {
+                    if(sb.Length == 0)
+                        return "421 Connection ended abruptly";
                     line = string.Empty;
                     break;
                 }
@@ -199,13 +201,27 @@ namespace OpenManta.Framework.Smtp
         {
             if (_CurrentTransportMIME == SmtpTransportMIME._7BitASCII)
             {
-                await ClientStreamWriterASCII.WriteLineAsync(message);
-                await ClientStreamWriterASCII.FlushAsync();
+                try
+                {
+                    await ClientStreamWriterASCII.WriteLineAsync(message);
+                    await ClientStreamWriterASCII.FlushAsync();
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
             }
             else if (_CurrentTransportMIME == SmtpTransportMIME._8BitUTF)
             {
-                await ClientStreamWriterUTF8.WriteLineAsync(message);
-                await ClientStreamWriterUTF8.FlushAsync();
+                try
+                {
+                    await ClientStreamWriterUTF8.WriteLineAsync(message);
+                    await ClientStreamWriterUTF8.FlushAsync();
+                }
+                catch(Exception)
+                {
+                    return false;
+                }
             }
             else
                 throw new NotImplementedException(_CurrentTransportMIME.ToString());
@@ -225,13 +241,27 @@ namespace OpenManta.Framework.Smtp
         {
             if (_CurrentTransportMIME == SmtpTransportMIME._7BitASCII)
             {
-                await ClientStreamWriterASCII.WriteAsync(message);
-                await ClientStreamWriterASCII.FlushAsync();
+                try
+                {
+                    await ClientStreamWriterASCII.WriteAsync(message);
+                    await ClientStreamWriterASCII.FlushAsync();
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
             }
             else if (_CurrentTransportMIME == SmtpTransportMIME._8BitUTF)
             {
-                await ClientStreamWriterUTF8.WriteAsync(message);
-                await ClientStreamWriterUTF8.FlushAsync();
+                try
+                {
+                    await ClientStreamWriterUTF8.WriteAsync(message);
+                    await ClientStreamWriterUTF8.FlushAsync();
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
             }
             else
                 throw new NotImplementedException(_CurrentTransportMIME.ToString());

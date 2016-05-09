@@ -25,7 +25,7 @@ namespace OpenManta.Service
 				Logging.Fatal(ex.Message, ex);
 			};
 
-            RabbitMqInboundStagingHandler.Start();
+            RabbitMqInboundStagingHandler.Instance.Start();
 
             // Start the RabbitMQ Bulk inserter.
             QueueManager.Instance.Start();

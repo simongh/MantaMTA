@@ -24,8 +24,8 @@ namespace OpenManta.Framework
 		public static void Add(string ip, string mxHostname, DateTime lastFail)
 		{
 			mxHostname = mxHostname.ToLower();
-			ServiceNotAvailableManager._ServiceUnavailableLog.TryAdd(ip, new ConcurrentDictionary<string, DateTime>());
-			ConcurrentDictionary<string, DateTime> ipServices = ServiceNotAvailableManager._ServiceUnavailableLog[ip];
+			_ServiceUnavailableLog.TryAdd(ip, new ConcurrentDictionary<string, DateTime>());
+			ConcurrentDictionary<string, DateTime> ipServices = _ServiceUnavailableLog[ip];
 			ipServices.AddOrUpdate(mxHostname, lastFail, delegate(string key, DateTime existingValue)
 			{
 				// We should only use the "new" timestamp if it's a later date that the existing value.
@@ -36,13 +36,15 @@ namespace OpenManta.Framework
 			});
 		}
 
-		/// <summary>
-		/// Check to see if the MX hostname has denied the specified IP access within the last 1 minute.
-		/// </summary>
-		/// <param name="ip">IP to check</param>
-		/// <param name="mxHostname">Hostname of the MX to check</param>
-		/// <returns>TRUE if service is unavailable</returns>
-		public static bool IsServiceUnavailable(string ip, string mxHostname)
+
+        private static readonly TimeSpan ServiceUnavailableTimeSpan = new TimeSpan(0, 0, 30);
+        /// <summary>
+        /// Check to see if the MX hostname has denied the specified IP access within the last 1 minute.
+        /// </summary>
+        /// <param name="ip">IP to check</param>
+        /// <param name="mxHostname">Hostname of the MX to check</param>
+        /// <returns>TRUE if service is unavailable</returns>
+        public static bool IsServiceUnavailable(string ip, string mxHostname)
 		{
 			mxHostname = mxHostname.ToLower();
 			ConcurrentDictionary<string, DateTime> ipServices = null;
@@ -52,7 +54,7 @@ namespace OpenManta.Framework
 
 				if (ipServices.TryGetValue(mxHostname, out lastFail))
 				{
-					if ((DateTime.UtcNow - lastFail) < new TimeSpan(0, 0, 25))
+					if ((DateTime.UtcNow - lastFail) < ServiceUnavailableTimeSpan)
 						return true;
 				}
 			}

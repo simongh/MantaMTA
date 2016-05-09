@@ -15,7 +15,15 @@ namespace OpenManta.Framework.RabbitMq
         /// <returns>A dequeued message or null if there weren't any.</returns>
         public static async Task<MtaQueuedMessage> Dequeue()
         {
-            BasicDeliverEventArgs ea = RabbitMqManager.Dequeue(RabbitMqManager.RabbitMqQueue.OutboundWaiting, 1, 100).FirstOrDefault();
+            BasicDeliverEventArgs ea = null;
+            try
+            {
+                ea = RabbitMqManager.Dequeue(RabbitMqManager.RabbitMqQueue.OutboundWaiting, 1, 100).FirstOrDefault();
+            }
+            catch (Exception)
+            {
+                ea = null;
+            }
             if (ea == null)
                 return null;
 

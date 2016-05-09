@@ -44,10 +44,11 @@ namespace OpenManta.Framework
 		/// </summary>
 		public void Start()
 		{
-			MantaCoreEvents.RegisterStopRequiredInstance(this);
-			Thread t = new Thread(new ThreadStart(ForwardEvents));
-			t.IsBackground = true;
-			t.Start();
+            if (MtaParameters.EventForwardingHttpPostUrl != null)
+            {
+                var t = new Thread(new ThreadStart(ForwardEvents));
+                t.Start();
+            }
 		}
 
 		/// <summary>
@@ -62,7 +63,7 @@ namespace OpenManta.Framework
 				// Keep looping as long as the MTA is running.
 				while (!_IsStopping)
 				{
-					IList<MantaEvent> events = null;
+                    IList<MantaEvent> events = null;
 					// Get events for forwarding.
 					try
 					{
@@ -82,9 +83,12 @@ namespace OpenManta.Framework
 					}
 					else
 					{
-						// Found events to forward, create and run Tasks to forward.
-						for (var i = 0; i < events.Count; i++)
-							ForwardEventAsync(events[i]).Wait();
+                        // Found events to forward, create and run Tasks to forward.
+                        //for (var i = 0; i < events.Count; i++)
+                        Parallel.ForEach(events, e => {
+                            ForwardEventAsync(e).Wait();
+                        });
+                            
 					}
 				}
 			}

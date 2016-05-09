@@ -23,7 +23,7 @@ namespace OpenManta.Framework.RabbitMq
 		/// <summary>
 		/// The connection to the RabbitMQ instance.
 		/// </summary>
-		private static IConnection LocalhostConnection = new ConnectionFactory
+		public static IConnection LocalhostConnection = new ConnectionFactory
 		{
 			HostName = MtaParameters.RabbitMQ.Hostname,
 			UserName = MtaParameters.RabbitMQ.Username,

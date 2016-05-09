@@ -1,8 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using OpenManta.Framework.RabbitMq;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace OpenManta.Framework
 {
-	public static class MantaCoreEvents
+    public static class MantaCoreEvents
 	{
 		/// <summary>
 		/// List of all the objects that need to be stopped.
@@ -23,19 +25,19 @@ namespace OpenManta.Framework
 		/// </summary>
 		public static void InvokeMantaCoreStopping()
 		{
-			Logging.Debug("InvokeMantaCoreStopping Started.");
+            Logging.Debug("InvokeMantaCoreStopping Started.");
 
-			// Always stop the Inbound Queue Manager first.
-			QueueManager.Instance.Stop();
+            // Loop through the things that need stopping and stop them :)
+            Parallel.ForEach(_StopRequiredTasks, instance =>
+            {
+                Logging.Debug("InvokeMantaCoreStopping > " + instance.GetType());
+                instance.Stop();
+            });
 
-			// Loop through the things that need stopping and stop them :)
-			for (int i = 0; i < _StopRequiredTasks.Count; i++)
-			{
-				Logging.Debug("InvokeMantaCoreStopping > " + _StopRequiredTasks[i].GetType());
-				_StopRequiredTasks[i].Stop();
-			}
+            // Close the RabbitMQ connection when were done.
+            RabbitMqManager.LocalhostConnection.Close();
 
-			Logging.Debug("InvokeMantaCoreStopping Finished.");
+            Logging.Debug("InvokeMantaCoreStopping Finished.");
 		}
 	}
 }

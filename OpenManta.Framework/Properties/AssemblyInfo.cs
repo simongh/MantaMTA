@@ -25,3 +25,5 @@ using System.Runtime.CompilerServices;
 //[assembly: AssemblyDelaySign(false)]
 //[assembly: AssemblyKeyFile("")]
 
+// Log4net config file location
+[assembly: log4net.Config.XmlConfigurator(ConfigFile = "Log4net.config", Watch = true)]

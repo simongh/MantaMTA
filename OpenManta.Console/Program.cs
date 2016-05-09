@@ -36,7 +36,7 @@ namespace OpenManta.Console
 			EventsFileHandler.Instance.Start();
 
 			QueueManager.Instance.Start();
-			OpenManta.Framework.RabbitMq.RabbitMqInboundStagingHandler.Start();
+			OpenManta.Framework.RabbitMq.RabbitMqInboundStagingHandler.Instance.Start();
 
 			bool quit = false;
 			while (!quit)
