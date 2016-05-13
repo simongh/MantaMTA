@@ -47,10 +47,6 @@ namespace OpenManta.Framework
 			// Increase the defered count as the queued messages has been deferred.
 			msg.DeferredCount++;
 
-            // After 2 deferrals drop the priority to low.
-            if (msg.DeferredCount > 2)
-                msg.RabbitMqPriority = RabbitMqPriority.Low;
-
 			// Hold the minutes to wait until next retry.
 			double nextRetryInterval = MtaParameters.MtaRetryInterval;
 
@@ -159,6 +155,7 @@ namespace OpenManta.Framework
 
 			// Set next retry time and release the lock.
 			msg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(1);
+            msg.RabbitMqPriority = RabbitMqPriority.Low;
 			await Requeue(msg);
 			return true;
 		}

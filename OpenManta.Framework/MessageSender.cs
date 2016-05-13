@@ -128,7 +128,7 @@ namespace OpenManta.Framework
                                 if (!qMsg.IsHandled)
                                 {
                                     Logging.Warn("Message not handled " + qMsg.ID);
-                                    qMsg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(6);
+                                    qMsg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(5);
                                     await RabbitMqOutboundQueueManager.Enqueue(qMsg);
                                 }
 
@@ -152,7 +152,7 @@ namespace OpenManta.Framework
                                 if (!qMsg.IsHandled)
                                 {
                                     Logging.Warn("Message not handled " + qMsg.ID);
-                                    qMsg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(6);
+                                    qMsg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(5);
                                     await RabbitMqOutboundQueueManager.Enqueue(qMsg);
                                 }
 
@@ -287,8 +287,10 @@ namespace OpenManta.Framework
                             await MtaMessageHelper.HandleFailedToConnectAsync(msg, sendResult.VirtualMTA, sendResult.MXRecord);
                             break;
                         case MantaOutboundClientResult.MaxConnections:
-                        case MantaOutboundClientResult.MaxMessages:
                             await RabbitMqOutboundQueueManager.Enqueue(msg);
+                            break;
+                        case MantaOutboundClientResult.MaxMessages:
+                            await MtaMessageHelper.HandleDeliveryThrottleAsync(msg, sendResult.VirtualMTA, sendResult.MXRecord);
                             break;
                         case MantaOutboundClientResult.RejectedByRemoteServer:
                             if(string.IsNullOrWhiteSpace(sendResult.Message))
