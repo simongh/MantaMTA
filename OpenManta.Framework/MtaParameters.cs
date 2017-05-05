@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using OpenManta.Core;
 using OpenManta.Data;
 
@@ -34,6 +35,28 @@ namespace OpenManta.Framework
 		/// </summary>
 		public const string TIMED_OUT_IN_QUEUE_MESSAGE = "Timed out in queue.";
 
+		private static DateTime _MtaDropFolderLoadTime = DateTime.MinValue;
+		private static DateTime _MtaQueueFolderLoadTime = DateTime.MinValue;
+		private static DateTime _MtaLogFolderLoadTime = DateTime.MinValue;
+		private static DateTime _LocalDomainsLoadTime = DateTime.MinValue;
+		private static DateTime _ReturnPathDomainLoadTime = DateTime.MinValue;
+		private static DateTime _IPsToAllowRelayingLoadTime = DateTime.MinValue;
+		private static DateTime _MtaRetryIntervalLoadTime = DateTime.MinValue;
+		private static int _MtaMaxTimeInQueue = -1;
+		private static DateTime _MtaMaxTimeInQueueLoadTime = DateTime.MinValue;
+		private static bool _keepBounceFiles = false;
+		private static DateTime _keepBounceFilesLoadTime = DateTime.MinValue;
+		private static int _DaysToKeepSmtpLogsFor = -1;
+		private static string _EventForwardingHttpPostUrl = string.Empty;
+		private static int _MtaRetryInterval = -1;
+		private static IList<LocalDomain> _LocalDomains;
+		private static string _MtaDropFolder;
+		private static int[] _ServerListeningPorts;
+		private static string _MtaQueueFolder;
+		private static string _MtaLogFolder;
+		private static string _ReturnPathDomain = string.Empty;
+		private static string[] _IPsToAllowRelaying;
+
 		/// <summary>
 		/// Gets the ports that the SMTP server should listen for client connections on.
 		/// This will almost always be 25 & 587.
@@ -43,11 +66,10 @@ namespace OpenManta.Framework
 			get
 			{
 				if (_ServerListeningPorts == null)
-					_ServerListeningPorts = CfgPara.GetServerListenPorts();
+					_ServerListeningPorts = CfgParaFactory.Instance.ServerListenPorts.ToArray();
 				return _ServerListeningPorts;
 			}
 		}
-		private static int[] _ServerListeningPorts { get; set; }
 
 		/// <summary>
 		/// Drop folder, for incoming messages.
@@ -59,7 +81,7 @@ namespace OpenManta.Framework
 			{
 				if (_MtaDropFolderLoadTime < DateTime.UtcNow)
 				{
-					_MtaDropFolder = CfgPara.GetDropFolder();
+					_MtaDropFolder = CfgParaFactory.Instance.DropFolder;
 					Directory.CreateDirectory(_MtaDropFolder);
 					_MtaDropFolderLoadTime = DateTime.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
 				}
@@ -67,8 +89,6 @@ namespace OpenManta.Framework
 				return _MtaDropFolder;
 			}
 		}
-		private static string _MtaDropFolder { get; set; }
-		private static DateTime _MtaDropFolderLoadTime = DateTime.MinValue;
 
 		/// <summary>
 		/// Drop folder for abuse@
@@ -123,7 +143,7 @@ namespace OpenManta.Framework
 			{
 				if (_MtaQueueFolderLoadTime < DateTime.UtcNow)
 				{
-					_MtaQueueFolder = CfgPara.GetQueueFolder();
+					_MtaQueueFolder = CfgParaFactory.Instance.QueueFolder;
 					Directory.CreateDirectory(_MtaQueueFolder);
 					_MtaQueueFolderLoadTime = DateTime.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
 				}
@@ -131,8 +151,6 @@ namespace OpenManta.Framework
 				return _MtaQueueFolder;
 			}
 		}
-		private static string _MtaQueueFolder { get; set; }
-		private static DateTime _MtaQueueFolderLoadTime = DateTime.MinValue;
 
 		/// <summary>
 		/// Log foler, where SMTP Transaction logs will go.
@@ -144,7 +162,7 @@ namespace OpenManta.Framework
 			{
 				if (_MtaLogFolderLoadTime < DateTime.UtcNow)
 				{
-					_MtaLogFolder = CfgPara.GetLogFolder();
+					_MtaLogFolder = CfgParaFactory.Instance.LogFolder;
 					Directory.CreateDirectory(_MtaLogFolder);
 					_MtaLogFolderLoadTime = DateTime.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
 				}
@@ -152,8 +170,6 @@ namespace OpenManta.Framework
 				return _MtaLogFolder;
 			}
 		}
-		private static string _MtaLogFolder { get; set; }
-		private static DateTime _MtaLogFolderLoadTime = DateTime.MinValue;
 
 		/// <summary>
 		/// List of domains to accept messages for drop folder.
@@ -165,14 +181,12 @@ namespace OpenManta.Framework
 			{
 				if (_LocalDomainsLoadTime < DateTime.UtcNow)
 				{
-					_LocalDomains = CfgLocalDomains.GetLocalDomainsArray();
+					_LocalDomains = CfgLocalDomainsFactory.Instance.GetLocalDomainsArray();
 					_LocalDomainsLoadTime = DateTime.UtcNow.AddMinutes(5);
 				}
 				return _LocalDomains;
 			}
 		}
-		private static IList<LocalDomain> _LocalDomains { get; set; }
-		private static DateTime _LocalDomainsLoadTime = DateTime.MinValue;
 
 		/// <summary>
 		/// The domain that return paths should use.
@@ -183,14 +197,12 @@ namespace OpenManta.Framework
 			{
 				if (_ReturnPathDomainLoadTime < DateTime.UtcNow)
 				{
-					_ReturnPathDomain = CfgPara.GetReturnPathDomain();
+					_ReturnPathDomain = CfgParaFactory.Instance.ReturnPathDomainId.ToString();
 					_ReturnPathDomainLoadTime = DateTime.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
 				}
 				return _ReturnPathDomain;
 			}
 		}
-		private static string _ReturnPathDomain = string.Empty;
-		private static DateTime _ReturnPathDomainLoadTime = DateTime.MinValue;
 
 		/// <summary>
 		/// List of IP addresses to allow relaying for.
@@ -207,8 +219,6 @@ namespace OpenManta.Framework
 				return _IPsToAllowRelaying;
 			}
 		}
-		private static string[] _IPsToAllowRelaying { get; set; }
-		private static DateTime _IPsToAllowRelayingLoadTime = DateTime.MinValue;
 
 		/// <summary>
 		/// The time in minutes between send retries.
@@ -219,16 +229,14 @@ namespace OpenManta.Framework
 			{
 				if (_MtaRetryIntervalLoadTime < DateTime.UtcNow)
 				{
-					_MtaRetryInterval = CfgPara.GetRetryIntervalBaseMinutes();
+					_MtaRetryInterval = CfgParaFactory.Instance.RetryIntervalBaseMinutes;
 					_MtaRetryIntervalLoadTime = DateTime.UtcNow.AddMinutes(5);
 				}
 
 				return _MtaRetryInterval;
 			}
 		}
-		private static int _MtaRetryInterval = -1;
-		private static DateTime _MtaRetryIntervalLoadTime = DateTime.MinValue;
-		
+
 		/// <summary>
 		/// The maximum time in minutes that a message can be in the queue.
 		/// </summary>
@@ -238,23 +246,20 @@ namespace OpenManta.Framework
 			{
 				if (_MtaMaxTimeInQueueLoadTime < DateTime.UtcNow)
 				{
-					_MtaMaxTimeInQueue = CfgPara.GetMaxTimeInQueueMinutes();
+					_MtaMaxTimeInQueue = CfgParaFactory.Instance.MaxTimeInQueueMinutes;
 					_MtaMaxTimeInQueueLoadTime = DateTime.UtcNow.AddMinutes(5);
 				}
 
 				return _MtaMaxTimeInQueue;
 			}
 		}
-		private static int _MtaMaxTimeInQueue = -1;
-		private static DateTime _MtaMaxTimeInQueueLoadTime = DateTime.MinValue;
-
 
 		/// <summary>
 		/// Flag to indicate whether to retain succesfully processed bounce email files.  Used to see how bounces have been processed so
 		/// the processing code can be reviewed and Bounce Rules modified if necessary.
-		/// 
+		///
 		/// Files that result in an error when being processed are always kept.
-		/// 
+		///
 		/// If true, successfully processed bounce email files are kept in folders relating to how they were identified;
 		/// if false, they are immediately deleted.
 		/// </summary>
@@ -264,7 +269,7 @@ namespace OpenManta.Framework
 			{
 				if (_keepBounceFilesLoadTime < DateTime.UtcNow)
 				{
-					bool newFlag = CfgPara.GetKeepBounceFilesFlag();
+					bool newFlag = CfgParaFactory.Instance.KeepBounceFilesFlag;
 
 					if (newFlag != _keepBounceFiles)
 					{
@@ -279,8 +284,6 @@ namespace OpenManta.Framework
 				return _keepBounceFiles;
 			}
 		}
-		private static bool _keepBounceFiles = false;
-		private static DateTime _keepBounceFilesLoadTime = DateTime.MinValue;
 
 		internal static class Client
 		{
@@ -289,6 +292,13 @@ namespace OpenManta.Framework
 			/// messages. This will likely only every change when developing/debugging.
 			/// </summary>
 			public const int SMTP_PORT = 25;
+
+			private static int _ConnectionIdleTimeoutInterval = -1;
+			private static DateTime _ConnectionIdleTimeoutIntervalLoadTime = DateTime.MinValue;
+			public static int _ConnectionReceiveTimeoutInterval = -1;
+			private static DateTime _ConnectionReceiveTimeoutIntervalLoadTime = DateTime.MinValue;
+			private static int _connectionSendTimeoutInterval = -1;
+			private static DateTime _connectionSendTimeoutIntervalLoadTime = DateTime.MinValue;
 
 			/// <summary>
 			/// The time in seconds after which an active but idle connection should be
@@ -300,15 +310,13 @@ namespace OpenManta.Framework
 				{
 					if (_ConnectionIdleTimeoutIntervalLoadTime < DateTime.UtcNow)
 					{
-						_ConnectionIdleTimeoutInterval = CfgPara.GetClientIdleTimeout();
+						_ConnectionIdleTimeoutInterval = CfgParaFactory.Instance.ClientIdleTimeout;
 						_ConnectionIdleTimeoutIntervalLoadTime = DateTime.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
 					}
 
 					return _ConnectionIdleTimeoutInterval;
 				}
 			}
-			private static int _ConnectionIdleTimeoutInterval = -1;
-			private static DateTime _ConnectionIdleTimeoutIntervalLoadTime = DateTime.MinValue;
 
 			/// <summary>
 			/// The time in seconds for connection read timeouts.
@@ -318,17 +326,14 @@ namespace OpenManta.Framework
 				get
 				{
 					if (_ConnectionReceiveTimeoutIntervalLoadTime < DateTime.UtcNow)
-						{
-							_ConnectionReceiveTimeoutInterval = CfgPara.GetReceiveTimeout();
-							_ConnectionReceiveTimeoutIntervalLoadTime = DateTime.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
-						}
+					{
+						_ConnectionReceiveTimeoutInterval = CfgParaFactory.Instance.ReceiveTimeout;
+						_ConnectionReceiveTimeoutIntervalLoadTime = DateTime.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
+					}
 
 					return _ConnectionReceiveTimeoutInterval;
 				}
 			}
-			public static int _ConnectionReceiveTimeoutInterval = -1;
-			private static DateTime _ConnectionReceiveTimeoutIntervalLoadTime = DateTime.MinValue;
-
 
 			/// <summary>
 			/// The time in seconds for connection send timeouts.
@@ -339,15 +344,13 @@ namespace OpenManta.Framework
 				{
 					if (_connectionSendTimeoutIntervalLoadTime < DateTime.UtcNow)
 					{
-						_connectionSendTimeoutInterval = CfgPara.GetSendTimeout();
+						_connectionSendTimeoutInterval = CfgParaFactory.Instance.SendTimeout;
 						_connectionSendTimeoutIntervalLoadTime = DateTime.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
 					}
 
 					return _connectionSendTimeoutInterval;
 				}
 			}
-			private static int _connectionSendTimeoutInterval = -1;
-			private static DateTime _connectionSendTimeoutIntervalLoadTime = DateTime.MinValue;
 		}
 
 		/// <summary>
@@ -358,11 +361,10 @@ namespace OpenManta.Framework
 			get
 			{
 				if (_DaysToKeepSmtpLogsFor == -1)
-					_DaysToKeepSmtpLogsFor = CfgPara.GetDaysToKeepSmtpLogsFor();
+					_DaysToKeepSmtpLogsFor = CfgParaFactory.Instance.DaysToKeepSmtpLogsFor;
 				return _DaysToKeepSmtpLogsFor;
 			}
 		}
-		private static int _DaysToKeepSmtpLogsFor = -1;
 
 		/// <summary>
 		/// The URL to post Manta Events (abuse/bounce) to.
@@ -372,14 +374,13 @@ namespace OpenManta.Framework
 			get
 			{
 				if (string.IsNullOrEmpty(_EventForwardingHttpPostUrl))
-					_EventForwardingHttpPostUrl = CfgPara.GetEventForwardingHttpPostUrl();
-                if (string.IsNullOrEmpty(_EventForwardingHttpPostUrl))
-                    return null;
+					_EventForwardingHttpPostUrl = CfgParaFactory.Instance.EventForwardingHttpPostUrl;
+				if (string.IsNullOrEmpty(_EventForwardingHttpPostUrl))
+					return null;
 
-                return new Uri(_EventForwardingHttpPostUrl);
+				return new Uri(_EventForwardingHttpPostUrl);
 			}
 		}
-		private static string _EventForwardingHttpPostUrl = string.Empty;
 
 		/// <summary>
 		/// Parameters regarding RabbitMQ.
@@ -388,6 +389,12 @@ namespace OpenManta.Framework
 		{
 			private static bool _IsEnabled = false;
 			private static DateTime _IsEnabledLoadTime = DateTime.MinValue;
+			private static string _Username = string.Empty;
+			private static DateTime _UsernameLoadTime = DateTime.MinValue;
+			private static string _Password = string.Empty;
+			private static DateTime _PasswordLoadTime = DateTime.MinValue;
+			private static string _Hostname = string.Empty;
+			private static DateTime _HostnameLoadTime = DateTime.MinValue;
 
 			/// <summary>
 			/// Will be true if MantaMTA should make use of RabbitMQ.
@@ -398,16 +405,13 @@ namespace OpenManta.Framework
 				{
 					if (_IsEnabledLoadTime < DateTime.UtcNow)
 					{
-						_IsEnabled = CfgPara.GetRabbitMqEnabled();
+						_IsEnabled = CfgParaFactory.Instance.RabbitMqEnabled;
 						_IsEnabledLoadTime = DateTime.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
 					}
 
 					return _IsEnabled;
 				}
 			}
-
-			private static string _Username = string.Empty;
-			private static DateTime _UsernameLoadTime = DateTime.MinValue;
 
 			/// <summary>
 			/// Username for connecting to RabbitMQ.
@@ -418,16 +422,13 @@ namespace OpenManta.Framework
 				{
 					if (_UsernameLoadTime < DateTime.UtcNow)
 					{
-						_Username = CfgPara.GetRabbitMqUsername();
+						_Username = CfgParaFactory.Instance.RabbitMqUsername;
 						_UsernameLoadTime = DateTime.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
 					}
 
 					return _Username;
 				}
 			}
-
-			private static string _Password = string.Empty;
-			private static DateTime _PasswordLoadTime = DateTime.MinValue;
 
 			/// <summary>
 			/// Password for connecting to RabbitMQ.
@@ -438,16 +439,13 @@ namespace OpenManta.Framework
 				{
 					if (_PasswordLoadTime < DateTime.UtcNow)
 					{
-						_Password = CfgPara.GetRabbitMqPassword();
+						_Password = CfgParaFactory.Instance.RabbitMqPassword;
 						_UsernameLoadTime = DateTime.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
 					}
 
 					return _Password;
 				}
 			}
-
-			private static string _Hostname = string.Empty;
-			private static DateTime _HostnameLoadTime = DateTime.MinValue;
 
 			/// <summary>
 			/// Password for connecting to RabbitMQ.
@@ -458,7 +456,7 @@ namespace OpenManta.Framework
 				{
 					if (_HostnameLoadTime < DateTime.UtcNow)
 					{
-						_Hostname = CfgPara.GetRabbitMqHostname();
+						_Hostname = CfgParaFactory.Instance.RabbitMqHostname;
 						_HostnameLoadTime = DateTime.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
 					}
 

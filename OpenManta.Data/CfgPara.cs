@@ -1,228 +1,174 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Data.SqlClient;
 
 namespace OpenManta.Data
 {
-	public static class CfgPara
+	public static class CfgParaFactory
 	{
+		public static ICfgPara Instance => new CfgPara();
+	}
+
+	internal class CfgPara : ICfgPara
+	{
+		private int? _DefaultVirtualMtaGroupID = null;
+
 		/// <summary>
 		/// Gets the IP Addresses that SMTP servers should listen for client on from the database.
 		/// </summary>
 		/// <returns></returns>
-		public static int[] GetServerListenPorts()
+		public IEnumerable<int> ServerListenPorts
 		{
-			string[] results = GetColumnValue("cfg_para_listenPorts").ToString().Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-			ArrayList toReturn = new ArrayList();
-			for (int i = 0; i < results.Length; i++)
-				toReturn.Add(Int32.Parse(results[i]));
+			get
+			{
+				string[] results = GetColumnValue("cfg_para_listenPorts").ToString().Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+				ArrayList toReturn = new ArrayList();
+				for (int i = 0; i < results.Length; i++)
+					toReturn.Add(Int32.Parse(results[i]));
 
-			return (int[])toReturn.ToArray(typeof(int));
+				return (int[])toReturn.ToArray(typeof(int));
+			}
 		}
 
 		/// <summary>
 		/// Gets the path to the drop folder.
 		/// </summary>
 		/// <returns></returns>
-		public static string GetDropFolder()
+		public string DropFolder
 		{
-			return GetColumnValue("cfg_para_dropFolder").ToString();
+			get { return GetColumnValue("cfg_para_dropFolder").ToString(); }
 		}
 
 		/// <summary>
 		/// Gets the path to the queue folder.
 		/// </summary>
 		/// <returns></returns>
-		public static string GetQueueFolder()
+		public string QueueFolder
 		{
-			return GetColumnValue("cfg_para_queueFolder").ToString();
+			get { return GetColumnValue("cfg_para_queueFolder").ToString(); }
 		}
 
 		/// <summary>
 		/// Gets the path to the log folder.
 		/// </summary>
 		/// <returns></returns>
-		public static string GetLogFolder()
+		public string LogFolder
 		{
-			return GetColumnValue("cfg_para_logFolder").ToString();
+			get { return GetColumnValue("cfg_para_logFolder").ToString(); }
+		}
+
+		// <summary>
+		// Gets or sets the base retry interval used for retry interval calculations.
+		// </summary>
+		// <returns></returns>
+		public int RetryIntervalBaseMinutes
+		{
+			get { return (int)GetColumnValue("cfg_para_retryIntervalMinutes"); }
+			set { SetColumnValue("cfg_para_retryIntervalMinutes", value); }
 		}
 
 		/// <summary>
-		/// Gets the base retry interval used for retry interval calculations.
+		/// Gets or sets the maximum time a message should be queued for from the DB.
 		/// </summary>
 		/// <returns></returns>
-		public static int GetRetryIntervalBaseMinutes()
+		public int MaxTimeInQueueMinutes
 		{
-			return (int)GetColumnValue("cfg_para_retryIntervalMinutes");
+			get { return (int)GetColumnValue("cfg_para_maxTimeInQueueMinutes"); }
+			set { SetColumnValue("cfg_para_maxTimeInQueueMinutes", value); }
 		}
 
 		/// <summary>
-		/// Sets the base message retry interval used for calculating the actual intervals.
-		/// </summary>
-		public static void SetRetryIntervalBaseMinutes(int minutes)
-		{
-			SetColumnValue("cfg_para_retryIntervalMinutes", minutes);
-		}
-
-		/// <summary>
-		/// Gets the maximum time a message should be queued for from the DB.
+		/// Gets or sets the ID of the default send group from the DB.
 		/// </summary>
 		/// <returns></returns>
-		public static int GetMaxTimeInQueueMinutes()
+		public int DefaultVirtualMtaGroupID
 		{
-			return (int)GetColumnValue("cfg_para_maxTimeInQueueMinutes");
+			get
+			{
+				if (_DefaultVirtualMtaGroupID == null)
+					_DefaultVirtualMtaGroupID = (int)GetColumnValue("cfg_para_defaultIpGroupId");
+				return _DefaultVirtualMtaGroupID.Value;
+			}
+			set
+			{
+				SetColumnValue("cfg_para_defaultIpGroupId", value);
+			}
 		}
 
 		/// <summary>
-		/// Sets the maximum time a message should be queued for before it is timed out.
+		/// Gets or sets the client connection idle timeout in seconds from the database.
 		/// </summary>
-		/// <param name="minutes">Minutes to allow email to be queued for.</param>
-		public static void SetMaxTimeInQueueMinutes(int minutes)
+		public int ClientIdleTimeout
 		{
-			SetColumnValue("cfg_para_maxTimeInQueueMinutes", minutes);
+			get { return (int)GetColumnValue("cfg_para_clientIdleTimeout"); }
+			set { SetColumnValue("cfg_para_clientIdleTimeout", value); }
 		}
 
 		/// <summary>
-		/// Gets the ID of the default send group from the DB.
+		/// Gets or sets the amount of days to keep SMTP log files from the database.
 		/// </summary>
-		/// <returns></returns>
-		public static int GetDefaultVirtualMtaGroupID()
+		public int DaysToKeepSmtpLogsFor
 		{
-			if(_DefaultVirtualMtaGroupID == null)
-				_DefaultVirtualMtaGroupID = (int)GetColumnValue("cfg_para_defaultIpGroupId");
-			return _DefaultVirtualMtaGroupID.Value;
-		}
-
-		public static int? _DefaultVirtualMtaGroupID = null;
-
-		/// <summary>
-		/// Sets the ID of the Virtual MTA Group sends should use by default.
-		/// </summary>
-		/// <param name="ID">ID of the Virtual MTA Group.</param>
-		public static void SetDefaultVirtualMtaGroupID(int ID)
-		{
-			SetColumnValue("cfg_para_defaultIpGroupId", ID);
-		}
-
-		/// <summary>
-		/// Gets the client connection idle timeout in seconds from the database.
-		/// </summary>
-		public static int GetClientIdleTimeout()
-		{
-			return (int)GetColumnValue("cfg_para_clientIdleTimeout");
-		}
-
-		/// <summary>
-		/// Saves the client idle timeout value to the database.
-		/// </summary>
-		/// <param name="seconds"></param>
-		public static void SetClientIdleTimeout(int seconds)
-		{
-			SetColumnValue("cfg_para_clientIdleTimeout", seconds);
-		}
-
-		/// <summary>
-		/// Gets the amount of days to keep SMTP log files from the database.
-		/// </summary>
-		public static int GetDaysToKeepSmtpLogsFor()
-		{
-			return (int)GetColumnValue("cfg_para_maxDaysToKeepSmtpLogs");
-		}
-
-		/// <summary>
-		/// Sets the amount of days that SMTP logs should be kept for.
-		/// </summary>
-		/// <param name="days">Days to keep logs for.</param>
-		public static void SetDaysToKeepSmtpLogsFor(int days)
-		{
-			SetColumnValue("cfg_para_maxDaysToKeepSmtpLogs", days);
+			get { return (int)GetColumnValue("cfg_para_maxDaysToKeepSmtpLogs"); }
+			set { SetColumnValue("cfg_para_maxDaysToKeepSmtpLogs", value); }
 		}
 
 		/// <summary>
 		/// Gets the connection receive timeout in seconds from the database.
 		/// </summary>
-		public static int GetReceiveTimeout()
+		public int ReceiveTimeout
 		{
-			return (int)GetColumnValue("cfg_para_receiveTimeout");
+			get { return (int)GetColumnValue("cfg_para_receiveTimeout"); }
+			set { SetColumnValue("cfg_para_receiveTimeout", value); }
 		}
 
 		/// <summary>
-		/// Sets the connection receive timeout in the database.
+		/// Gets or sets the return path domain.
 		/// </summary>
-		/// <param name="seconds">Seconds to wait before receive timeout exception is thrown.</param>
-		public static void SetReceiveTimeout(int seconds)
+		public int ReturnPathDomainId
 		{
-			SetColumnValue("cfg_para_receiveTimeout", seconds);
-		}
-
-		/// <summary>
-		/// Gets the return path domain.
-		/// </summary>
-		public static string GetReturnPathDomain()
-		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			get
 			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"
+				using (SqlConnection conn = MantaDB.GetSqlConnection())
+				{
+					SqlCommand cmd = conn.CreateCommand();
+					cmd.CommandText = @"
 SELECT [dmn].cfg_localDomain_domain
 FROM man_cfg_localDomain as [dmn]
 WHERE [dmn].cfg_localDomain_id = (SELECT TOP 1 [para].cfg_para_returnPathDomain_id FROM man_cfg_para as [para])";
-				conn.Open();
-				return cmd.ExecuteScalar().ToString();
+					conn.Open();
+					return (int)cmd.ExecuteScalar();
+				}
 			}
+			set { SetColumnValue("cfg_para_returnPathDomain_id", value); }
 		}
 
 		/// <summary>
-		/// Sets the default domain to use for ReturnPath host.
+		/// Gets or sets the connection send timeout in seconds from the database.
 		/// </summary>
-		/// <param name="localDomainID">ID of the localdomain.</param>
-		public static void SetReturnPathLocalDomain(int localDomainID)
+		public int SendTimeout
 		{
-			SetColumnValue("cfg_para_returnPathDomain_id", localDomainID);
+			get { return (int)GetColumnValue("cfg_para_sendTimeout"); }
+			set { SetColumnValue("cfg_para_sendTimeout", value); }
 		}
 
 		/// <summary>
-		/// Gets the connection send timeout in seconds from the database.
+		/// Gets or sets the URL to post events to from the database.
 		/// </summary>
-		public static int GetSendTimeout()
+		public string EventForwardingHttpPostUrl
 		{
-			return (int)GetColumnValue("cfg_para_sendTimeout");
+			get { return GetColumnValue("cfg_para_eventForwardingHttpPostUrl").ToString(); }
+			set { SetColumnValue("cfg_para_eventForwardingHttpPostUrl", value); }
 		}
-
-		/// <summary>
-		/// Saves the connection send timeout to the database.
-		/// </summary>
-		/// <param name="seconds">Seconds before the send timeout exception is thrown.</param>
-		public static void SetSendTimeout(int seconds)
-		{
-			SetColumnValue("cfg_para_sendTimeout", seconds);
-		}
-
-		/// <summary>
-		/// Gets the URL to post events to from the database.
-		/// </summary>
-		public static string GetEventForwardingHttpPostUrl()
-		{
-			return GetColumnValue("cfg_para_eventForwardingHttpPostUrl").ToString();
-		}
-
-		/// <summary>
-		/// Sets the URL to post events to.
-		/// </summary>
-		/// <param name="url">URL to post to.</param>
-		public static void SetEventForwardingHttpPostUrl(string url)
-		{
-			SetColumnValue("cfg_para_eventForwardingHttpPostUrl", url);
-		}
-
 
 		/// <summary>
 		/// Gets the a flag from the database that indicates whether to keep or delete successfully processed bounce email files.
 		/// Useful for Bounce Rule reviewing.
 		/// </summary>
-		public static bool GetKeepBounceFilesFlag()
+		public bool KeepBounceFilesFlag
 		{
-			return (bool)GetColumnValue("cfg_para_keepBounceFilesFlag");
+			get { return (bool)GetColumnValue("cfg_para_keepBounceFilesFlag"); }
 		}
 
 		/// <summary>
@@ -230,7 +176,7 @@ WHERE [dmn].cfg_localDomain_id = (SELECT TOP 1 [para].cfg_para_returnPathDomain_
 		/// </summary>
 		/// <param name="colName"></param>
 		/// <returns></returns>
-		private static object GetColumnValue(string colName)
+		private object GetColumnValue(string colName)
 		{
 			using (SqlConnection conn = MantaDB.GetSqlConnection())
 			{
@@ -248,7 +194,7 @@ FROM man_cfg_para";
 		/// </summary>
 		/// <param name="colName">Name of the column to set.</param>
 		/// <param name="value">Value to set.</param>
-		private static void SetColumnValue(string colName, object value)
+		private void SetColumnValue(string colName, object value)
 		{
 			using (SqlConnection conn = MantaDB.GetSqlConnection())
 			{
@@ -266,36 +212,36 @@ SET " + colName + @" = @value";
 		/// Gets the RabbitMQ enabled state from the parameters table.
 		/// </summary>
 		/// <returns>True if MantaMTA should use RabbitMQ.</returns>
-		public static bool GetRabbitMqEnabled()
+		public bool RabbitMqEnabled
 		{
-			return Convert.ToBoolean(GetColumnValue("cfg_para_rabbitMqEnabled"));
+			get { return Convert.ToBoolean(GetColumnValue("cfg_para_rabbitMqEnabled")); }
 		}
 
 		/// <summary>
 		/// Gets the RabbitMQ username.
 		/// </summary>
 		/// <returns>RabbitMQ username.</returns>
-		public static string GetRabbitMqUsername()
+		public string RabbitMqUsername
 		{
-			return GetColumnValue("cfg_para_rabbitMqUsername").ToString();
+			get { return GetColumnValue("cfg_para_rabbitMqUsername").ToString(); }
 		}
 
 		/// <summary>
 		/// Gets the RabbitMQ password.
 		/// </summary>
 		/// <returns>RabbitMQ password.</returns>
-		public static string GetRabbitMqPassword()
+		public string RabbitMqPassword
 		{
-			return GetColumnValue("cfg_para_rabbitMqPassword").ToString();
+			get { return GetColumnValue("cfg_para_rabbitMqPassword").ToString(); }
 		}
 
 		/// <summary>
 		/// Gets the RabbitMQ hostname.
 		/// </summary>
 		/// <returns>RabbitMQ hostname.</returns>
-		public static string GetRabbitMqHostname()
+		public string RabbitMqHostname
 		{
-			return GetColumnValue("cfg_para_rabbitMqHostname").ToString();
+			get { return GetColumnValue("cfg_para_rabbitMqHostname").ToString(); }
 		}
 	}
 }

@@ -6,14 +6,19 @@ using OpenManta.Core;
 
 namespace OpenManta.Data
 {
-	public static class CfgLocalDomains
+	public static class CfgLocalDomainsFactory
+	{
+		public static ICfgLocalDomains Instance => new CfgLocalDomains();
+	}
+
+	internal class CfgLocalDomains : ICfgLocalDomains
 	{
 		/// <summary>
 		/// Gets an array of the local domains from the database.
 		/// All domains are toLowered!
 		/// </summary>
 		/// <returns></returns>
-		public static IList<LocalDomain> GetLocalDomainsArray()
+		public IList<LocalDomain> GetLocalDomainsArray()
 		{
 			using (SqlConnection conn = MantaDB.GetSqlConnection())
 			{
@@ -21,14 +26,14 @@ namespace OpenManta.Data
 				cmd.CommandText = @"
 SELECT *
 FROM man_cfg_localDomain";
-				return DataRetrieval.GetCollectionFromDatabase<LocalDomain> (cmd, CreateAndFillLocalDomainFromRecord);
+				return DataRetrieval.GetCollectionFromDatabase<LocalDomain>(cmd, CreateAndFillLocalDomainFromRecord);
 			}
 		}
 
 		/// <summary>
 		/// Deletes all of the local domains from the database.
 		/// </summary>
-		public static void ClearLocalDomains()
+		public void ClearLocalDomains()
 		{
 			using (SqlConnection conn = MantaDB.GetSqlConnection())
 			{
@@ -43,8 +48,10 @@ FROM man_cfg_localDomain";
 		/// Saves a local domain to the database.
 		/// </summary>
 		/// <param name="domain">Domain to add. Does nothing if domain already exists.</param>
-		public static void Save(LocalDomain localDomain)
+		public void Save(LocalDomain localDomain)
 		{
+			Guard.NotNull(localDomain, nameof(localDomain));
+
 			using (SqlConnection conn = MantaDB.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
@@ -89,7 +96,7 @@ ELSE
 		/// </summary>
 		/// <param name="record">Record to get the data from.</param>
 		/// <returns>LocalDomain object filled from record.</returns>
-		private static LocalDomain CreateAndFillLocalDomainFromRecord(IDataRecord record)
+		private LocalDomain CreateAndFillLocalDomainFromRecord(IDataRecord record)
 		{
 			return new LocalDomain
 			{

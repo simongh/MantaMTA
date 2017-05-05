@@ -9,56 +9,68 @@ using WebInterface.Models.API.v1;
 
 namespace WebInterface.Controllers.API.v1
 {
-    /// <summary>
+	/// <summary>
 	/// Summary description for Settings API
 	/// </summary>
-    [RoutePrefix("api/v1/Settings")]
-    public class SettingsController : ApiController
-    {
-        /// <summary>
+	[RoutePrefix("api/v1/Settings")]
+	public class SettingsController : ApiController
+	{
+		private readonly ICfgLocalDomains _localDomains;
+		private readonly ICfgPara _config;
+
+		public SettingsController(ICfgLocalDomains localDomains, ICfgPara config)
+		{
+			Guard.NotNull(localDomains, nameof(localDomains));
+			Guard.NotNull(config, nameof(config));
+
+			_localDomains = localDomains;
+			_config = config;
+		}
+
+		/// <summary>
 		/// Saves the settings.
 		/// </summary>
 		/// <param name="viewModel"></param>
-        /// <returns>TRUE if updated or FALSE if update failed.</returns>
-        [HttpPost]
-        [Route("Update")]
-        public bool Update(UpdateSettingsViewModel viewModel)
-        {
-            if (viewModel.ClientIdleTimeout < 0 ||
-                viewModel.ReceiveTimeout < 0 ||
-                viewModel.SendTimeout < 0)
-                return false;
+		/// <returns>TRUE if updated or FALSE if update failed.</returns>
+		[HttpPost]
+		[Route("Update")]
+		public bool Update(UpdateSettingsViewModel viewModel)
+		{
+			if (viewModel.ClientIdleTimeout < 0 ||
+				viewModel.ReceiveTimeout < 0 ||
+				viewModel.SendTimeout < 0)
+				return false;
 
-            List<IPAddress> relayingIps = new List<IPAddress>();
-            foreach (string str in viewModel.IpAddressesForRelaying)
-            {
-                relayingIps.Add(IPAddress.Parse(str));
-            }
+			List<IPAddress> relayingIps = new List<IPAddress>();
+			foreach (string str in viewModel.IpAddressesForRelaying)
+			{
+				relayingIps.Add(IPAddress.Parse(str));
+			}
 
-            CfgPara.SetClientIdleTimeout(viewModel.ClientIdleTimeout);
-            CfgPara.SetReceiveTimeout(viewModel.ReceiveTimeout);
-            CfgPara.SetSendTimeout(viewModel.SendTimeout);
-            CfgPara.SetDefaultVirtualMtaGroupID(viewModel.DefaultVirtualMtaGroupID);
-            CfgPara.SetEventForwardingHttpPostUrl(viewModel.EventUrl);
-            CfgPara.SetDaysToKeepSmtpLogsFor(viewModel.DaysToKeepSmtpLogsFor);
-            CfgPara.SetMaxTimeInQueueMinutes(viewModel.MaxTimeInQueueHours * 60);
-            CfgPara.SetRetryIntervalBaseMinutes(viewModel.RetryIntervalBase);
-            CfgRelayingPermittedIP.SetRelayingPermittedIPAddresses(relayingIps.ToArray());
-            CfgPara.SetReturnPathLocalDomain(viewModel.ReturnPathLocalDomainID);
+			_config.ClientIdleTimeout = viewModel.ClientIdleTimeout;
+			_config.ReceiveTimeout = viewModel.ReceiveTimeout;
+			_config.SendTimeout = viewModel.SendTimeout;
+			_config.DefaultVirtualMtaGroupID = viewModel.DefaultVirtualMtaGroupID;
+			_config.EventForwardingHttpPostUrl = viewModel.EventUrl;
+			_config.DaysToKeepSmtpLogsFor = viewModel.DaysToKeepSmtpLogsFor;
+			_config.MaxTimeInQueueMinutes = viewModel.MaxTimeInQueueHours * 60;
+			_config.RetryIntervalBaseMinutes = viewModel.RetryIntervalBase;
+			CfgRelayingPermittedIP.SetRelayingPermittedIPAddresses(relayingIps.ToArray());
+			_config.ReturnPathDomainId = viewModel.ReturnPathLocalDomainID;
 
-            var domains = CfgLocalDomains.GetLocalDomainsArray();
-            CfgLocalDomains.ClearLocalDomains();
-            foreach (string localDomain in viewModel.LocalDomains)
-            {
-                if (string.IsNullOrWhiteSpace(localDomain))
-                    continue;
-                LocalDomain ld = domains.SingleOrDefault(d => d.Hostname.Equals(localDomain, StringComparison.OrdinalIgnoreCase));
-                if (ld == null)
-                    ld = new LocalDomain { Hostname = localDomain.Trim() };
-                CfgLocalDomains.Save(ld);
-            }
+			var domains = _localDomains.GetLocalDomainsArray();
+			_localDomains.ClearLocalDomains();
+			foreach (string localDomain in viewModel.LocalDomains)
+			{
+				if (string.IsNullOrWhiteSpace(localDomain))
+					continue;
+				LocalDomain ld = domains.SingleOrDefault(d => d.Hostname.Equals(localDomain, StringComparison.OrdinalIgnoreCase));
+				if (ld == null)
+					ld = new LocalDomain { Hostname = localDomain.Trim() };
+				_localDomains.Save(ld);
+			}
 
-            return true;
-        }
-    }
+			return true;
+		}
+	}
 }

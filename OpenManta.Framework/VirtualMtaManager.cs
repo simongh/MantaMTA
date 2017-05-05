@@ -17,17 +17,17 @@ namespace OpenManta.Framework
 		/// Collection of the IP addresses that can be used by the MTA.
 		/// </summary>
 		private static IList<VirtualMTA> _vmtaCollection = null;
-		
+
 		/// <summary>
 		/// Collection of the IP addresses that can be used by the MTA for sending.
 		/// </summary>
 		private static IList<VirtualMTA> _outboundMtas = null;
-		
+
 		/// <summary>
 		/// Collection of the IP addresses that can be used by the MTA to receive mail.
 		/// </summary>
 		private static IList<VirtualMTA> _inboundMtas = null;
-		
+
 		/// <summary>
 		/// Timestamp of when the _ipAddresses collection was filled.
 		/// </summary>
@@ -40,7 +40,7 @@ namespace OpenManta.Framework
 
 		/// <summary>
 		/// Method will load IP addresses from the database if required.
-		/// This method should be called before doing anything with the 
+		/// This method should be called before doing anything with the
 		/// private IP collections.
 		/// </summary>
 		private static void LoadVirtualMtas()
@@ -62,12 +62,12 @@ namespace OpenManta.Framework
 		public static IList<VirtualMTA> GetVirtualMtasForListeningOn()
 		{
 			LoadVirtualMtas();
-			
+
 			if (_inboundMtas == null)
 				_inboundMtas = (from ip
 								in _vmtaCollection
-				                where ip.IsSmtpInbound
-				                select ip).ToList ();
+								where ip.IsSmtpInbound
+								select ip).ToList();
 
 			return _inboundMtas;
 		}
@@ -84,8 +84,8 @@ namespace OpenManta.Framework
 			if (_outboundMtas == null)
 				_outboundMtas = (from ip
 								 in _vmtaCollection
-				                 where ip.IsSmtpOutbound
-				                 select ip).ToList ();
+								 where ip.IsSmtpOutbound
+								 select ip).ToList();
 
 			return _outboundMtas;
 		}
@@ -98,7 +98,7 @@ namespace OpenManta.Framework
 		{
 			if (_DefaultVirtualMtaGroup == null)
 			{
-				int defaultGroupID = CfgPara.GetDefaultVirtualMtaGroupID();
+				int defaultGroupID = CfgParaFactory.Instance.DefaultVirtualMtaGroupID;
 				_DefaultVirtualMtaGroup = GetVirtualMtaGroup(defaultGroupID);
 			}
 
@@ -149,7 +149,7 @@ namespace OpenManta.Framework
 				group.VirtualMtaCollection = VirtualMtaDB.GetVirtualMtasInVirtualMtaGroup(id);
 
 				// Add the group to collection, so others can use it.
-				_vmtaGroups.AddOrUpdate(id, group, new Func<int, VirtualMtaGroup, VirtualMtaGroup>(delegate(int key, VirtualMtaGroup existing)
+				_vmtaGroups.AddOrUpdate(id, group, new Func<int, VirtualMtaGroup, VirtualMtaGroup>(delegate (int key, VirtualMtaGroup existing)
 				{
 					return group;
 				}));
