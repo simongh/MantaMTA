@@ -8,13 +8,13 @@ using OpenManta.Data;
 
 namespace OpenManta.WebLib.DAL
 {
-	public static class SendDB
+	internal class SendDB : ISendDB
 	{
 		/// <summary>
 		/// Gets the amount of messages currently the queue with the specified statuses.
 		/// </summary>
 		/// <returns>Count of the messages waiting in the queue.</returns>
-		public static long GetQueueCount(SendStatus[] sendStatus)
+		public long GetQueueCount(SendStatus[] sendStatus)
 		{
 			return 0;
 			/*using (SqlConnection conn = MantaDB.GetSqlConnection())
@@ -35,7 +35,7 @@ WHERE s.mta_sendStatus_id in (" + string.Join(",", Array.ConvertAll<SendStatus, 
 		/// Get a count of all the sends in the MantaMTA database.
 		/// </summary>
 		/// <returns>Count of all Sends.</returns>
-		public static long GetSendsCount()
+		public long GetSendsCount()
 		{
 			using (SqlConnection conn = MantaDB.GetSqlConnection())
 			{
@@ -52,12 +52,12 @@ WHERE s.mta_sendStatus_id in (" + string.Join(",", Array.ConvertAll<SendStatus, 
 		/// <param name="pageSize">Size of the page to get.</param>
 		/// <param name="pageNum">The page to get.</param>
 		/// <returns>SendInfoCollection of the data page.</returns>
-		public static SendInfoCollection GetSends(int pageSize, int pageNum)
+		public SendInfoCollection GetSends(int pageSize, int pageNum)
 		{
 			using (SqlConnection conn = MantaDB.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"DECLARE @sends table (RowNum int, 
+				cmd.CommandText = @"DECLARE @sends table (RowNum int,
 					  mta_send_internalId int)
 
 INSERT INTO @sends
@@ -66,7 +66,7 @@ FROM (SELECT (ROW_NUMBER() OVER(ORDER BY mta_send_createdTimestamp DESC)) as Row
 FROM man_mta_send with(nolock)) [sends]
 WHERE [sends].RowNumber >= " + ((pageNum * pageSize) - pageSize + 1) + " AND [sends].RowNumber <= " + (pageSize * pageNum) + @"
 
-SELECT [send].*, 
+SELECT [send].*,
 	mta_send_messages AS 'Messages',
 	mta_send_accepted AS 'Accepted',
 	mta_send_rejected AS 'Rejected',
@@ -86,13 +86,13 @@ ORDER BY [send].mta_send_createdTimestamp DESC";
 		/// Gets all of the sends with messages waiting to be sent.
 		/// </summary>
 		/// <returns>SendInfoCollection of all relevent sends.</returns>
-		public static SendInfoCollection GetSendsInProgress()
+		public SendInfoCollection GetSendsInProgress()
 		{
 			using (SqlConnection conn = new SqlConnection(ConfigurationManager.ConnectionStrings["SqlServer"].ConnectionString))
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
-SELECT [send].*, 
+SELECT [send].*,
 	mta_send_messages AS 'Messages',
 	mta_send_accepted AS 'Accepted',
 	mta_send_rejected AS 'Rejected',
@@ -109,11 +109,11 @@ ORDER BY [send].mta_send_createdTimestamp DESC";
 		}
 
 		/// <summary>
-		/// 
+		///
 		/// </summary>
 		/// <param name="sendID"></param>
 		/// <returns></returns>
-		public static SendInfo GetSend(string sendID)
+		public SendInfo GetSend(string sendID)
 		{
 			using (SqlConnection conn = new SqlConnection(ConfigurationManager.ConnectionStrings["SqlServer"].ConnectionString))
 			{
@@ -138,7 +138,7 @@ WHERE [snd].mta_send_id = @sndID";
 		/// </summary>
 		/// <param name="sendID"></param>
 		/// <returns></returns>
-		public static SendMetadataCollection GetSendMetaData(int internalSendID)
+		public SendMetadataCollection GetSendMetaData(int internalSendID)
 		{
 			using (SqlConnection conn = new SqlConnection(ConfigurationManager.ConnectionStrings["SqlServer"].ConnectionString))
 			{
@@ -156,7 +156,7 @@ WHERE mta_send_internalId = @sndID";
 		/// </summary>
 		/// <param name="record">Where to get the data to fill object from.</param>
 		/// <returns>A populated SendInfo object.</returns>
-		private static SendInfo CreateAndFillSendInfo(IDataRecord record)
+		private SendInfo CreateAndFillSendInfo(IDataRecord record)
 		{
 			SendInfo sInfo = new SendInfo
 			{
@@ -187,7 +187,7 @@ WHERE mta_send_internalId = @sndID";
 		/// </summary>
 		/// <param name="record">Where to get the data to fill object from.</param>
 		/// <returns>A populated SendMetadata object.</returns>
-		private static SendMetadata CreateAndFillSendMetadata(IDataRecord record)
+		private SendMetadata CreateAndFillSendMetadata(IDataRecord record)
 		{
 			return new SendMetadata
 			{
@@ -196,7 +196,7 @@ WHERE mta_send_internalId = @sndID";
 			};
 		}
 
-		public static bool SaveSendMetadata(int internalSendID, SendMetadata metadata)
+		public bool SaveSendMetadata(int internalSendID, SendMetadata metadata)
 		{
 			using (SqlConnection conn = new SqlConnection(ConfigurationManager.ConnectionStrings["SqlServer"].ConnectionString))
 			{

@@ -2,8 +2,17 @@
 
 namespace OpenManta.WebLib
 {
-	public static class OutboundRuleWebManager
+	internal class OutboundRuleWebManager : IOutboundRuleWebManager
 	{
+		private readonly DAL.IOutboundRulesDB _rulesDb;
+
+		public OutboundRuleWebManager(DAL.IOutboundRulesDB rulesDb)
+		{
+			Guard.NotNull(rulesDb, nameof(rulesDb));
+
+			_rulesDb = rulesDb;
+		}
+
 		/// <summary>
 		/// Creates a new MX Pattern and it's default rules.
 		/// </summary>
@@ -13,7 +22,7 @@ namespace OpenManta.WebLib
 		/// <param name="pattern">The pattern value.</param>
 		/// <param name="ipAddress">IP Address to limit the outbound rule to, or null if applies to all IP's.</param>
 		/// <returns>ID of the MX Pattern.</returns>
-		public static int CreatePattern(string name, string description, OutboundMxPatternType type, string pattern, int? ipAddress)
+		public int CreatePattern(string name, string description, OutboundMxPatternType type, string pattern, int? ipAddress)
 		{
 			OutboundMxPattern mxPattern = new OutboundMxPattern
 			{
@@ -25,7 +34,7 @@ namespace OpenManta.WebLib
 			};
 
 			mxPattern.ID = Save(mxPattern);
-			
+
 			// Create the three types of rule.
 			Save(new OutboundRule(mxPattern.ID, OutboundRuleType.MaxConnections, "-1"));
 			Save(new OutboundRule(mxPattern.ID, OutboundRuleType.MaxMessagesConnection, "-1"));
@@ -38,9 +47,9 @@ namespace OpenManta.WebLib
 		/// Deletes the specified Outbound Rule pattern and all of it's rules.
 		/// </summary>
 		/// <param name="mxPatternID">ID of the MX Pattern to delete.</param>
-		public static void Delete(int mxPatternID)
+		public void Delete(int mxPatternID)
 		{
-			DAL.OutboundRulesDB.Delete(mxPatternID);
+			_rulesDb.Delete(mxPatternID);
 		}
 
 		/// <summary>
@@ -48,18 +57,18 @@ namespace OpenManta.WebLib
 		/// </summary>
 		/// <param name="pattern">Pattern to save.</param>
 		/// <returns>ID of the pattern.</returns>
-		public static int Save(OutboundMxPattern pattern)
+		public int Save(OutboundMxPattern pattern)
 		{
-			return DAL.OutboundRulesDB.Save(pattern);
+			return _rulesDb.Save(pattern);
 		}
 
 		/// <summary>
 		/// Saves the OutboundRule.
 		/// </summary>
 		/// <param name="rule">The rule to save.</param>
-		public static void Save(OutboundRule rule)
+		public void Save(OutboundRule rule)
 		{
-			DAL.OutboundRulesDB.Save(rule);
+			_rulesDb.Save(rule);
 		}
 	}
 }

@@ -6,13 +6,13 @@ using OpenManta.Framework;
 
 namespace OpenManta.WebLib.DAL
 {
-	internal static class OutboundRulesDB
+	internal class OutboundRulesDB : IOutboundRulesDB
 	{
 		/// <summary>
 		/// Deletes the MX Pattern and its rules from the database.
 		/// </summary>
 		/// <param name="patternID">ID of the pattern to delete.</param>
-		public static void Delete(int mxPatternID)
+		public void Delete(int mxPatternID)
 		{
 			using (SqlConnection conn = MantaDB.GetSqlConnection())
 			{
@@ -34,8 +34,10 @@ IF(@mxPatternID <> " + MtaParameters.OUTBOUND_RULES_DEFAULT_PATTERN_ID + @")
 		/// Saves the OutboundRule to the database.
 		/// </summary>
 		/// <param name="outboundRule">The OutboundRule to save.</param>
-		public static void Save(OutboundRule outboundRule)
+		public void Save(OutboundRule outboundRule)
 		{
+			Guard.NotNull(outboundRule, nameof(outboundRule));
+
 			using (SqlConnection conn = MantaDB.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
@@ -65,8 +67,10 @@ ELSE
 		/// </summary>
 		/// <param name="mxPattern">The OutboundMxPattern to save.</param>
 		/// <returns>ID of the OutboundMxPattern.</returns>
-		public static int Save(OutboundMxPattern mxPattern)
+		public int Save(OutboundMxPattern mxPattern)
 		{
+			Guard.NotNull(mxPattern, nameof(mxPattern));
+
 			using (SqlConnection conn = MantaDB.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();

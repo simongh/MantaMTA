@@ -1,24 +1,31 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Web;
 using System.Web.Mvc;
-using WebInterface.Models;
 using OpenManta.Core;
 using OpenManta.Data;
 using OpenManta.Framework;
 using OpenManta.WebLib;
+using WebInterface.Models;
 
 namespace WebInterface.Controllers
 {
-    public class OutboundRulesController : Controller
-    {
-        //
-        // GET: /OutboundRules/
-        public ActionResult Index()
-        {
+	public class OutboundRulesController : Controller
+	{
+		private readonly IOutboundRuleWebManager _manager;
+
+		public OutboundRulesController(IOutboundRuleWebManager manager)
+		{
+			Guard.NotNull(manager, nameof(manager));
+
+			_manager = manager;
+		}
+
+		//
+		// GET: /OutboundRules/
+		public ActionResult Index()
+		{
 			return View(OutboundRuleDB.GetOutboundRulePatterns());
-        }
+		}
 
 		//
 		// GET: /OutboundRules/Edit?id=
@@ -35,10 +42,9 @@ namespace WebInterface.Controllers
 			else
 			{
 				pattern = new OutboundMxPattern();
-				rules = OutboundRuleDB.GetOutboundRules ().Where (r => r.OutboundMxPatternID == MtaParameters.OUTBOUND_RULES_DEFAULT_PATTERN_ID).ToList ();
+				rules = OutboundRuleDB.GetOutboundRules().Where(r => r.OutboundMxPatternID == MtaParameters.OUTBOUND_RULES_DEFAULT_PATTERN_ID).ToList();
 			}
 
-			
 			IList<VirtualMTA> vMtas = VirtualMtaDB.GetVirtualMtas();
 			return View(new OutboundRuleModel(rules, pattern, vMtas));
 		}
@@ -47,8 +53,8 @@ namespace WebInterface.Controllers
 		// GET: /OutboundRules/Delete?patternID=
 		public ActionResult Delete(int patternID)
 		{
-			OutboundRuleWebManager.Delete(patternID);
+			_manager.Delete(patternID);
 			return View();
 		}
-    }
+	}
 }

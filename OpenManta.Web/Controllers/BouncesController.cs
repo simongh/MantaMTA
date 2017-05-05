@@ -1,30 +1,37 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Web;
 using System.Web.Mvc;
-using WebInterface.Models;
+using OpenManta.Core;
 using OpenManta.WebLib.DAL;
+using WebInterface.Models;
 
 namespace WebInterface.Controllers
 {
-    public class BouncesController : Controller
-    {
-        //
-        // GET: /Bounces/
-        public ActionResult Index(int? page = 1, int? pageSize = 25)
-        {
+	public class BouncesController : Controller
+	{
+		private readonly ITransactionDB _transactionDb;
+
+		public BouncesController(ITransactionDB transactionDb)
+		{
+			Guard.NotNull(transactionDb, nameof(transactionDb));
+
+			_transactionDb = transactionDb;
+		}
+
+		//
+		// GET: /Bounces/
+		public ActionResult Index(int? page = 1, int? pageSize = 25)
+		{
 			long deferred, rejected = 0;
-			TransactionDB.GetBounceDeferredAndRejected(out deferred, out rejected);
+			_transactionDb.GetBounceDeferredAndRejected(out deferred, out rejected);
 			return View(new BounceModel
 			{
-				BounceInfo =TransactionDB.GetBounceInfo(null, page.Value, pageSize.Value),
+				BounceInfo = _transactionDb.GetBounceInfo(null, page.Value, pageSize.Value).ToArray(),
 				CurrentPage = page.Value,
-				PageCount = (int)Math.Ceiling(Convert.ToDouble(TransactionDB.GetBounceCount(null)) / pageSize.Value),
+				PageCount = (int)Math.Ceiling(Convert.ToDouble(_transactionDb.GetBounceCount(null)) / pageSize.Value),
 				DeferredCount = deferred,
 				RejectedCount = rejected
 			});
-        }
-
-    }
+		}
+	}
 }

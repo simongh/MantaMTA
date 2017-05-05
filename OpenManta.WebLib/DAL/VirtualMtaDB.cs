@@ -1,20 +1,20 @@
-﻿using System.Configuration;
+﻿using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using OpenManta.Core;
-using OpenManta.WebLib.BO;
 using OpenManta.Data;
+using OpenManta.WebLib.BO;
 
 namespace OpenManta.WebLib.DAL
 {
-	public static class VirtualMtaDB
+	internal class VirtualMtaDB : IVirtualMtaDB
 	{
 		/// <summary>
 		/// Gets information about VirtualMTA sends for the specified send.
 		/// </summary>
 		/// <param name="sendID">ID of the send to get information for.</param>
 		/// <returns>Information about the usage of each VirtualMTA in the send.</returns>
-		public static VirtualMtaSendInfo[] GetSendVirtualMTAStats(string sendID)
+		public IEnumerable<VirtualMtaSendInfo> GetSendVirtualMTAStats(string sendID)
 		{
 			using (SqlConnection conn = MantaDB.GetSqlConnection())
 			{
@@ -37,7 +37,7 @@ WHERE [msg].mta_send_internalId = @internalSendId
 --// Get the actual data
 SELECT [ip].*,
 	(SELECT COUNT(*) FROM man_mta_transaction as [tran] with(nolock) JOIN man_mta_msg as [msg] with(nolock) ON [tran].mta_msg_id = [msg].mta_msg_id WHERE [tran].ip_ipAddress_id = [ip].ip_ipAddress_id AND [msg].mta_send_internalId = @internalSendId AND [tran].mta_transactionStatus_id = 4) AS 'Accepted',
-	(SELECT COUNT(*) FROM man_mta_transaction as [tran] with(nolock) JOIN man_mta_msg as [msg] with(nolock) ON [tran].mta_msg_id = [msg].mta_msg_id WHERE [tran].ip_ipAddress_id = [ip].ip_ipAddress_id AND [msg].mta_send_internalId = @internalSendId AND ([tran].mta_transactionStatus_id = 2 OR [tran].mta_transactionStatus_id = 3 OR [tran].mta_transactionStatus_id = 6)) AS 'Rejected',	
+	(SELECT COUNT(*) FROM man_mta_transaction as [tran] with(nolock) JOIN man_mta_msg as [msg] with(nolock) ON [tran].mta_msg_id = [msg].mta_msg_id WHERE [tran].ip_ipAddress_id = [ip].ip_ipAddress_id AND [msg].mta_send_internalId = @internalSendId AND ([tran].mta_transactionStatus_id = 2 OR [tran].mta_transactionStatus_id = 3 OR [tran].mta_transactionStatus_id = 6)) AS 'Rejected',
 	(SELECT COUNT(*) FROM man_mta_transaction as [tran] with(nolock) JOIN man_mta_msg as [msg] with(nolock) ON [tran].mta_msg_id = [msg].mta_msg_id WHERE [tran].ip_ipAddress_id = [ip].ip_ipAddress_id AND [msg].mta_send_internalId = @internalSendId AND [tran].mta_transactionStatus_id = 5) AS 'Throttled',
 	(SELECT COUNT(*) FROM man_mta_transaction as [tran] with(nolock) JOIN man_mta_msg as [msg] with(nolock) ON [tran].mta_msg_id = [msg].mta_msg_id WHERE [tran].ip_ipAddress_id = [ip].ip_ipAddress_id AND [msg].mta_send_internalId = @internalSendId AND [tran].mta_transactionStatus_id = 1) AS 'Deferred'
 FROM man_ip_ipAddress as [ip]
@@ -52,8 +52,10 @@ WHERE [ip].ip_ipAddress_id IN (SELECT * FROM @usedIpAddressIds)";
 		/// </summary>
 		/// <param name="record">Record to get the data from.</param>
 		/// <returns>A VirtualMtaSendInfo object filled with data from the data record.</returns>
-		public static VirtualMtaSendInfo CreateAndFillVirtualMtaSendInfo(IDataRecord record)
+		public VirtualMtaSendInfo CreateAndFillVirtualMtaSendInfo(IDataRecord record)
 		{
+			Guard.NotNull(record, nameof(record));
+
 			VirtualMtaSendInfo vinfo = new VirtualMtaSendInfo();
 
 			vinfo.ID = record.GetInt32("ip_ipAddress_id");
@@ -73,8 +75,10 @@ WHERE [ip].ip_ipAddress_id IN (SELECT * FROM @usedIpAddressIds)";
 		/// Save the specified Virtual MTA to the Database.
 		/// </summary>
 		/// <param name="vmta"></param>
-		public static void Save(VirtualMTA vmta)
+		public void Save(VirtualMTA vmta)
 		{
+			Guard.NotNull(vmta, nameof(vmta));
+
 			using (SqlConnection conn = MantaDB.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
@@ -108,7 +112,7 @@ ELSE
 		/// Deletes the specified Virtual MTA from the Database.
 		/// </summary>
 		/// <param name="id">ID of Virtual MTA to Delete.</param>
-		public static void Delete(int id)
+		public void Delete(int id)
 		{
 			using (SqlConnection conn = MantaDB.GetSqlConnection())
 			{

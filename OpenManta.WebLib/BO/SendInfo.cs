@@ -3,16 +3,22 @@ using OpenManta.Core;
 using System.Linq;
 using System;
 using System.Text;
+using OpenManta.WebLib.DAL;
 
 namespace OpenManta.WebLib.BO
 {
 	public class SendInfoCollection : List<SendInfo>
 	{
-		public SendInfoCollection() { }
-		public SendInfoCollection(IEnumerable<SendInfo> collection) : base(collection) { }
+		public SendInfoCollection()
+		{
+		}
+
+		public SendInfoCollection(IEnumerable<SendInfo> collection) : base(collection)
+		{
+		}
 
 		/// <summary>
-		/// 
+		///
 		/// </summary>
 		public long Waiting
 		{
@@ -23,7 +29,7 @@ namespace OpenManta.WebLib.BO
 		}
 
 		/// <summary>
-		/// 
+		///
 		/// </summary>
 		public double ThrottledPercent
 		{
@@ -38,7 +44,7 @@ namespace OpenManta.WebLib.BO
 		}
 
 		/// <summary>
-		/// 
+		///
 		/// </summary>
 		public double DeferredPercent
 		{
@@ -58,6 +64,15 @@ namespace OpenManta.WebLib.BO
 	/// </summary>
 	public class SendInfo : Send
 	{
+		private readonly ISendDB _sendDb;
+
+		public SendInfo(ISendDB sendDb)
+		{
+			Guard.NotNull(sendDb, nameof(sendDb));
+
+			_sendDb = sendDb;
+		}
+
 		/// <summary>
 		/// The total messages that this send has.
 		/// </summary>
@@ -117,7 +132,6 @@ namespace OpenManta.WebLib.BO
 			}
 		}
 
-
 		/// <summary>
 		/// Percentage of attempts to send that where throttled.
 		/// </summary>
@@ -148,7 +162,7 @@ namespace OpenManta.WebLib.BO
 				StringBuilder sb = new StringBuilder(string.Empty);
 				if (timeActive.TotalDays >= 1)
 					sb.AppendFormat("{0}d {1}h {2}m", timeActive.Days, timeActive.Hours, timeActive.Minutes);
-				else if(timeActive.TotalHours >= 1)
+				else if (timeActive.TotalHours >= 1)
 					sb.AppendFormat("{0}h {0}m", timeActive.Hours, timeActive.Minutes);
 				else
 					sb.AppendFormat("{0}m", timeActive.Minutes);
@@ -159,9 +173,8 @@ namespace OpenManta.WebLib.BO
 
 		public SendMetadataCollection GetMetaData()
 		{
-			return new SendMetadataCollection(DAL.SendDB.GetSendMetaData(InternalID).OrderBy(m => m.Name));
+			return new SendMetadataCollection(_sendDb.GetSendMetaData(InternalID).OrderBy(m => m.Name));
 		}
-
 
 		/// <summary>
 		/// Constructor sets defaults.

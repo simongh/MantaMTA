@@ -11,19 +11,31 @@ using OpenManta.WebLib.DAL;
 
 namespace WebInterface.Controllers
 {
-    public class DashboardController : Controller
-    {
-        //
-        // GET: /Dashboard/
-        public ActionResult Index()
-        {
+	public class DashboardController : Controller
+	{
+		private readonly ISendDB _sendDb;
+		private readonly ITransactionDB _transactionDb;
+
+		public DashboardController(ISendDB sendDb, ITransactionDB transactionDb)
+		{
+			Guard.NotNull(sendDb, nameof(sendDb));
+			Guard.NotNull(transactionDb, nameof(transactionDb));
+
+			_sendDb = sendDb;
+			_transactionDb = transactionDb;
+		}
+
+		//
+		// GET: /Dashboard/
+		public ActionResult Index()
+		{
 			DashboardModel model = new DashboardModel
 			{
-				SendTransactionSummaryCollection = TransactionDB.GetLastHourTransactionSummary(),
-				Waiting = SendDB.GetQueueCount(new SendStatus[] { SendStatus.Active, SendStatus.Discard }),
-				Paused =SendDB.GetQueueCount(new SendStatus[] { SendStatus.Paused }),
-				BounceInfo = TransactionDB.GetLastHourBounceInfo(3),
-				SendSpeedInfo = TransactionDB.GetLastHourSendSpeedInfo()
+				SendTransactionSummaryCollection = _transactionDb.GetLastHourTransactionSummary(),
+				Waiting = _sendDb.GetQueueCount(new SendStatus[] { SendStatus.Active, SendStatus.Discard }),
+				Paused = _sendDb.GetQueueCount(new SendStatus[] { SendStatus.Paused }),
+				BounceInfo = _transactionDb.GetLastHourBounceInfo(3).ToArray(),
+				SendSpeedInfo = _transactionDb.GetLastHourSendSpeedInfo()
 			};
 
 			try
@@ -33,7 +45,6 @@ namespace WebInterface.Controllers
 				request.Credentials = new NetworkCredential(MtaParameters.RabbitMQ.Username, MtaParameters.RabbitMQ.Password);
 				using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
 				{
-
 					string json = new StreamReader(response.GetResponseStream()).ReadToEnd();
 					JArray rabbitQueues = JArray.Parse(json);
 					foreach (JToken q in rabbitQueues.Children())
@@ -51,14 +62,13 @@ namespace WebInterface.Controllers
 					}
 				}
 			}
-			catch(Exception)
+			catch (Exception)
 			{
 				model.RabbitMqInbound = int.MinValue;
 				model.RabbitMqTotalOutbound = int.MinValue;
 			}
 
-
 			return View(model);
-        }
-    }
+		}
+	}
 }

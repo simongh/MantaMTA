@@ -7,25 +7,37 @@ using OpenManta.WebLib;
 
 namespace WebInterface.Controllers
 {
-    public class VirtualMtaController : Controller
-    {
-        //
-        // GET: /VirtualMta/
-        public ActionResult Index()
-        {
+	public class VirtualMtaController : Controller
+	{
+		private readonly IVirtualMtaWebManager _manager;
+		private readonly OpenManta.WebLib.DAL.IVirtualMtaTransactionDB _virtualtransactionsDb;
+
+		public VirtualMtaController(IVirtualMtaWebManager manager, OpenManta.WebLib.DAL.IVirtualMtaTransactionDB virtualtransactionsDb)
+		{
+			Guard.NotNull(manager, nameof(manager));
+			Guard.NotNull(virtualtransactionsDb, nameof(virtualtransactionsDb));
+
+			_manager = manager;
+			_virtualtransactionsDb = virtualtransactionsDb;
+		}
+
+		//
+		// GET: /VirtualMta/
+		public ActionResult Index()
+		{
 			var ips = VirtualMtaDB.GetVirtualMtas();
 			var summary = new List<VirtualMTASummary>();
-			var ipGroups = VirtualMtaWebManager.GetAllVirtualMtaGroups();
+			var ipGroups = _manager.GetAllVirtualMtaGroups();
 			foreach (var address in ips)
 			{
-				summary.Add(new VirtualMTASummary 
-				{ 
-					IpAddress = address, 
-						SendTransactionSummaryCollection = OpenManta.WebLib.DAL.VirtualMtaTransactionDB.GetSendSummaryForIpAddress(address.ID)
+				summary.Add(new VirtualMTASummary
+				{
+					IpAddress = address,
+					SendTransactionSummaryCollection = _virtualtransactionsDb.GetSendSummaryForIpAddress(address.ID)
 				});
 			}
 			return View(new VirtualMtaPageModel { VirtualMTASummaryCollection = summary.ToArray(), IpGroups = ipGroups });
-        }
+		}
 
 		//
 		// GET: /VirtualMta/Edit
@@ -44,7 +56,7 @@ namespace WebInterface.Controllers
 			if (id == WebInterfaceParameters.VIRTUALMTAGROUP_NEW_ID)
 				grp = new VirtualMtaGroup();
 			else
-				grp = VirtualMtaWebManager.GetVirtualMtaGroup(id);
+				grp = _manager.GetVirtualMtaGroup(id);
 
 			return View(new VirtualMtaGroupCreateEditModel
 			{
@@ -52,5 +64,5 @@ namespace WebInterface.Controllers
 				VirtualMTACollection = VirtualMtaDB.GetVirtualMtas()
 			});
 		}
-    }
+	}
 }

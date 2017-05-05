@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Web;
 using OpenManta.Framework;
 using OpenManta.WebLib.BO;
+using OpenManta.WebLib.DAL;
 
 namespace WebInterface.Models
 {
@@ -19,10 +20,12 @@ namespace WebInterface.Models
 		/// Collection of information about each send.
 		/// </summary>
 		public SendInfoCollection SendInfo { get; set; }
+
 		/// <summary>
 		/// Count of the amount of pages that are required to view all of the data.
 		/// </summary>
 		public int PageCount { get; set; }
+
 		/// <summary>
 		/// The number of the current page.
 		/// </summary>
@@ -41,6 +44,15 @@ namespace WebInterface.Models
 	/// </summary>
 	public class SendReportBase
 	{
+		private readonly ISendDB _sendDb;
+
+		public SendReportBase(ISendDB sendDb)
+		{
+			Guard.NotNull(sendDb, nameof(sendDb));
+
+			_sendDb = sendDb;
+		}
+
 		/// <summary>
 		/// ID of the Send that the report is for.
 		/// </summary>
@@ -59,8 +71,8 @@ namespace WebInterface.Models
 		{
 			int internalID = SendManager.Instance.GetSend(this.SendID).InternalID;
 
-			SendMetadataCollection meta = new SendMetadataCollection(OpenManta.WebLib.DAL.SendDB.GetSendMetaData(internalID).OrderBy(m => m.Name));
-			
+			SendMetadataCollection meta = new SendMetadataCollection(_sendDb.GetSendMetaData(internalID).OrderBy(m => m.Name));
+
 			string result = string.Empty;
 			for (int i = 0; i < meta.Count; i++)
 			{
@@ -114,11 +126,13 @@ namespace WebInterface.Models
 		/// Array of information about bounces for this send.
 		/// </summary>
 		public BounceInfo[] BounceInfo { get; set; }
+
 		/// <summary>
-		/// Total number of pages required to view all information 
+		/// Total number of pages required to view all information
 		/// about bounces for this send.
 		/// </summary>
 		public int PageCount { get; set; }
+
 		/// <summary>
 		/// The current page of bounce data.
 		/// </summary>
@@ -244,6 +258,7 @@ namespace WebInterface.Models
 	public class SendStatusUpdated
 	{
 		public string RedirectUrl { get; set; }
+
 		public SendStatusUpdated(string redirectUrl)
 		{
 			RedirectUrl = redirectUrl;

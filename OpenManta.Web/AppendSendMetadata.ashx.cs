@@ -15,18 +15,25 @@ namespace WebInterface
 	/// </summary>
 	public class AppendSendMetadata : IHttpHandler
 	{
+		private readonly ISendDB _sendDb;
+
+		public AppendSendMetadata(ISendDB sendDb)
+		{
+			Guard.NotNull(sendDb, nameof(sendDb));
+
+			_sendDb = sendDb;
+		}
 
 		public void ProcessRequest(HttpContext context)
 		{
 			context.Response.ContentType = "text/plain";
 
 			string[] relayingIPs = MtaParameters.IPsToAllowRelaying;
-			if(!relayingIPs.Contains(context.Request.UserHostAddress))
+			if (!relayingIPs.Contains(context.Request.UserHostAddress))
 			{
 				context.Response.Write("Forbidden");
 				return;
 			}
-
 
 			string sendID = context.Request.QueryString["SendID"];
 			string name = context.Request.QueryString["Name"];
@@ -39,12 +46,12 @@ namespace WebInterface
 			}
 
 			Send snd = SendManager.Instance.GetSend(sendID);
-			SendDB.SaveSendMetadata(snd.InternalID, new SendMetadata { 
+			_sendDb.SaveSendMetadata(snd.InternalID, new SendMetadata
+			{
 				Name = name,
 				Value = value
 			});
 
-			
 			context.Response.Write("ok");
 		}
 
