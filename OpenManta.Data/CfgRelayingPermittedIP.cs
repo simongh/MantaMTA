@@ -1,18 +1,34 @@
 ﻿using System.Collections;
+using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Net;
+using OpenManta.Core;
 
 namespace OpenManta.Data
 {
-	public static class CfgRelayingPermittedIP
+	public static class CfgRelayingPermittedIPFactory
 	{
+		public static ICfgRelayingPermittedIP Instance { get; internal set; }
+	}
+
+	internal class CfgRelayingPermittedIP : ICfgRelayingPermittedIP
+	{
+		private readonly IMantaDB _mantaDb;
+
+		public CfgRelayingPermittedIP(IMantaDB mantaDb)
+		{
+			Guard.NotNull(mantaDb, nameof(mantaDb));
+
+			_mantaDb = mantaDb;
+		}
+
 		/// <summary>
 		/// Gets an array of the IP addresses that are permitted to use this server for relaying from the database.
 		/// </summary>
 		/// <returns></returns>
-		public static string[] GetRelayingPermittedIPAddresses()
+		public IEnumerable<string> GetRelayingPermittedIPAddresses()
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
@@ -33,9 +49,9 @@ FROM man_cfg_relayingPermittedIp";
 		/// Overwrites the existing addresses.
 		/// </summary>
 		/// <param name="addresses">IP Addresses to allow relaying for.</param>
-		public static void SetRelayingPermittedIPAddresses(IPAddress[] addresses)
+		public void SetRelayingPermittedIPAddresses(IEnumerable<IPAddress> addresses)
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"DELETE FROM man_cfg_relayingPermittedIp";

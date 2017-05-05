@@ -16,12 +16,27 @@ namespace OpenManta.Framework
 	/// </summary>
 	public class EventsManager
 	{
+		private readonly ISendDB _sendDb;
+		private readonly IEventDB _eventDb;
+
 		/// <summary>
 		/// Holds a singleton instance of the EventsManager.
 		/// </summary>
-		public static EventsManager Instance { get { return _Instance; } }
-		private static readonly EventsManager _Instance = new EventsManager();
-		private EventsManager() { }
+		public static EventsManager Instance { get; private set; }
+
+		static EventsManager()
+		{
+			Instance = new EventsManager(SendDBFactory.Instance, EventDbFactory.Instance);
+		}
+
+		private EventsManager(ISendDB sendDb, IEventDB eventDb)
+		{
+			Guard.NotNull(sendDb, nameof(sendDb));
+			Guard.NotNull(eventDb, nameof(eventDb));
+
+			_sendDb = sendDb;
+			_eventDb = eventDb;
+		}
 
 		/// <summary>
 		/// Class to store any re-usable Regex patterns.
@@ -38,7 +53,6 @@ namespace OpenManta.Framework
 			/// </summary>
 			internal static string NonDeliveryReportCode = @"\b(?<NdrCode>\d{1}\.\d{1,3}\.\d{1,3})\b";
 		}
-
 
 		/// <summary>
 		/// Examines an email to try to identify detailed bounce information from it.
@@ -59,7 +73,6 @@ namespace OpenManta.Framework
 				bounceDetails.BounceIdentifier = BounceIdentifier.NotIdentifiedAsABounce;
 				return bounceDetails;
 			}
-
 
 			// "X-Recipient" should contain what Manta originally set as the "return-path" when sending.
 			MessageHeader returnPath = msg.Headers.GetFirstOrDefault("X-Recipient");
@@ -83,7 +96,7 @@ namespace OpenManta.Framework
 
 			MantaBounceEvent bounceEvent = new MantaBounceEvent();
 			bounceEvent.EmailAddress = rcptTo;
-			bounceEvent.SendID = SendDB.GetSend(internalSendID).ID;
+			bounceEvent.SendID = _sendDb.GetSend(internalSendID).ID;
 
 			// TODO: Might be good to get the DateTime found in the email.
 			bounceEvent.EventTime = DateTime.UtcNow;
@@ -122,8 +135,6 @@ namespace OpenManta.Framework
 				}
 			}
 
-
-
 			// We're still here so there was either no NDR part or nothing contained within it that we could
 			// interpret so have to check _all_ body parts for something useful.
 			if (FindBounceReason(msg.BodyParts, out bouncePair, out bounceMsg, out bounceDetails))
@@ -138,10 +149,6 @@ namespace OpenManta.Framework
 				return bounceDetails;
 			}
 
-
-
-
-
 			// Nope - no clues relating to why the bounce occurred.
 			bounceEvent.BounceInfo.BounceType = MantaBounceType.Unknown;
 			bounceEvent.BounceInfo.BounceCode = MantaBounceCode.Unknown;
@@ -151,7 +158,6 @@ namespace OpenManta.Framework
 			bounceDetails.ProcessingResult = EmailProcessingResult.Unknown;
 			return bounceDetails;
 		}
-
 
 		/// <summary>
 		/// Examines a non-delivery report for detailed bounce information.
@@ -165,12 +171,9 @@ namespace OpenManta.Framework
 		{
 			bounceIdentification = new EmailProcessingDetails();
 
-
 			// Check for the Diagnostic-Code as hopefully contains more information about the error.
 			const string DiagnosticCodeFieldName = "Diagnostic-Code: ";
 			const string StatusFieldName = "Status: ";
-
-
 
 			StringBuilder diagnosticCode = new StringBuilder(string.Empty);
 			string status = string.Empty;
@@ -241,7 +244,6 @@ namespace OpenManta.Framework
 				}
 			}
 
-
 			// Process what we've managed to find...
 
 			// Diagnostic-Code
@@ -252,7 +254,6 @@ namespace OpenManta.Framework
 					return true;
 				}
 			}
-
 
 			// Status
 			if (!string.IsNullOrWhiteSpace(status))
@@ -271,15 +272,10 @@ namespace OpenManta.Framework
 				}
 			}
 
-
-
-
 			// If we've not already returned from this method, then we're still looking for an explanation
 			// for the bounce so parse the entire message as a string.
 			if (ParseBounceMessage(message, out bouncePair, out bounceMessage, out bounceIdentification))
 				return true;
-
-
 
 			// Nope - no clues relating to why the bounce occurred.
 			bouncePair.BounceType = MantaBounceType.Unknown;
@@ -291,7 +287,6 @@ namespace OpenManta.Framework
 
 			return false;
 		}
-
 
 		/// <summary>
 		/// Examines an SMTP response that is thought to relate to delivery of an email failing.
@@ -311,12 +306,10 @@ namespace OpenManta.Framework
 			if (ParseBounceMessage(message, out bouncePair, out bounceMessage, out bounceIdentification))
 				return true;
 
-
 			bounceIdentification.BounceIdentifier = BounceIdentifier.NotIdentifiedAsABounce;
 
 			return false;
 		}
-
 
 		/// <summary>
 		/// Examines an SMTP response message to identify detailed bounce information from it.
@@ -329,8 +322,6 @@ namespace OpenManta.Framework
 		{
 			bounceIdentification = new EmailProcessingDetails();
 
-
-
 			// Check for TimedOutInQueue message first.
 			if (response.Equals(MtaParameters.TIMED_OUT_IN_QUEUE_MESSAGE, StringComparison.OrdinalIgnoreCase))
 			{
@@ -340,7 +331,7 @@ namespace OpenManta.Framework
 				{
 					EventType = MantaEventType.TimedOutInQueue,
 					EmailAddress = rcptTo,
-					SendID = SendDB.GetSend(internalSendID).ID,
+					SendID = _sendDb.GetSend(internalSendID).ID,
 					EventTime = DateTime.UtcNow
 				};
 
@@ -351,16 +342,8 @@ namespace OpenManta.Framework
 				return true;
 			}
 
-
-
-
-
-
-
-
 			BouncePair bouncePair = new BouncePair();
 			string bounceMessage = string.Empty;
-
 
 			if (ParseBounceMessage(response, out bouncePair, out bounceMessage, out bounceIdentification))
 			{
@@ -370,7 +353,7 @@ namespace OpenManta.Framework
 					EventType = MantaEventType.Bounce,
 					EmailAddress = rcptTo,
 					BounceInfo = bouncePair,
-					SendID = SendDB.GetSend(internalSendID).ID,
+					SendID = _sendDb.GetSend(internalSendID).ID,
 					// It is possible that the bounce was generated a while back, but we're assuming "now" for the moment.
 					// Might be good to get the DateTime found in the email at a later point.
 					EventTime = DateTime.UtcNow,
@@ -380,12 +363,9 @@ namespace OpenManta.Framework
 				// Log to DB.
 				Save(bounceEvent);
 
-
 				// All done return true.
 				return true;
 			}
-
-
 
 			// Couldn't identify the bounce.
 
@@ -393,7 +373,6 @@ namespace OpenManta.Framework
 
 			return false;
 		}
-
 
 		/// <summary>
 		/// Attempts to find the reason for the bounce by running Bounce Rules, then checking for Non-Delivery Report codes,
@@ -407,10 +386,8 @@ namespace OpenManta.Framework
 		{
 			bounceIdentification = new EmailProcessingDetails();
 
-
-
 			// Check all Bounce Rules for a match.
-			foreach (BounceRule r in BounceRulesManager.BounceRules)
+			foreach (BounceRule r in BounceRulesManager.Instance.BounceRules)
 			{
 				// If we get a match, we're done processing Rules.
 				if (r.IsMatch(message, out bounceMessage))
@@ -426,7 +403,6 @@ namespace OpenManta.Framework
 					return true;
 				}
 			}
-
 
 			// No Bounce Rules match the message so try to get a match on an NDR code ("5.1.1") or an SMTP code ("550").
 			// TODO: Handle several matches being found - somehow find The Best?
@@ -464,7 +440,6 @@ namespace OpenManta.Framework
 				}
 			}
 
-
 			// Failed to identify a reason so shouldn't be a bounce.
 			bouncePair.BounceCode = MantaBounceCode.Unknown;
 			bouncePair.BounceType = MantaBounceType.Unknown;
@@ -475,7 +450,6 @@ namespace OpenManta.Framework
 
 			return false;
 		}
-
 
 		/// <summary>
 		// Attempts to find the first body part with the specified Media Type from a collection of BodyParts.
@@ -507,12 +481,10 @@ namespace OpenManta.Framework
 					continue;
 			}
 
-
 			// If we're still here, then we didn't find a bodypart with the media type we're looking for.
 			foundBodyPart = null;
 			return false;
 		}
-
 
 		/// <summary>
 		/// Attempts to find and process the reason an email bounced by digging through all body parts.
@@ -541,7 +513,6 @@ namespace OpenManta.Framework
 				//	Console.WriteLine("\tSkipped bodypart \"" + b.ContentType.MediaType + "\".");
 			}
 
-
 			// Still here so haven't found anything useful.
 			bouncePair.BounceCode = MantaBounceCode.Unknown;
 			bouncePair.BounceType = MantaBounceType.Unknown;
@@ -553,11 +524,10 @@ namespace OpenManta.Framework
 			return false;
 		}
 
-
 		/// <summary>
 		/// Looks through a feedback loop email looking for something to identify it as an abuse report and who it relates to.
 		/// If found, logs the event.
-		/// 
+		///
 		/// How to get the info depending on the ESP (and this is likely to be the best order to check for each too):
 		/// Abuse Report Original-Mail-From.										[Yahoo]
 		/// Message-ID from body part child with content-type of message/rfc822.	[AOL]
@@ -604,7 +574,7 @@ namespace OpenManta.Framework
 									if (ReturnPathManager.TryDecode(tmp, out rcptTo, out internalSendID))
 									{
 										// NEED TO LOG TO DB HERE!!!!!
-										Send snd = SendDB.GetSend(internalSendID);
+										Send snd = _sendDb.GetSend(internalSendID);
 										Save(new MantaAbuseEvent
 										{
 											EmailAddress = rcptTo,
@@ -639,9 +609,8 @@ namespace OpenManta.Framework
 						{
 							if (!rcptTo.StartsWith("redacted@", StringComparison.OrdinalIgnoreCase))
 							{
-
 								// NEED TO LOG TO DB HERE!!!!!
-								Send snd = SendDB.GetSend(internalSendID);
+								Send snd = _sendDb.GetSend(internalSendID);
 								Save(new MantaAbuseEvent
 								{
 									EmailAddress = rcptTo,
@@ -667,7 +636,7 @@ namespace OpenManta.Framework
 							if (ReturnPathManager.TryDecode(tmp, out rcptTo, out internalSendID))
 							{
 								// NEED TO LOG TO DB HERE!!!!!
-								Send snd = SendDB.GetSend(internalSendID);
+								Send snd = _sendDb.GetSend(internalSendID);
 								Save(new MantaAbuseEvent
 								{
 									EmailAddress = rcptTo,
@@ -684,7 +653,6 @@ namespace OpenManta.Framework
 				}
 			;
 
-
 				// Step 2: AOL give redacted Abuse Reports but include the original email as a bodypart; find that.
 				BodyPart childMessageBodyPart;
 				if (FindFirstBodyPartByMediaType(message.BodyParts, "message/rfc822", out childMessageBodyPart))
@@ -698,7 +666,6 @@ namespace OpenManta.Framework
 						}
 					}
 				}
-
 
 				// Step 3: Hotmail don't do Abuse Reports, they just return our email to us exactly as we sent it.
 				if (checkForReturnPathHeaders(message.Headers))
@@ -725,9 +692,9 @@ namespace OpenManta.Framework
 			return SaveAsync(evt).Result;
 		}
 
-		internal async Task<int> SaveAsync(MantaEvent evt)
+		internal Task<int> SaveAsync(MantaEvent evt)
 		{
-			return await EventDB.SaveAsync(evt);
+			return _eventDb.SaveAsync(evt);
 		}
 
 		/// <summary>
@@ -737,7 +704,7 @@ namespace OpenManta.Framework
 		/// <returns>The MantaEvent or NULL if ID doesn't belong to any.</returns>
 		internal MantaEvent GetEvent(int ID)
 		{
-			return EventDB.GetEvent(ID);
+			return _eventDb.GetEvent(ID);
 		}
 
 		/// <summary>
@@ -746,7 +713,7 @@ namespace OpenManta.Framework
 		/// <returns>Collection of MantaEvent objects.</returns>
 		internal IList<MantaEvent> GetEvents()
 		{
-			return EventDB.GetEvents();
+			return _eventDb.GetEvents();
 		}
 	}
 }

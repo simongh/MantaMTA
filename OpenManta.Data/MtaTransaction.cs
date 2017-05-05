@@ -5,11 +5,25 @@ using System.Threading.Tasks;
 
 namespace OpenManta.Data
 {
-	public class MtaTransaction
+	public static class MtaTransactionFactory
 	{
-		public static async Task<bool> HasBeenHandledAsync(Guid messageID)
+		public static IMtaTransaction Instance { get; internal set; }
+	}
+
+	internal class MtaTransaction : IMtaTransaction
+	{
+		private readonly IMantaDB _mantaDb;
+
+		public MtaTransaction(IMantaDB mantaDb)
 		{
-			using(SqlConnection conn = MantaDB.GetSqlConnection())
+			Guard.NotNull(mantaDb, nameof(mantaDb));
+
+			_mantaDb = mantaDb;
+		}
+
+		public async Task<bool> HasBeenHandledAsync(Guid messageID)
+		{
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"IF EXISTS(SELECT 1
@@ -17,7 +31,7 @@ FROM man_mta_transaction WITH(readuncommitted)
 WHERE man_mta_transaction.mta_msg_id = @msgID
 AND man_mta_transaction.mta_transactionStatus_id IN (2,3,4,6))
 	SELECT 1
-ELSE 
+ELSE
 	SELECT 0";
 				cmd.Parameters.AddWithValue("@msgID", messageID);
 				await conn.OpenAsync();
@@ -25,29 +39,28 @@ ELSE
 			}
 		}
 
-
 		/// <summary>
 		/// Logs an MTA Transaction to the database.
 		/// </summary>
-		public static void LogTransaction(MtaMessage msg, TransactionStatus status, string svrResponse, VirtualMTA ipAddress, MXRecord mxRecord)
+		public void LogTransaction(MtaMessage msg, TransactionStatus status, string svrResponse, VirtualMTA ipAddress, MXRecord mxRecord)
 		{
-			LogTransactionAsync(msg, status, svrResponse, ipAddress, mxRecord).Wait();
+			LogTransactionAsync(msg, status, svrResponse, ipAddress, mxRecord).GetAwaiter().GetResult();
 		}
 
 		/// <summary>
 		/// Logs an MTA Transaction to the database.
 		/// </summary>
-		public static async Task<bool> LogTransactionAsync(MtaMessage msg, TransactionStatus status, string svrResponse, VirtualMTA ipAddress, MXRecord mxRecord)
+		public async Task<bool> LogTransactionAsync(MtaMessage msg, TransactionStatus status, string svrResponse, VirtualMTA ipAddress, MXRecord mxRecord)
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
-BEGIN TRANSACTION 
+BEGIN TRANSACTION
 INSERT INTO man_mta_transaction (mta_msg_id, ip_ipAddress_id, mta_transaction_timestamp, mta_transactionStatus_id, mta_transaction_serverResponse, mta_transaction_serverHostname)
 VALUES(@msgID, @ipAddressID, GETUTCDATE(), @status, @serverResponse, @serverHostname)";
 
-				switch(status)
+				switch (status)
 				{
 					case TransactionStatus.Discarded:
 					case TransactionStatus.Failed:
@@ -56,6 +69,7 @@ VALUES(@msgID, @ipAddressID, GETUTCDATE(), @status, @serverResponse, @serverHost
 								SET mta_send_rejected = mta_send_rejected + 1
 								WHERE mta_send_internalID = @sendInternalID";
 						break;
+
 					case TransactionStatus.Success:
 						cmd.CommandText += @"UPDATE man_mta_send
 								SET mta_send_accepted = mta_send_accepted + 1

@@ -11,21 +11,24 @@ namespace WebInterface.Controllers
 	{
 		private readonly IVirtualMtaWebManager _manager;
 		private readonly OpenManta.WebLib.DAL.IVirtualMtaTransactionDB _virtualtransactionsDb;
+		private readonly IVirtualMtaDB _virtualMtaDb;
 
-		public VirtualMtaController(IVirtualMtaWebManager manager, OpenManta.WebLib.DAL.IVirtualMtaTransactionDB virtualtransactionsDb)
+		public VirtualMtaController(IVirtualMtaWebManager manager, OpenManta.WebLib.DAL.IVirtualMtaTransactionDB virtualtransactionsDb, IVirtualMtaDB virtualMtaDb)
 		{
 			Guard.NotNull(manager, nameof(manager));
 			Guard.NotNull(virtualtransactionsDb, nameof(virtualtransactionsDb));
+			Guard.NotNull(virtualMtaDb, nameof(virtualMtaDb));
 
 			_manager = manager;
 			_virtualtransactionsDb = virtualtransactionsDb;
+			_virtualMtaDb = virtualMtaDb;
 		}
 
 		//
 		// GET: /VirtualMta/
 		public ActionResult Index()
 		{
-			var ips = VirtualMtaDB.GetVirtualMtas();
+			var ips = _virtualMtaDb.GetVirtualMtas();
 			var summary = new List<VirtualMTASummary>();
 			var ipGroups = _manager.GetAllVirtualMtaGroups();
 			foreach (var address in ips)
@@ -45,7 +48,7 @@ namespace WebInterface.Controllers
 		{
 			if (id == WebInterfaceParameters.VIRTUALMTA_NEW_ID)
 				return View(new VirtualMTA());
-			return View(VirtualMtaDB.GetVirtualMta(id));
+			return View(_virtualMtaDb.GetVirtualMta(id));
 		}
 
 		//
@@ -61,7 +64,7 @@ namespace WebInterface.Controllers
 			return View(new VirtualMtaGroupCreateEditModel
 			{
 				VirtualMtaGroup = grp,
-				VirtualMTACollection = VirtualMtaDB.GetVirtualMtas()
+				VirtualMTACollection = _virtualMtaDb.GetVirtualMtas()
 			});
 		}
 	}

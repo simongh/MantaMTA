@@ -1,44 +1,57 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Data.SqlClient;
-using System.Configuration;
 using System.Data;
+using System.Data.SqlClient;
 using System.Threading.Tasks;
 using OpenManta.Core;
 
 namespace OpenManta.Data
 {
+	public static class EventDbFactory
+	{
+		public static IEventDB Instance { get; internal set; }
+	}
+
 	/// <summary>
 	/// Performs database querying and retrieval operations for Manta's Events.
 	/// </summary>
-	public static class EventDB
+	internal class EventDB : IEventDB
 	{
+		private readonly IDataRetrieval _dataRetrieval;
+		private readonly IMantaDB _mantaDb;
+
+		public EventDB(IDataRetrieval dataRetrieval, IMantaDB mantaDb)
+		{
+			Guard.NotNull(dataRetrieval, nameof(dataRetrieval));
+			Guard.NotNull(mantaDb, nameof(mantaDb));
+
+			_dataRetrieval = dataRetrieval;
+			_mantaDb = mantaDb;
+		}
+
 		/// <summary>
 		/// Retrieves all BounceRules from the database.
 		/// </summary>
 		/// <returns>A BounceRulesCollection of all the Rules.</returns>
-		public static BounceRulesCollection GetBounceRules()
+		public BounceRulesCollection GetBounceRules()
 		{
-			using (SqlConnection conn = new SqlConnection(ConfigurationManager.ConnectionStrings["SqlServer"].ConnectionString))
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
 SELECT *
 FROM man_evn_bounceRule
 ORDER BY evn_bounceRule_executionOrder ASC";
-				return new BounceRulesCollection(DataRetrieval.GetCollectionFromDatabase<BounceRule>(cmd, CreateAndFillBounceRuleFromRecord));
+				return new BounceRulesCollection(_dataRetrieval.GetCollectionFromDatabase<BounceRule>(cmd, CreateAndFillBounceRuleFromRecord));
 			}
 		}
-
 
 		/// <summary>
 		/// Create and fill a BounceRule object from the Data Record.
 		/// </summary>
 		/// <param name="record">Datarecord containing values for the new object.</param>
 		/// <returns>A BounceRule object.</returns>
-		private static BounceRule CreateAndFillBounceRuleFromRecord(IDataRecord record)
+		private BounceRule CreateAndFillBounceRuleFromRecord(IDataRecord record)
 		{
 			BounceRule rule = new BounceRule();
 
@@ -59,9 +72,9 @@ ORDER BY evn_bounceRule_executionOrder ASC";
 		/// Gets a MantaEvent from the database.
 		/// </summary>
 		/// <returns>The event from the database of NULL if one wasn't found with the ID</returns>
-		public static MantaEvent GetEvent(int ID)
+		public MantaEvent GetEvent(int ID)
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"SELECT [evt].*, [bnc].evn_bounceCode_id, [bnc].evn_bounceEvent_message, [bnc].evn_bounceType_id
@@ -69,7 +82,7 @@ FROM man_evn_event AS [evt]
 LEFT JOIN man_evn_bounceEvent AS [bnc] ON [evt].evn_event_id = [bnc].evn_event_id
 WHERE [evt].evn_event_id = @eventId";
 				cmd.Parameters.AddWithValue("@eventId", ID);
-				return DataRetrieval.GetSingleObjectFromDatabase<MantaEvent>(cmd, CreateAndFillMantaEventFromRecord);
+				return _dataRetrieval.GetSingleObjectFromDatabase<MantaEvent>(cmd, CreateAndFillMantaEventFromRecord);
 			}
 		}
 
@@ -77,24 +90,24 @@ WHERE [evt].evn_event_id = @eventId";
 		/// Gets all of the MantaEvents from the database.
 		/// </summary>
 		/// <returns>Collection of MantaEvent objects.</returns>
-		public static IList<MantaEvent> GetEvents()
+		public IList<MantaEvent> GetEvents()
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"SELECT [evt].*, [bnc].evn_bounceCode_id, [bnc].evn_bounceEvent_message, [bnc].evn_bounceType_id
 FROM man_evn_event AS [evt]
 LEFT JOIN man_evn_bounceEvent AS [bnc] ON [evt].evn_event_id = [bnc].evn_event_id";
-				return DataRetrieval.GetCollectionFromDatabase<MantaEvent> (cmd, CreateAndFillMantaEventFromRecord);
+				return _dataRetrieval.GetCollectionFromDatabase<MantaEvent>(cmd, CreateAndFillMantaEventFromRecord);
 			}
 		}
 
 		/// <summary>
 		/// Gets <param name="maxEventsToGet"/> amount of Events that need forwarding from the database.
 		/// </summary>
-		public static IList<MantaEvent> GetEventsForForwarding(int maxEventsToGet)
+		public IList<MantaEvent> GetEventsForForwarding(int maxEventsToGet)
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
@@ -103,7 +116,7 @@ FROM man_evn_event AS [evt]
 LEFT JOIN man_evn_bounceEvent AS [bnc] ON [evt].evn_event_id = [bnc].evn_event_id
 WHERE evn_event_forwarded = 0
 ORDER BY evn_event_id ASC";
-				return DataRetrieval.GetCollectionFromDatabase<MantaEvent>(cmd, CreateAndFillMantaEventFromRecord);
+				return _dataRetrieval.GetCollectionFromDatabase<MantaEvent>(cmd, CreateAndFillMantaEventFromRecord);
 			}
 		}
 
@@ -112,9 +125,9 @@ ORDER BY evn_event_id ASC";
 		/// </summary>
 		/// <param name="evn">The Manta Event to save.</param>
 		/// <returns>ID of the MantaEvent.</returns>
-		public static async Task<int> SaveAsync(MantaEvent evn)
+		public async Task<int> SaveAsync(MantaEvent evn)
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
@@ -175,24 +188,27 @@ ELSE
 		/// </summary>
 		/// <param name="record">Record to get the data from.</param>
 		/// <returns>MantaAubseEvent or MantaBounceEvent</returns>
-		private static MantaEvent CreateAndFillMantaEventFromRecord(IDataRecord record)
+		private MantaEvent CreateAndFillMantaEventFromRecord(IDataRecord record)
 		{
 			MantaEventType type = (MantaEventType)record.GetInt32("evn_type_id");
 			MantaEvent thisEvent = null;
 			switch (type)
 			{
-			case MantaEventType.Abuse:
-				thisEvent = new MantaAbuseEvent();
-				break;
-			case MantaEventType.Bounce:
-				thisEvent = new MantaBounceEvent();
-				FillMantaBounceEvent((thisEvent as MantaBounceEvent), record);
-				break;
-			case MantaEventType.TimedOutInQueue:
-				thisEvent = new MantaTimedOutInQueueEvent();
-				break;
-			default:
-				throw new NotImplementedException("Unknown Event Type (" + type + ")");
+				case MantaEventType.Abuse:
+					thisEvent = new MantaAbuseEvent();
+					break;
+
+				case MantaEventType.Bounce:
+					thisEvent = new MantaBounceEvent();
+					FillMantaBounceEvent((thisEvent as MantaBounceEvent), record);
+					break;
+
+				case MantaEventType.TimedOutInQueue:
+					thisEvent = new MantaTimedOutInQueueEvent();
+					break;
+
+				default:
+					throw new NotImplementedException("Unknown Event Type (" + type + ")");
 			}
 
 			thisEvent.EmailAddress = record.GetString("evn_event_emailAddress");
@@ -209,7 +225,7 @@ ELSE
 		/// </summary>
 		/// <param name="evt">The MantaBounceEvent to fill.</param>
 		/// <param name="record">The data record to fill with.</param>
-		private static void FillMantaBounceEvent(MantaBounceEvent evt, IDataRecord record)
+		private void FillMantaBounceEvent(MantaBounceEvent evt, IDataRecord record)
 		{
 			if (record.IsDBNull("evn_bounceCode_id"))   // The bounce record is incomplete
 			{

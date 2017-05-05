@@ -13,7 +13,6 @@ namespace OpenManta.Framework
 		/// </summary>
 		private const string RCPT_TO_AT_REPLACEMENT = "=";
 
-
 		/// <summary>
 		/// Generates the return path, using the default return path domain.
 		/// </summary>
@@ -72,7 +71,7 @@ namespace OpenManta.Framework
 		/// <returns>The generated return path or string.empty if no message with ID found.</returns>
 		public static async Task<string> GetReturnPathFromMessageIDAsync(Guid messageID)
 		{
-			return await MtaMessageDB.GetMailFrom(messageID).ConfigureAwait(false);
+			return await MtaMessageDBFactory.Instance.GetMailFrom(messageID).ConfigureAwait(false);
 		}
 
 		/// <summary>

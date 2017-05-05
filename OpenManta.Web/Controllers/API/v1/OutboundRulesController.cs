@@ -14,12 +14,15 @@ namespace WebInterface.Controllers.API.v1
 	public class OutboundRulesController : ApiController
 	{
 		private readonly IOutboundRuleWebManager _manager;
+		private readonly IOutboundRuleDB _ruleDb;
 
-		public OutboundRulesController(IOutboundRuleWebManager manager)
+		public OutboundRulesController(IOutboundRuleWebManager manager, IOutboundRuleDB ruleDb)
 		{
 			Guard.NotNull(manager, nameof(manager));
+			Guard.NotNull(ruleDb, nameof(ruleDb));
 
 			_manager = manager;
+			_ruleDb = ruleDb;
 		}
 
 		[HttpPost]
@@ -33,7 +36,7 @@ namespace WebInterface.Controllers.API.v1
 			if (viewModel.PatternID == WebInterfaceParameters.OUTBOUND_RULES_NEW_PATTERN_ID)
 				pattern = new OutboundMxPattern();
 			else
-				pattern = OutboundRuleDB.GetOutboundRulePatterns().SingleOrDefault(p => p.ID == viewModel.PatternID);
+				pattern = _ruleDb.GetOutboundRulePatterns().SingleOrDefault(p => p.ID == viewModel.PatternID);
 			if (pattern == null)
 				return false;
 

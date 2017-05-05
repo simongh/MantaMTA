@@ -51,7 +51,7 @@ namespace OpenManta.Framework
 
 			_outboundMtas = null;
 			_inboundMtas = null;
-			_vmtaCollection = VirtualMtaDB.GetVirtualMtas();
+			_vmtaCollection = VirtualMtaDBFactory.Instance.GetVirtualMtas();
 		}
 
 		/// <summary>
@@ -139,14 +139,14 @@ namespace OpenManta.Framework
 					return group;
 
 				// Get group from the database.
-				group = VirtualMtaGroupDB.GetVirtualMtaGroup(id);
+				group = VirtualMtaGroupDBFactory.Instance.GetVirtualMtaGroup(id);
 
 				// Group doesn't exist, so don't try and get it's IPs
 				if (group == null)
 					return null;
 
 				// Got the group, go get it's IPs.
-				group.VirtualMtaCollection = VirtualMtaDB.GetVirtualMtasInVirtualMtaGroup(id);
+				group.VirtualMtaCollection = VirtualMtaDBFactory.Instance.GetVirtualMtasInVirtualMtaGroup(id);
 
 				// Add the group to collection, so others can use it.
 				_vmtaGroups.AddOrUpdate(id, group, new Func<int, VirtualMtaGroup, VirtualMtaGroup>(delegate (int key, VirtualMtaGroup existing)

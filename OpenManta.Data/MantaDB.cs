@@ -3,16 +3,21 @@ using System.Data.SqlClient;
 
 namespace OpenManta.Data
 {
+	public static class MantaDbFactory
+	{
+		public static IMantaDB Instance { get; internal set; }
+	}
+
 	/// <summary>
 	/// Functions to help with database stuff.
 	/// </summary>
-	public static class MantaDB
+	internal class MantaDB : IMantaDB
 	{
 		/// <summary>
 		/// Gets a SqlConnection to the MantaMTA Database
 		/// </summary>
 		/// <returns>Sql connection</returns>
-		public static SqlConnection GetSqlConnection()
+		public SqlConnection GetSqlConnection()
 		{
 			return new SqlConnection(ConfigurationManager.ConnectionStrings["SqlServer"].ConnectionString);
 		}

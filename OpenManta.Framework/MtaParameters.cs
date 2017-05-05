@@ -213,7 +213,7 @@ namespace OpenManta.Framework
 			{
 				if (_IPsToAllowRelayingLoadTime < DateTime.UtcNow)
 				{
-					_IPsToAllowRelaying = CfgRelayingPermittedIP.GetRelayingPermittedIPAddresses();
+					_IPsToAllowRelaying = CfgRelayingPermittedIPFactory.Instance.GetRelayingPermittedIPAddresses().ToArray();
 					_IPsToAllowRelayingLoadTime = DateTime.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
 				}
 				return _IPsToAllowRelaying;

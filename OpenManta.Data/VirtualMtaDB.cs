@@ -1,26 +1,42 @@
-﻿using System.Configuration;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using OpenManta.Core;
 
 namespace OpenManta.Data
 {
-	public static class VirtualMtaDB
+	public static class VirtualMtaDBFactory
 	{
+		public static IVirtualMtaDB Instance { get; internal set; }
+	}
+
+	internal class VirtualMtaDB : IVirtualMtaDB
+	{
+		private readonly IDataRetrieval _dataRetrieval;
+		private readonly IMantaDB _mantaDb;
+
+		public VirtualMtaDB(IDataRetrieval dataRetrieval, IMantaDB mantaDb)
+		{
+			Guard.NotNull(dataRetrieval, nameof(dataRetrieval));
+			Guard.NotNull(mantaDb, nameof(mantaDb));
+
+			_dataRetrieval = dataRetrieval;
+			_mantaDb = mantaDb;
+		}
+
 		/// <summary>
 		/// Gets all of the MTA IP Addresses from the Database.
 		/// </summary>
 		/// <returns></returns>
-		public static IList<VirtualMTA> GetVirtualMtas()
+		public IList<VirtualMTA> GetVirtualMtas()
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
 SELECT *
 FROM man_ip_ipAddress";
-				return DataRetrieval.GetCollectionFromDatabase<VirtualMTA>(cmd, CreateAndFillVirtualMtaFromRecord);
+				return _dataRetrieval.GetCollectionFromDatabase(cmd, CreateAndFillVirtualMtaFromRecord);
 			}
 		}
 
@@ -28,9 +44,9 @@ FROM man_ip_ipAddress";
 		/// Gets a single MTA IP Addresses from the Database.
 		/// </summary>
 		/// <returns></returns>
-		public static VirtualMTA GetVirtualMta(int id)
+		public VirtualMTA GetVirtualMta(int id)
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
@@ -38,7 +54,7 @@ SELECT *
 FROM man_ip_ipAddress
 WHERE ip_ipAddress_id = @id";
 				cmd.Parameters.AddWithValue("@id", id);
-				return DataRetrieval.GetSingleObjectFromDatabase<VirtualMTA>(cmd, CreateAndFillVirtualMtaFromRecord);
+				return _dataRetrieval.GetSingleObjectFromDatabase(cmd, CreateAndFillVirtualMtaFromRecord);
 			}
 		}
 
@@ -47,16 +63,16 @@ WHERE ip_ipAddress_id = @id";
 		/// </summary>
 		/// <param name="groupID">ID of the Virtual MTA Group to get Virtual MTAs for.</param>
 		/// <returns></returns>
-		public static IList<VirtualMTA> GetVirtualMtasInVirtualMtaGroup(int groupID)
+		public IList<VirtualMTA> GetVirtualMtasInVirtualMtaGroup(int groupID)
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"SELECT *
 FROM man_ip_ipAddress as [ip]
 WHERE [ip].ip_ipAddress_id IN (SELECT [grp].ip_ipAddress_id FROM man_ip_groupMembership as [grp] WHERE [grp].ip_group_id = @groupID) ";
 				cmd.Parameters.AddWithValue("@groupID", groupID);
-				return DataRetrieval.GetCollectionFromDatabase<VirtualMTA>(cmd, CreateAndFillVirtualMtaFromRecord);
+				return _dataRetrieval.GetCollectionFromDatabase(cmd, CreateAndFillVirtualMtaFromRecord);
 			}
 		}
 
@@ -65,7 +81,7 @@ WHERE [ip].ip_ipAddress_id IN (SELECT [grp].ip_ipAddress_id FROM man_ip_groupMem
 		/// </summary>
 		/// <param name="record"></param>
 		/// <returns></returns>
-		private static VirtualMTA CreateAndFillVirtualMtaFromRecord(IDataRecord record)
+		private VirtualMTA CreateAndFillVirtualMtaFromRecord(IDataRecord record)
 		{
 			VirtualMTA vmta = new VirtualMTA();
 			vmta.ID = record.GetInt32("ip_ipAddress_id");

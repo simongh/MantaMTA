@@ -14,6 +14,7 @@ namespace OpenManta.Framework
 		/// Holds a cached copy of the Outbound MX Patterns from the database.
 		/// </summary>
 		private static IList<OutboundMxPattern> _MXPatterns { get; set; }
+
 		/// <summary>
 		/// Holds a cached copy of the Outbound Rules from the database.
 		/// </summary>
@@ -34,10 +35,12 @@ namespace OpenManta.Framework
 			/// ID of the pattern that resulted in this match.
 			/// </summary>
 			public int MxPatternID { get; set; }
+
 			/// <summary>
 			/// IP Address if specific otherwise string.empty.
 			/// </summary>
 			public string IPAddress { get; set; }
+
 			/// <summary>
 			/// DateTime of the match.
 			/// </summary>
@@ -67,7 +70,7 @@ namespace OpenManta.Framework
 				newMxPattern.MatchedUtc = DateTime.UtcNow;
 				newMxPattern.MxPatternID = mxPatternID;
 
-				Func<string, OutboundRuleManager.MatchedMxPattern, OutboundRuleManager.MatchedMxPattern> updateAction = delegate(string key, OutboundRuleManager.MatchedMxPattern existing)
+				Func<string, OutboundRuleManager.MatchedMxPattern, OutboundRuleManager.MatchedMxPattern> updateAction = delegate (string key, OutboundRuleManager.MatchedMxPattern existing)
 				{
 					if (existing.MatchedUtc > newMxPattern.MatchedUtc)
 						return existing;
@@ -79,18 +82,18 @@ namespace OpenManta.Framework
 					newMxPattern.IPAddress = ipAddress.IPAddress.ToString();
 					this.AddOrUpdate(newMxPattern.IPAddress,
 									 new MatchedMxPattern()
-					{
-						MatchedUtc = DateTime.UtcNow,
-						MxPatternID = mxPatternID
-					}, updateAction);
+									 {
+										 MatchedUtc = DateTime.UtcNow,
+										 MxPatternID = mxPatternID
+									 }, updateAction);
 				}
 				else
 					this.AddOrUpdate(string.Empty,
 									 new OutboundRuleManager.MatchedMxPattern
-					{
-						MatchedUtc = DateTime.UtcNow,
-						MxPatternID = mxPatternID
-					}, updateAction);
+									 {
+										 MatchedUtc = DateTime.UtcNow,
+										 MxPatternID = mxPatternID
+									 }, updateAction);
 			}
 
 			/// <summary>
@@ -119,8 +122,6 @@ namespace OpenManta.Framework
 			}
 		}
 
-		
-
 		/// <summary>
 		/// Gets the Outbound Rules for the specified destination MX and optionally IP Address.
 		/// </summary>
@@ -132,15 +133,15 @@ namespace OpenManta.Framework
 		{
 			// Get the data from the database. This needs to be cleverer and reload every x minutes.
 			if (OutboundRuleManager._MXPatterns == null)
-				OutboundRuleManager._MXPatterns = OutboundRuleDB.GetOutboundRulePatterns();
+				OutboundRuleManager._MXPatterns = OutboundRuleDBFactory.Instance.GetOutboundRulePatterns();
 			if (OutboundRuleManager._Rules == null)
-				OutboundRuleManager._Rules = OutboundRuleDB.GetOutboundRules();
+				OutboundRuleManager._Rules = OutboundRuleDBFactory.Instance.GetOutboundRules();
 
 			int patternID = OutboundRuleManager.GetMxPatternID(mxRecord, mtaIpAddress);
 			mxPatternID = patternID;
 			return (from r in OutboundRuleManager._Rules
-			        where r.OutboundMxPatternID == patternID
-			        select r).ToList ();
+					where r.OutboundMxPatternID == patternID
+					select r).ToList();
 		}
 
 		/// <summary>
@@ -267,22 +268,22 @@ namespace OpenManta.Framework
 			return 1;
 		}
 
-        public static int GetMaxMessagesDestinationHour(VirtualMTA vmta, MXRecord mx)
-        {
-            int tmp;
-            return GetMaxMessagesDestinationHour(vmta, mx, out tmp);
-        }
-
-        /// <summary>
-        /// Gets the maximum amount of messages to send per hour from each ip address to mx.
-        /// </summary>
-        /// <param name="ipAddress">Outbound IP address</param>
-        /// <param name="record">MX Record of destination server.</param>
-        /// <param name="mxPatternID">ID of the pattern used to identify the rule.</param>
-        /// <returns>Maximum number of messages per hour or -1 for unlimited.</returns>
-        public static int GetMaxMessagesDestinationHour(VirtualMTA ipAddress, MXRecord record, out int mxPatternID)
+		public static int GetMaxMessagesDestinationHour(VirtualMTA vmta, MXRecord mx)
 		{
-			IList<OutboundRule>  rules = OutboundRuleManager.GetRules(record, ipAddress, out mxPatternID);
+			int tmp;
+			return GetMaxMessagesDestinationHour(vmta, mx, out tmp);
+		}
+
+		/// <summary>
+		/// Gets the maximum amount of messages to send per hour from each ip address to mx.
+		/// </summary>
+		/// <param name="ipAddress">Outbound IP address</param>
+		/// <param name="record">MX Record of destination server.</param>
+		/// <param name="mxPatternID">ID of the pattern used to identify the rule.</param>
+		/// <returns>Maximum number of messages per hour or -1 for unlimited.</returns>
+		public static int GetMaxMessagesDestinationHour(VirtualMTA ipAddress, MXRecord record, out int mxPatternID)
+		{
+			IList<OutboundRule> rules = OutboundRuleManager.GetRules(record, ipAddress, out mxPatternID);
 			for (int i = 0; i < rules.Count; i++)
 			{
 				if (rules[i].Type == OutboundRuleType.MaxMessagesPerHour)
@@ -311,14 +312,14 @@ namespace OpenManta.Framework
 		internal static int GetMaxConnectionsToDestination(VirtualMTA ipAddress, MXRecord record)
 		{
 			int mxPatternID = -1;
-			IList<OutboundRule>  rules = OutboundRuleManager.GetRules(record, ipAddress, out mxPatternID);
+			IList<OutboundRule> rules = OutboundRuleManager.GetRules(record, ipAddress, out mxPatternID);
 			for (int i = 0; i < rules.Count; i++)
 			{
 				if (rules[i].Type == OutboundRuleType.MaxConnections)
 				{
 					int tmp = 0;
 					if (int.TryParse(rules[i].Value, out tmp))
-							return tmp;
+						return tmp;
 					else
 					{
 						Logging.Error("Failed to get max connections for " + record.Host + " using " + ipAddress.IPAddress.ToString() + " value wasn't valid [" + rules[i].Value + "], defaulting to 1");

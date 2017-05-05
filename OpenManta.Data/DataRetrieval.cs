@@ -3,34 +3,33 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
+using OpenManta.Core;
 
 namespace OpenManta.Data
 {
-	public class DataRetrieval
+	/// <summary>
+	/// Used for methods that create new Business Objects and fill them with data.
+	/// </summary>
+	/// <typeparam name="ObjectType">The Type of the Business Object, e.g. BroadcastEmail, Format,
+	/// Audience, etc.</typeparam>
+	/// <param name="record"></param>
+	/// <returns></returns>
+	public delegate ObjectType CreateObjectMethod<ObjectType>(IDataRecord record);
+
+	/// <summary>
+	/// Used for methods that fill existing Business Objects with data.
+	/// </summary>
+	/// <typeparam name="ObjectType">The Type of the Business Object, e.g. BroadcastEmail, Format,
+	/// Audience, etc.</typeparam>
+	/// <param name="obj">An existing Business Object to fill with data from the database
+	/// record provided by <paramref name="record"/>.</param>
+	/// <param name="record">Database record containing values to copy to the Business Object
+	/// provided by <paramref name="obj"/>.</param>
+	/// <returns></returns>
+	public delegate void FillObjectMethod<ObjectType>(ObjectType obj, IDataRecord record);
+
+	public class DataRetrieval : IDataRetrieval
 	{
-		/// <summary>
-		/// Used for methods that create new Business Objects and fill them with data.
-		/// </summary>
-		/// <typeparam name="ObjectType">The Type of the Business Object, e.g. BroadcastEmail, Format,
-		/// Audience, etc.</typeparam>
-		/// <param name="record"></param>
-		/// <returns></returns>
-		public delegate ObjectType CreateObjectMethod<ObjectType>(IDataRecord record);
-
-
-		/// <summary>
-		/// Used for methods that fill existing Business Objects with data.
-		/// </summary>
-		/// <typeparam name="ObjectType">The Type of the Business Object, e.g. BroadcastEmail, Format,
-		/// Audience, etc.</typeparam>
-		/// <param name="obj">An existing Business Object to fill with data from the database
-		/// record provided by <paramref name="record"/>.</param>
-		/// <param name="record">Database record containing values to copy to the Business Object
-		/// provided by <paramref name="obj"/>.</param>
-		/// <returns></returns>
-		public delegate void FillObjectMethod<ObjectType>(ObjectType obj, IDataRecord record);
-
-
 		/// <summary>
 		/// Attempts to retrieve a database record and return a Business Object populated with
 		/// values from that record.
@@ -43,8 +42,11 @@ namespace OpenManta.Data
 		/// <returns>If a database record is not found by executing <paramref name="command"/>,
 		/// null is returned.  If a database record does exist, an instantied object with
 		/// values set from the retrieved database record is returned.</returns>
-		public static ObjectType GetSingleObjectFromDatabase<ObjectType>(SqlCommand command, CreateObjectMethod<ObjectType> createObjectMethod)
+		public ObjectType GetSingleObjectFromDatabase<ObjectType>(SqlCommand command, CreateObjectMethod<ObjectType> createObjectMethod)
 		{
+			Guard.NotNull(command, nameof(command));
+			Guard.NotNull(createObjectMethod, nameof(createObjectMethod));
+
 			// BenC (2011-01-07): Set "obj" to null by calling default() with its type.
 			// For reference types this'll be null, for value types it'll be zero.
 			// So either null or an instantiated object with values from the database
@@ -61,12 +63,10 @@ namespace OpenManta.Data
 				}
 			}
 
-
 			command.Connection.Close();
 
 			return obj;
 		}
-
 
 		/// <summary>
 		/// Attempts to retrieve a database record and return a Business Object populated with
@@ -79,8 +79,11 @@ namespace OpenManta.Data
 		/// <returns>If a database record is not found by executing <paramref name="command"/>,
 		/// null is returned.  If a database record does exist, an instantied object with
 		/// values set from the retrieved database record is returned.</returns>
-		public static async Task<T> GetSingleObjectFromDatabaseAsync<T>(SqlCommand command, CreateObjectMethod<T> createObjectMethod)
+		public async Task<T> GetSingleObjectFromDatabaseAsync<T>(SqlCommand command, CreateObjectMethod<T> createObjectMethod)
 		{
+			Guard.NotNull(command, nameof(command));
+			Guard.NotNull(createObjectMethod, nameof(createObjectMethod));
+
 			var obj = default(T);
 
 			await command.Connection.OpenAsync().ConfigureAwait(false);
@@ -90,7 +93,6 @@ namespace OpenManta.Data
 				if (await reader.ReadAsync().ConfigureAwait(false))
 					obj = createObjectMethod(reader);
 			}
-
 
 			command.Connection.Close();
 
@@ -112,8 +114,11 @@ namespace OpenManta.Data
 		/// from a retrieved database record into the object provided by <paramref name="obj"/>.</param>
 		/// <returns>true if a database record was retrieved and used to fill the Business Object provided
 		/// in <paramref name="obj"/>, else false.</returns>
-		public static bool FillSingleObjectFromDatabase<ObjectType>(SqlCommand command, ObjectType obj, FillObjectMethod<ObjectType> fillObjectMethod)
+		public bool FillSingleObjectFromDatabase<ObjectType>(SqlCommand command, ObjectType obj, FillObjectMethod<ObjectType> fillObjectMethod)
 		{
+			Guard.NotNull(command, nameof(command));
+			Guard.NotNull(fillObjectMethod, nameof(fillObjectMethod));
+
 			bool toReturn = false;
 
 			command.Connection.Open();
@@ -128,15 +133,16 @@ namespace OpenManta.Data
 				}
 			}
 
-
 			command.Connection.Close();
 
 			return toReturn;
 		}
 
-
-		public static List<ObjectType> GetCollectionFromDatabase<ObjectType>(SqlCommand command, CreateObjectMethod<ObjectType> createObjectMethod)
+		public List<ObjectType> GetCollectionFromDatabase<ObjectType>(SqlCommand command, CreateObjectMethod<ObjectType> createObjectMethod)
 		{
+			Guard.NotNull(command, nameof(command));
+			Guard.NotNull(createObjectMethod, nameof(createObjectMethod));
+
 			List<ObjectType> collection = new List<ObjectType>();
 
 			command.Connection.Open();
@@ -159,7 +165,7 @@ namespace OpenManta.Data
 	}
 
 	/// <summary>
-	/// Provides a set of extension methods for the IDataRecord class adding 
+	/// Provides a set of extension methods for the IDataRecord class adding
 	/// support for calling the Get* methods with a column name as well.
 	/// </summary>
 	public static class IDataRecordExtensions

@@ -6,18 +6,30 @@ namespace OpenManta.WebLib
 {
 	internal class VirtualMtaWebManager : IVirtualMtaWebManager
 	{
+		private readonly IVirtualMtaGroupDB _virtualGroupDb;
+		private readonly IVirtualMtaDB _virtualMtaDb;
+
+		public VirtualMtaWebManager(IVirtualMtaGroupDB virtualGroupDb, IVirtualMtaDB virtualMtaDb)
+		{
+			Guard.NotNull(virtualGroupDb, nameof(virtualGroupDb));
+			Guard.NotNull(virtualMtaDb, nameof(virtualMtaDb));
+
+			_virtualGroupDb = virtualGroupDb;
+			_virtualMtaDb = virtualMtaDb;
+		}
+
 		/// <summary>
 		/// Get a collection of all of the Virtual MTA Groups.
 		/// </summary>
 		/// <returns></returns>
 		public IList<VirtualMtaGroup> GetAllVirtualMtaGroups()
 		{
-			IList<VirtualMtaGroup> ipGroups = VirtualMtaGroupDB.GetVirtualMtaGroups();
+			IList<VirtualMtaGroup> ipGroups = _virtualGroupDb.GetVirtualMtaGroups();
 
 			// Get all the groups Virtual MTAs.
 			foreach (VirtualMtaGroup grp in ipGroups)
 			{
-				grp.VirtualMtaCollection = VirtualMtaDB.GetVirtualMtasInVirtualMtaGroup(grp.ID);
+				grp.VirtualMtaCollection = _virtualMtaDb.GetVirtualMtasInVirtualMtaGroup(grp.ID);
 			}
 
 			return ipGroups;
@@ -30,8 +42,8 @@ namespace OpenManta.WebLib
 		/// <returns>The Virtual MTA Group or NULL if none exist with ID</returns>
 		public VirtualMtaGroup GetVirtualMtaGroup(int id)
 		{
-			VirtualMtaGroup grp = VirtualMtaGroupDB.GetVirtualMtaGroup(id);
-			grp.VirtualMtaCollection = VirtualMtaDB.GetVirtualMtasInVirtualMtaGroup(grp.ID);
+			VirtualMtaGroup grp = _virtualGroupDb.GetVirtualMtaGroup(id);
+			grp.VirtualMtaCollection = _virtualMtaDb.GetVirtualMtasInVirtualMtaGroup(grp.ID);
 			return grp;
 		}
 
@@ -41,7 +53,7 @@ namespace OpenManta.WebLib
 		/// <param name="grp">Virtual MTA Group to save.</param>
 		public void Save(VirtualMtaGroup grp)
 		{
-			VirtualMtaGroupDB.Save(grp);
+			_virtualGroupDb.Save(grp);
 		}
 
 		/// <summary>
@@ -50,7 +62,7 @@ namespace OpenManta.WebLib
 		/// <param name="id">ID of the group to delete.</param>
 		public void DeleteGroup(int id)
 		{
-			VirtualMtaGroupDB.Delete(id);
+			_virtualGroupDb.Delete(id);
 		}
 	}
 }

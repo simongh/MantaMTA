@@ -10,6 +10,18 @@ namespace OpenManta.WebLib.DAL
 {
 	internal class SendDB : ISendDB
 	{
+		private readonly IDataRetrieval _dataRetrieval;
+		private readonly IMantaDB _mantaDb;
+
+		public SendDB(IDataRetrieval dataRetrieval, IMantaDB mantaDb)
+		{
+			Guard.NotNull(dataRetrieval, nameof(dataRetrieval));
+			Guard.NotNull(mantaDb, nameof(mantaDb));
+
+			_dataRetrieval = dataRetrieval;
+			_mantaDb = mantaDb;
+		}
+
 		/// <summary>
 		/// Gets the amount of messages currently the queue with the specified statuses.
 		/// </summary>
@@ -37,7 +49,7 @@ WHERE s.mta_sendStatus_id in (" + string.Join(",", Array.ConvertAll<SendStatus, 
 		/// <returns>Count of all Sends.</returns>
 		public long GetSendsCount()
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"SELECT COUNT(*) FROM man_mta_send";
@@ -54,7 +66,7 @@ WHERE s.mta_sendStatus_id in (" + string.Join(",", Array.ConvertAll<SendStatus, 
 		/// <returns>SendInfoCollection of the data page.</returns>
 		public SendInfoCollection GetSends(int pageSize, int pageNum)
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"DECLARE @sends table (RowNum int,
@@ -78,7 +90,7 @@ FROM man_mta_send as [send] with(nolock)
 WHERE [send].mta_send_internalId in (SELECT [s].mta_send_internalId FROM @sends as [s])
 ORDER BY [send].mta_send_createdTimestamp DESC";
 				cmd.CommandTimeout = 90; // Query can take a while to run due to the size of the Transactions table.
-				return new SendInfoCollection(DataRetrieval.GetCollectionFromDatabase<SendInfo>(cmd, CreateAndFillSendInfo));
+				return new SendInfoCollection(_dataRetrieval.GetCollectionFromDatabase<SendInfo>(cmd, CreateAndFillSendInfo));
 			}
 		}
 
@@ -88,7 +100,7 @@ ORDER BY [send].mta_send_createdTimestamp DESC";
 		/// <returns>SendInfoCollection of all relevent sends.</returns>
 		public SendInfoCollection GetSendsInProgress()
 		{
-			using (SqlConnection conn = new SqlConnection(ConfigurationManager.ConnectionStrings["SqlServer"].ConnectionString))
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
@@ -104,7 +116,7 @@ FROM man_mta_send as [send]
 WHERE ([send].mta_send_messages - (mta_send_accepted + mta_send_rejected)) > 0
 ORDER BY [send].mta_send_createdTimestamp DESC";
 				cmd.CommandTimeout = 90; // Query can take a while to run due to the size of the Transactions table.
-				return new SendInfoCollection(DataRetrieval.GetCollectionFromDatabase<SendInfo>(cmd, CreateAndFillSendInfo));
+				return new SendInfoCollection(_dataRetrieval.GetCollectionFromDatabase<SendInfo>(cmd, CreateAndFillSendInfo));
 			}
 		}
 
@@ -115,7 +127,7 @@ ORDER BY [send].mta_send_createdTimestamp DESC";
 		/// <returns></returns>
 		public SendInfo GetSend(string sendID)
 		{
-			using (SqlConnection conn = new SqlConnection(ConfigurationManager.ConnectionStrings["SqlServer"].ConnectionString))
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"SELECT [snd].*,
@@ -129,7 +141,7 @@ ORDER BY [send].mta_send_createdTimestamp DESC";
 FROM man_mta_send as [snd] with(nolock)
 WHERE [snd].mta_send_id = @sndID";
 				cmd.Parameters.AddWithValue("@sndID", sendID);
-				return DataRetrieval.GetSingleObjectFromDatabase<SendInfo>(cmd, CreateAndFillSendInfo);
+				return _dataRetrieval.GetSingleObjectFromDatabase<SendInfo>(cmd, CreateAndFillSendInfo);
 			}
 		}
 
@@ -140,14 +152,14 @@ WHERE [snd].mta_send_id = @sndID";
 		/// <returns></returns>
 		public SendMetadataCollection GetSendMetaData(int internalSendID)
 		{
-			using (SqlConnection conn = new SqlConnection(ConfigurationManager.ConnectionStrings["SqlServer"].ConnectionString))
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"SELECT *
 FROM man_mta_sendMeta
 WHERE mta_send_internalId = @sndID";
 				cmd.Parameters.AddWithValue("@sndID", internalSendID);
-				return new SendMetadataCollection(DataRetrieval.GetCollectionFromDatabase<SendMetadata>(cmd, CreateAndFillSendMetadata));
+				return new SendMetadataCollection(_dataRetrieval.GetCollectionFromDatabase<SendMetadata>(cmd, CreateAndFillSendMetadata));
 			}
 		}
 
@@ -198,7 +210,7 @@ WHERE mta_send_internalId = @sndID";
 
 		public bool SaveSendMetadata(int internalSendID, SendMetadata metadata)
 		{
-			using (SqlConnection conn = new SqlConnection(ConfigurationManager.ConnectionStrings["SqlServer"].ConnectionString))
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"IF EXISTS(SELECT 1

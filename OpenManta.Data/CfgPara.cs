@@ -2,17 +2,26 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using OpenManta.Core;
 
 namespace OpenManta.Data
 {
 	public static class CfgParaFactory
 	{
-		public static ICfgPara Instance => new CfgPara();
+		public static ICfgPara Instance { get; internal set; }
 	}
 
 	internal class CfgPara : ICfgPara
 	{
+		private readonly IMantaDB _mantaDb;
 		private int? _DefaultVirtualMtaGroupID = null;
+
+		public CfgPara(IMantaDB mantaDb)
+		{
+			Guard.NotNull(mantaDb, nameof(mantaDb));
+
+			_mantaDb = mantaDb;
+		}
 
 		/// <summary>
 		/// Gets the IP Addresses that SMTP servers should listen for client on from the database.
@@ -130,7 +139,7 @@ namespace OpenManta.Data
 		{
 			get
 			{
-				using (SqlConnection conn = MantaDB.GetSqlConnection())
+				using (SqlConnection conn = _mantaDb.GetSqlConnection())
 				{
 					SqlCommand cmd = conn.CreateCommand();
 					cmd.CommandText = @"
@@ -178,7 +187,7 @@ WHERE [dmn].cfg_localDomain_id = (SELECT TOP 1 [para].cfg_para_returnPathDomain_
 		/// <returns></returns>
 		private object GetColumnValue(string colName)
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
@@ -196,7 +205,7 @@ FROM man_cfg_para";
 		/// <param name="value">Value to set.</param>
 		private void SetColumnValue(string colName, object value)
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"

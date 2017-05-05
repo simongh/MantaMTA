@@ -7,22 +7,35 @@ namespace OpenManta.Framework
 {
 	internal partial class BounceRulesManager
 	{
+		private readonly IEventDB _eventDb;
+
 		/// <summary>
 		/// Holds a singleton instance of the BounceRulesManager.
 		/// </summary>
-		public static BounceRulesManager Instance { get { return _Instance; } }
-		private static readonly BounceRulesManager _Instance = new BounceRulesManager();
-		private BounceRulesManager() { }
+		public static BounceRulesManager Instance { get; private set; }
 
-		private static BounceRulesCollection _bounceRules = null;
-		public static BounceRulesCollection BounceRules
+		static BounceRulesManager()
+		{
+			Instance = new BounceRulesManager(EventDbFactory.Instance);
+		}
+
+		private BounceRulesManager(IEventDB eventDb)
+		{
+			Guard.NotNull(eventDb, nameof(eventDb));
+
+			_eventDb = eventDb;
+		}
+
+		private BounceRulesCollection _bounceRules = null;
+
+		public BounceRulesCollection BounceRules
 		{
 			get
 			{
 				if (_bounceRules == null || _bounceRules.LoadedTimestampUtc.AddMinutes(5) < DateTime.UtcNow)
 				{
 					// Would be nice to write to a log that we're updating.
-					_bounceRules = EventDB.GetBounceRules();
+					_bounceRules = _eventDb.GetBounceRules();
 
 					// Ensure the Rules are in the correct order.
 					_bounceRules = new BounceRulesCollection(_bounceRules.OrderBy(r => r.ExecutionOrder));

@@ -6,17 +6,34 @@ using System.Threading.Tasks;
 
 namespace OpenManta.Data
 {
-	public static class SendDB
+	public static class SendDBFactory
 	{
+		public static ISendDB Instance { get; internal set; }
+	}
+
+	internal class SendDB : ISendDB
+	{
+		private readonly IDataRetrieval _dataRetrieval;
+		private readonly IMantaDB _mantaDb;
+
+		public SendDB(IDataRetrieval dataRetrieval, IMantaDB mantaDb)
+		{
+			Guard.NotNull(dataRetrieval, nameof(dataRetrieval));
+			Guard.NotNull(mantaDb, nameof(mantaDb));
+
+			_dataRetrieval = dataRetrieval;
+			_mantaDb = mantaDb;
+		}
+
 		/// <summary>
 		/// Gets the sendID's internal ID from the database. If the record doesn't exist
 		/// then it will be created.
 		/// </summary>
 		/// <param name="sendID">The SendID to get the internal ID for.</param>
 		/// <returns></returns>
-		public static async Task<Send> CreateAndGetInternalSendIDAsync(string sendID)
+		public async Task<Send> CreateAndGetInternalSendIDAsync(string sendID)
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
@@ -36,7 +53,7 @@ FROM man_mta_send WITH(nolock)
 WHERE mta_send_id = @sndID";
 				cmd.Parameters.AddWithValue("@sndID", sendID);
 				cmd.Parameters.AddWithValue("@activeStatusID", (int)SendStatus.Active);
-				return await DataRetrieval.GetSingleObjectFromDatabaseAsync<Send>(cmd, CreateAndFillSendFromRecord).ConfigureAwait(false);
+				return await _dataRetrieval.GetSingleObjectFromDatabaseAsync(cmd, CreateAndFillSendFromRecord).ConfigureAwait(false);
 			}
 		}
 
@@ -45,7 +62,7 @@ WHERE mta_send_id = @sndID";
 		/// </summary>
 		/// <param name="record">Record to get data from.</param>
 		/// <returns>SendID filled with data.</returns>
-		private static Send CreateAndFillSendFromRecord(IDataRecord record)
+		private Send CreateAndFillSendFromRecord(IDataRecord record)
 		{
 			Send sendID = new Send();
 			sendID.ID = record.GetString("mta_send_id");
@@ -62,7 +79,7 @@ WHERE mta_send_id = @sndID";
 		/// </summary>
 		/// <param name="internalSendID">Internal ID of the Send to get.</param>
 		/// <returns>The specified Send or NULL if none with the ID exist.</returns>
-		public static Send GetSend(int internalSendID)
+		public Send GetSend(int internalSendID)
 		{
 			return GetSendAsync(internalSendID).Result;
 		}
@@ -72,9 +89,9 @@ WHERE mta_send_id = @sndID";
 		/// </summary>
 		/// <param name="internalSendID">Internal ID of the Send to get.</param>
 		/// <returns>The specified Send or NULL if none with the ID exist.</returns>
-		public static async Task<Send> GetSendAsync(int internalSendID)
+		public async Task<Send> GetSendAsync(int internalSendID)
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
@@ -82,7 +99,7 @@ SELECT *
 FROM man_mta_send WITH(NOLOCK)
 WHERE mta_send_internalId = @internalSndID";
 				cmd.Parameters.AddWithValue("@internalSndID", internalSendID);
-				return await DataRetrieval.GetSingleObjectFromDatabaseAsync<Send>(cmd, CreateAndFillSendFromRecord);
+				return await _dataRetrieval.GetSingleObjectFromDatabaseAsync<Send>(cmd, CreateAndFillSendFromRecord);
 			}
 		}
 
@@ -91,9 +108,9 @@ WHERE mta_send_internalId = @internalSndID";
 		/// </summary>
 		/// <param name="sendID">ID of the send to set the staus of.</param>
 		/// <param name="status">The status to set the send to.</param>
-		public static void SetSendStatus(string sendID, SendStatus status)
+		public void SetSendStatus(string sendID, SendStatus status)
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"

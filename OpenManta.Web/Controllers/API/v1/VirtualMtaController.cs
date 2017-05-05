@@ -17,14 +17,20 @@ namespace WebInterface.Controllers.API.v1
 	{
 		private readonly IVirtualMtaWebManager _manager;
 		private readonly OpenManta.WebLib.DAL.IVirtualMtaDB _virtualMtaDb;
+		private readonly IVirtualMtaGroupDB _virtualGroupDb;
+		private readonly IVirtualMtaDB _virtualDb;
 
-		public VirtualMtaController(IVirtualMtaWebManager manager, OpenManta.WebLib.DAL.IVirtualMtaDB virtualMtaDb)
+		public VirtualMtaController(IVirtualMtaWebManager manager, OpenManta.WebLib.DAL.IVirtualMtaDB virtualMtaDb, IVirtualMtaGroupDB virtualGroupDb, IVirtualMtaDB virtualDb)
 		{
 			Guard.NotNull(manager, nameof(manager));
 			Guard.NotNull(virtualMtaDb, nameof(virtualMtaDb));
+			Guard.NotNull(virtualGroupDb, nameof(virtualGroupDb));
+			Guard.NotNull(virtualDb, nameof(virtualDb));
 
 			_manager = manager;
 			_virtualMtaDb = virtualMtaDb;
+			_virtualGroupDb = virtualGroupDb;
+			_virtualDb = virtualDb;
 		}
 
 		/// <summary>
@@ -39,7 +45,7 @@ namespace WebInterface.Controllers.API.v1
 			VirtualMTA vMTA = null;
 
 			if (viewModel.Id != WebInterfaceParameters.VIRTUALMTA_NEW_ID)
-				vMTA = VirtualMtaDB.GetVirtualMta(viewModel.Id);
+				vMTA = _virtualDb.GetVirtualMta(viewModel.Id);
 			else
 				vMTA = new VirtualMTA();
 
@@ -91,7 +97,7 @@ namespace WebInterface.Controllers.API.v1
 			if (viewModel.Id == WebInterfaceParameters.VIRTUALMTAGROUP_NEW_ID)
 				grp = new VirtualMtaGroup();
 			else
-				grp = VirtualMtaGroupDB.GetVirtualMtaGroup(viewModel.Id);
+				grp = _virtualGroupDb.GetVirtualMtaGroup(viewModel.Id);
 
 			if (grp == null)
 				return false;
@@ -99,7 +105,7 @@ namespace WebInterface.Controllers.API.v1
 			grp.Name = viewModel.Name;
 			grp.Description = viewModel.Description;
 
-			var vMtas = VirtualMtaDB.GetVirtualMtas();
+			var vMtas = _virtualDb.GetVirtualMtas();
 			for (int i = 0; i < viewModel.MtaIDs.Length; i++)
 			{
 				VirtualMTA mta = vMtas.SingleOrDefault(m => m.ID == viewModel.MtaIDs[i]);

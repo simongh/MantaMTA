@@ -20,58 +20,50 @@ namespace OpenManta.Framework
 		/// </summary>
 		private TcpListener _TcpListener = null;
 
-        /// <summary>
-        /// Creates an instance of the Colony101 SMTP Server.
-        /// </summary>
-        /// <param name="port">Port number that server bind to.</param>
-        public SmtpServer(int port) : this(IPAddress.Any, port) { }
+		/// <summary>
+		/// Creates an instance of the Colony101 SMTP Server.
+		/// </summary>
+		/// <param name="port">Port number that server bind to.</param>
+		public SmtpServer(int port) : this(IPAddress.Any, port) { }
 
-        /// <summary>
-        /// Creates an instance of the Colony101 SMTP Server.
-        /// </summary>
-        /// <param name="iPAddress">IP Address to use for binding.</param>
-        /// <param name="port">Port number that server bind to.</param>
-        public SmtpServer(IPAddress ipAddress, int port)
-        {
-            // Create the TCP Listener using specified port on all IPs
-            _TcpListener = new TcpListener(ipAddress, port);
-
-            try
-            {
-                _TcpListener.Start();
-                _TcpListener.BeginAcceptTcpClient(AsyncConnectionHandler, _TcpListener);
-            }
-            catch (SocketException ex)
-            {
-                Logging.Error("Failed to create server on " + ipAddress.ToString() + ":" + port, ex);
-                return;
-            }
-
-            Logging.Info("Server started on " + ipAddress.ToString() + ":" + port);
-        }
-
-        /// <summary>
-        /// Make default constructor private so code from other classes has to use SmtpServer(port)
-        /// </summary>
-        private SmtpServer()
+		/// <summary>
+		/// Creates an instance of the Colony101 SMTP Server.
+		/// </summary>
+		/// <param name="iPAddress">IP Address to use for binding.</param>
+		/// <param name="port">Port number that server bind to.</param>
+		public SmtpServer(IPAddress ipAddress, int port)
 		{
-			throw new Exception("Must specify port for SMTP Server.");
+			// Create the TCP Listener using specified port on all IPs
+			_TcpListener = new TcpListener(ipAddress, port);
+
+			try
+			{
+				_TcpListener.Start();
+				_TcpListener.BeginAcceptTcpClient(AsyncConnectionHandler, _TcpListener);
+			}
+			catch (SocketException ex)
+			{
+				Logging.Error("Failed to create server on " + ipAddress.ToString() + ":" + port, ex);
+				return;
+			}
+
+			Logging.Info("Server started on " + ipAddress.ToString() + ":" + port);
 		}
 
-        /// <summary>
-        /// SmtpServer dispose method. Ensures the TcpListener is stopped.
-        /// </summary>
-        public void Dispose()
-        {
-            _TcpListener.Stop();
-            _TcpListener = null;
-        }
+		/// <summary>
+		/// SmtpServer dispose method. Ensures the TcpListener is stopped.
+		/// </summary>
+		public void Dispose()
+		{
+			_TcpListener.Stop();
+			_TcpListener = null;
+		}
 
-        /// <summary>
-        /// Event fired when a new Connection to the SMTP Server is made.
-        /// </summary>
-        /// <param name="ir">The AsyncResult from the TcpListener.</param>
-        private void AsyncConnectionHandler(IAsyncResult ir)
+		/// <summary>
+		/// Event fired when a new Connection to the SMTP Server is made.
+		/// </summary>
+		/// <param name="ir">The AsyncResult from the TcpListener.</param>
+		private void AsyncConnectionHandler(IAsyncResult ir)
 		{
 			// If the TCP Listener has been set to null, then we cannot handle any connections.
 			if (_TcpListener == null)
@@ -81,42 +73,42 @@ namespace OpenManta.Framework
 			{
 				TcpClient client = _TcpListener.EndAcceptTcpClient(ir);
 				_TcpListener.BeginAcceptTcpClient(AsyncConnectionHandler, _TcpListener);
-                Task.Factory.StartNew(HandleSmtpConnection, client, TaskCreationOptions.LongRunning | TaskCreationOptions.PreferFairness);
-            }
+				Task.Factory.StartNew(HandleSmtpConnection, client, TaskCreationOptions.LongRunning | TaskCreationOptions.PreferFairness);
+			}
 			catch (ObjectDisposedException)
 			{
 				// SMTP Server stop was done mid connection handshake, just ignore it.
 			}
 		}
 
-        /// <summary>
-        /// Gets the hostname for the server that is being connected to by client.
-        /// </summary>
-        /// <param name="client"></param>
-        /// <returns></returns>
-        private async Task<string> GetServerHostnameAsync(TcpClient client)
-        {
-            string serverIPAddress = (client.Client.LocalEndPoint as IPEndPoint).Address.ToString();
-            string serverHost = string.Empty;
-            try
-            {
-                IPHostEntry hostEntry = await Dns.GetHostEntryAsync(serverIPAddress);
-                serverHost = hostEntry.HostName;
-            }
-            catch (Exception)
-            {
-                // Host doesn't have reverse DNS. Use IP Address.
-                serverHost = serverIPAddress;
-            }
+		/// <summary>
+		/// Gets the hostname for the server that is being connected to by client.
+		/// </summary>
+		/// <param name="client"></param>
+		/// <returns></returns>
+		private async Task<string> GetServerHostnameAsync(TcpClient client)
+		{
+			string serverIPAddress = (client.Client.LocalEndPoint as IPEndPoint).Address.ToString();
+			string serverHost = string.Empty;
+			try
+			{
+				IPHostEntry hostEntry = await Dns.GetHostEntryAsync(serverIPAddress);
+				serverHost = hostEntry.HostName;
+			}
+			catch (Exception)
+			{
+				// Host doesn't have reverse DNS. Use IP Address.
+				serverHost = serverIPAddress;
+			}
 
-            return serverHost;
-        }
+			return serverHost;
+		}
 
-        /// <summary>
-        /// Method handles a single connection from a client.
-        /// </summary>
-        /// <param name="obj">Connection with the client.</param>
-        private async Task<bool> HandleSmtpConnection(object obj)
+		/// <summary>
+		/// Method handles a single connection from a client.
+		/// </summary>
+		/// <param name="obj">Connection with the client.</param>
+		private async Task<bool> HandleSmtpConnection(object obj)
 		{
 			TcpClient client = (TcpClient)obj;
 			client.ReceiveTimeout = MtaParameters.Client.ConnectionReceiveTimeoutInterval * 1000;
@@ -176,7 +168,7 @@ namespace OpenManta.Framework
 						continue;
 					}
 
-					#endregion
+					#endregion SMTP Commands that can be run before HELO is issued by client.
 
 					// EHLO should 500 Bad Command as we don't support enhanced services, clients should then HELO.
 					// We need to get the hostname provided by the client as it will be used in the recivied header.
@@ -307,9 +299,8 @@ namespace OpenManta.Framework
 							continue;
 						}
 
-
 						// Check to see if mail is to be delivered locally or relayed for delivery somewhere else.
-						if (MtaParameters.LocalDomains.Count(ld=> ld.Hostname.Equals(rcptTo.Host, StringComparison.OrdinalIgnoreCase)) < 1)
+						if (MtaParameters.LocalDomains.Count(ld => ld.Hostname.Equals(rcptTo.Host, StringComparison.OrdinalIgnoreCase)) < 1)
 						{
 							// Messages isn't for delivery on this server.
 							// Check if we are allowed to relay for the client IP
@@ -330,12 +321,12 @@ namespace OpenManta.Framework
 							if (!rcptTo.User.Equals("abuse", StringComparison.OrdinalIgnoreCase) &&
 								!rcptTo.User.Equals("postmaster", StringComparison.OrdinalIgnoreCase) &&
 								!rcptTo.User.StartsWith("return-", StringComparison.OrdinalIgnoreCase) &&
-								!FeedbackLoopEmailAddressDB.IsFeedbackLoopEmailAddress(rcptTo.Address))
+								!FeedbackLoopEmailAddressDBFactory.Instance.IsFeedbackLoopEmailAddress(rcptTo.Address))
 							{
 								await smtpStream.WriteLineAsync("550 Unknown mailbox");
 								continue;
 							}
-							
+
 							mailTransaction.MessageDestination = MessageDestination.Self;
 						}
 
@@ -395,23 +386,25 @@ namespace OpenManta.Framework
 							smtpStream.LocalAddress.ToString(),
 							DateTime.UtcNow.ToString("ddd, dd MMM yyyy HH':'mm':'ss -0000 (UTC)")));
 
-						
 						// Complete the transaction,either saving to local mailbox or queueing for relay.
 						SmtpServerTransaction.SmtpServerTransactionAsyncResult result = await mailTransaction.SaveAsync();
 
 						// Send a response to the client depending on the result of saving the transaction.
-						switch(result)
+						switch (result)
 						{
 							case SmtpServerTransaction.SmtpServerTransactionAsyncResult.SuccessMessageDelivered:
 							case SmtpServerTransaction.SmtpServerTransactionAsyncResult.SuccessMessageQueued:
 								await smtpStream.WriteLineAsync("250 Message queued for delivery");
 								break;
+
 							case SmtpServerTransaction.SmtpServerTransactionAsyncResult.FailedSendDiscarding:
 								await smtpStream.WriteLineAsync("554 Send Discarding.");
 								break;
+
 							case SmtpServerTransaction.SmtpServerTransactionAsyncResult.FailedToEnqueue:
 								await smtpStream.WriteLineAsync("421 Service unavailable");
 								break;
+
 							case SmtpServerTransaction.SmtpServerTransactionAsyncResult.Unknown:
 							default:
 								await smtpStream.WriteLineAsync("451 Requested action aborted: local error in processing.");
@@ -420,13 +413,12 @@ namespace OpenManta.Framework
 
 						// Done with transaction, clear it and inform client message success and QUEUED
 						mailTransaction = null;
-						
+
 						// Go and wait for the next client command.
 						continue;
 					}
 
-					#endregion
-
+					#endregion Commands that must be after a HELO
 
 					// If got this far then we don't known the command.
 					await smtpStream.WriteLineAsync("500 Unknown command");
@@ -436,7 +428,7 @@ namespace OpenManta.Framework
 			finally
 			{
 				// Client has issued QUIT command or connecion lost.
-				if(client.GetStream() != null)
+				if (client.GetStream() != null)
 					client.GetStream().Close();
 				client.Close();
 			}

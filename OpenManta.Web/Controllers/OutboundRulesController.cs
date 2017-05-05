@@ -12,19 +12,25 @@ namespace WebInterface.Controllers
 	public class OutboundRulesController : Controller
 	{
 		private readonly IOutboundRuleWebManager _manager;
+		private readonly IVirtualMtaDB _virtuaMtalDb;
+		private readonly IOutboundRuleDB _ruleDb;
 
-		public OutboundRulesController(IOutboundRuleWebManager manager)
+		public OutboundRulesController(IOutboundRuleWebManager manager, IVirtualMtaDB virtualMtaDb, IOutboundRuleDB ruleDb)
 		{
 			Guard.NotNull(manager, nameof(manager));
+			Guard.NotNull(virtualMtaDb, nameof(virtualMtaDb));
+			Guard.NotNull(ruleDb, nameof(ruleDb));
 
 			_manager = manager;
+			_virtuaMtalDb = virtualMtaDb;
+			_ruleDb = ruleDb;
 		}
 
 		//
 		// GET: /OutboundRules/
 		public ActionResult Index()
 		{
-			return View(OutboundRuleDB.GetOutboundRulePatterns());
+			return View(_ruleDb.GetOutboundRulePatterns());
 		}
 
 		//
@@ -36,16 +42,16 @@ namespace WebInterface.Controllers
 
 			if (id != WebInterfaceParameters.OUTBOUND_RULES_NEW_PATTERN_ID)
 			{
-				pattern = OutboundRuleDB.GetOutboundRulePatterns().Single(p => p.ID == id);
-				rules = OutboundRuleDB.GetOutboundRules().Where(r => r.OutboundMxPatternID == id).ToList();
+				pattern = _ruleDb.GetOutboundRulePatterns().Single(p => p.ID == id);
+				rules = _ruleDb.GetOutboundRules().Where(r => r.OutboundMxPatternID == id).ToList();
 			}
 			else
 			{
 				pattern = new OutboundMxPattern();
-				rules = OutboundRuleDB.GetOutboundRules().Where(r => r.OutboundMxPatternID == MtaParameters.OUTBOUND_RULES_DEFAULT_PATTERN_ID).ToList();
+				rules = _ruleDb.GetOutboundRules().Where(r => r.OutboundMxPatternID == MtaParameters.OUTBOUND_RULES_DEFAULT_PATTERN_ID).ToList();
 			}
 
-			IList<VirtualMTA> vMtas = VirtualMtaDB.GetVirtualMtas();
+			IList<VirtualMTA> vMtas = _virtuaMtalDb.GetVirtualMtas();
 			return View(new OutboundRuleModel(rules, pattern, vMtas));
 		}
 

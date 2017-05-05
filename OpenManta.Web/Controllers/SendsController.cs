@@ -16,16 +16,19 @@ namespace WebInterface.Controllers
 		private readonly ISendDB _sendDb;
 		private readonly ITransactionDB _transactionDb;
 		private readonly IVirtualMtaDB _virtualMtaDb;
+		private readonly OpenManta.Data.IMantaDB _mantaDb;
 
-		public SendsController(ISendDB sendDb, ITransactionDB transactionDb, IVirtualMtaDB virtualMtaDb)
+		public SendsController(ISendDB sendDb, ITransactionDB transactionDb, IVirtualMtaDB virtualMtaDb, OpenManta.Data.IMantaDB mantaDb)
 		{
 			Guard.NotNull(sendDb, nameof(sendDb));
 			Guard.NotNull(transactionDb, nameof(transactionDb));
 			Guard.NotNull(virtualMtaDb, nameof(virtualMtaDb));
+			Guard.NotNull(mantaDb, nameof(mantaDb));
 
 			_sendDb = sendDb;
 			_transactionDb = transactionDb;
 			_virtualMtaDb = virtualMtaDb;
+			_mantaDb = mantaDb;
 		}
 
 		//
@@ -122,7 +125,7 @@ namespace WebInterface.Controllers
 		// GET: /Sends/GetMessageResultCsv?sendID=
 		public ActionResult GetMessageResultCsv(string sendID)
 		{
-			using (SqlConnection conn = OpenManta.Data.MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"

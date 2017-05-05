@@ -28,14 +28,29 @@
     <ConsolePause>false</ConsolePause>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Ninject, Version=3.2.0.0, Culture=neutral, PublicKeyToken=c7192dc5380945e7, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ninject.3.2.2.0\lib\net45-full\Ninject.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Data" />
     <Reference Include="System.Configuration" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DataModule.cs" />
     <Compile Include="ICfgLocalDomains.cs" />
     <Compile Include="ICfgPara.cs" />
+    <Compile Include="ICfgRelayingPermittedIP.cs" />
+    <Compile Include="IDataRetrieval.cs" />
+    <Compile Include="IEventDB.cs" />
+    <Compile Include="IFeedbackLoopEmailAddressDB.cs" />
+    <Compile Include="IMantaDB.cs" />
+    <Compile Include="IMtaMessageDB.cs" />
+    <Compile Include="IMtaTransaction.cs" />
+    <Compile Include="IOutboundRuleDB.cs" />
+    <Compile Include="ISendDB.cs" />
+    <Compile Include="IVirtualMtaDB.cs" />
+    <Compile Include="IVirtualMtaGroupDB.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="CfgLocalDomains.cs" />
     <Compile Include="CfgPara.cs" />
@@ -54,6 +69,7 @@
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\OpenManta.Core\OpenManta.Core.csproj">

@@ -17,14 +17,17 @@ namespace WebInterface.Controllers.API.v1
 	{
 		private readonly ICfgLocalDomains _localDomains;
 		private readonly ICfgPara _config;
+		private readonly ICfgRelayingPermittedIP _configPermittedIP;
 
-		public SettingsController(ICfgLocalDomains localDomains, ICfgPara config)
+		public SettingsController(ICfgLocalDomains localDomains, ICfgPara config, ICfgRelayingPermittedIP configPermittedIP)
 		{
 			Guard.NotNull(localDomains, nameof(localDomains));
 			Guard.NotNull(config, nameof(config));
+			Guard.NotNull(configPermittedIP, nameof(configPermittedIP));
 
 			_localDomains = localDomains;
 			_config = config;
+			_configPermittedIP = configPermittedIP;
 		}
 
 		/// <summary>
@@ -55,7 +58,7 @@ namespace WebInterface.Controllers.API.v1
 			_config.DaysToKeepSmtpLogsFor = viewModel.DaysToKeepSmtpLogsFor;
 			_config.MaxTimeInQueueMinutes = viewModel.MaxTimeInQueueHours * 60;
 			_config.RetryIntervalBaseMinutes = viewModel.RetryIntervalBase;
-			CfgRelayingPermittedIP.SetRelayingPermittedIPAddresses(relayingIps.ToArray());
+			_configPermittedIP.SetRelayingPermittedIPAddresses(relayingIps.ToArray());
 			_config.ReturnPathDomainId = viewModel.ReturnPathLocalDomainID;
 
 			var domains = _localDomains.GetLocalDomainsArray();

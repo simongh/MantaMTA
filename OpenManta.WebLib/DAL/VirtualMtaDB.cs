@@ -9,6 +9,18 @@ namespace OpenManta.WebLib.DAL
 {
 	internal class VirtualMtaDB : IVirtualMtaDB
 	{
+		private readonly IDataRetrieval _dataRetrieval;
+		private readonly IMantaDB _mantaDb;
+
+		public VirtualMtaDB(IDataRetrieval dataRetrieval, IMantaDB mantaDb)
+		{
+			Guard.NotNull(dataRetrieval, nameof(dataRetrieval));
+			Guard.NotNull(mantaDb, nameof(mantaDb));
+
+			_dataRetrieval = dataRetrieval;
+			_mantaDb = mantaDb;
+		}
+
 		/// <summary>
 		/// Gets information about VirtualMTA sends for the specified send.
 		/// </summary>
@@ -16,7 +28,7 @@ namespace OpenManta.WebLib.DAL
 		/// <returns>Information about the usage of each VirtualMTA in the send.</returns>
 		public IEnumerable<VirtualMtaSendInfo> GetSendVirtualMTAStats(string sendID)
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
@@ -43,7 +55,7 @@ SELECT [ip].*,
 FROM man_ip_ipAddress as [ip]
 WHERE [ip].ip_ipAddress_id IN (SELECT * FROM @usedIpAddressIds)";
 				cmd.Parameters.AddWithValue("@sndID", sendID);
-				return DataRetrieval.GetCollectionFromDatabase<VirtualMtaSendInfo>(cmd, CreateAndFillVirtualMtaSendInfo).ToArray();
+				return _dataRetrieval.GetCollectionFromDatabase<VirtualMtaSendInfo>(cmd, CreateAndFillVirtualMtaSendInfo).ToArray();
 			}
 		}
 
@@ -79,7 +91,7 @@ WHERE [ip].ip_ipAddress_id IN (SELECT * FROM @usedIpAddressIds)";
 		{
 			Guard.NotNull(vmta, nameof(vmta));
 
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
@@ -114,7 +126,7 @@ ELSE
 		/// <param name="id">ID of Virtual MTA to Delete.</param>
 		public void Delete(int id)
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"

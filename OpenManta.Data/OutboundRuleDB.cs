@@ -1,20 +1,34 @@
-﻿using System.Configuration;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using OpenManta.Core;
 
 namespace OpenManta.Data
 {
-	public static class OutboundRuleDB
+	public static class OutboundRuleDBFactory
 	{
+		public static IOutboundRuleDB Instance { get; internal set; }
+	}
+
+	internal class OutboundRuleDB : IOutboundRuleDB
+	{
+		private readonly IDataRetrieval _dataRetrieval;
+		private readonly IMantaDB _mantaDb;
+
+		public OutboundRuleDB(IDataRetrieval dataRetrieval, IMantaDB mantaDb)
+		{
+			Guard.NotNull(dataRetrieval, nameof(dataRetrieval));
+
+			_dataRetrieval = dataRetrieval;
+		}
+
 		/// <summary>
 		/// Get the Outbound MX Patterns from the database.
 		/// </summary>
 		/// <returns></returns>
-		public static IList<OutboundMxPattern> GetOutboundRulePatterns()
+		public IList<OutboundMxPattern> GetOutboundRulePatterns()
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
@@ -22,7 +36,7 @@ SELECT *
 FROM man_rle_mxPattern
 ORDER BY rle_mxPattern_id DESC"; // Order descending so default -1 is always at the bottom!
 
-				return DataRetrieval.GetCollectionFromDatabase<OutboundMxPattern>(cmd, CreateAndFillOutboundMxPattern);
+				return _dataRetrieval.GetCollectionFromDatabase<OutboundMxPattern>(cmd, CreateAndFillOutboundMxPattern);
 			}
 		}
 
@@ -30,16 +44,16 @@ ORDER BY rle_mxPattern_id DESC"; // Order descending so default -1 is always at 
 		/// Get the Outbound Rules from the database.
 		/// </summary>
 		/// <returns></returns>
-		public static IList<OutboundRule> GetOutboundRules()
+		public IList<OutboundRule> GetOutboundRules()
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
 SELECT *
 FROM man_rle_rule";
 
-				return DataRetrieval.GetCollectionFromDatabase<OutboundRule>(cmd, CreateAndFillOutboundRule);
+				return _dataRetrieval.GetCollectionFromDatabase<OutboundRule>(cmd, CreateAndFillOutboundRule);
 			}
 		}
 
@@ -48,7 +62,7 @@ FROM man_rle_rule";
 		/// </summary>
 		/// <param name="record">Datarecord containing values for the new object.</param>
 		/// <returns>OutboundMxPattern object.</returns>
-		private static OutboundMxPattern CreateAndFillOutboundMxPattern(IDataRecord record)
+		private OutboundMxPattern CreateAndFillOutboundMxPattern(IDataRecord record)
 		{
 			OutboundMxPattern mxPattern = new OutboundMxPattern();
 
@@ -67,10 +81,10 @@ FROM man_rle_rule";
 		/// </summary>
 		/// <param name="record">Datarecord containing values for the new object.</param>
 		/// <returns>OutboundRule object.</returns>
-		private static OutboundRule CreateAndFillOutboundRule(IDataRecord record)
+		private OutboundRule CreateAndFillOutboundRule(IDataRecord record)
 		{
 			OutboundRule rule = new OutboundRule(record.GetInt32("rle_mxPattern_id"), (OutboundRuleType)record.GetInt32("rle_ruleType_id"), record.GetString("rle_rule_value"));
-			
+
 			return rule;
 		}
 	}

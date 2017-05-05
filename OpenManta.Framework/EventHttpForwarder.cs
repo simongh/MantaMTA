@@ -14,9 +14,21 @@ namespace OpenManta.Framework
 {
 	public class EventHttpForwarder : IStopRequired
 	{
-		private static EventHttpForwarder _Instance = new EventHttpForwarder();
-		public static EventHttpForwarder Instance { get { return _Instance; } }
-		private EventHttpForwarder() { }
+		private readonly IEventDB _eventDb;
+
+		public static EventHttpForwarder Instance { get; private set; }
+
+		static EventHttpForwarder()
+		{
+			Instance = new EventHttpForwarder(EventDbFactory.Instance);
+		}
+
+		private EventHttpForwarder(IEventDB eventDb)
+		{
+			Guard.NotNull(eventDb, nameof(eventDb));
+
+			_eventDb = eventDb;
+		}
 
 		/// <summary>
 		/// Will be set to true when MTA is stopping.
@@ -44,11 +56,11 @@ namespace OpenManta.Framework
 		/// </summary>
 		public void Start()
 		{
-            if (MtaParameters.EventForwardingHttpPostUrl != null)
-            {
-                var t = new Thread(new ThreadStart(ForwardEvents));
-                t.Start();
-            }
+			if (MtaParameters.EventForwardingHttpPostUrl != null)
+			{
+				var t = new Thread(new ThreadStart(ForwardEvents));
+				t.Start();
+			}
 		}
 
 		/// <summary>
@@ -63,17 +75,16 @@ namespace OpenManta.Framework
 				// Keep looping as long as the MTA is running.
 				while (!_IsStopping)
 				{
-                    IList<MantaEvent> events = null;
+					IList<MantaEvent> events = null;
 					// Get events for forwarding.
 					try
 					{
-						events = EventDB.GetEventsForForwarding(10);
+						events = _eventDb.GetEventsForForwarding(10);
 					}
 					catch (SqlNullValueException)
 					{
 						events = new List<MantaEvent>();
 					}
-
 
 					if (events.Count == 0)
 					{
@@ -83,12 +94,12 @@ namespace OpenManta.Framework
 					}
 					else
 					{
-                        // Found events to forward, create and run Tasks to forward.
-                        //for (var i = 0; i < events.Count; i++)
-                        Parallel.ForEach(events, e => {
-                            ForwardEventAsync(e).Wait();
-                        });
-                            
+						// Found events to forward, create and run Tasks to forward.
+						//for (var i = 0; i < events.Count; i++)
+						Parallel.ForEach(events, e =>
+						{
+							ForwardEventAsync(e).Wait();
+						});
 					}
 				}
 			}
@@ -122,12 +133,15 @@ namespace OpenManta.Framework
 					case MantaEventType.Abuse:
 						eventJson = JsonConvert.SerializeObject((MantaAbuseEvent)evt);
 						break;
+
 					case MantaEventType.Bounce:
 						eventJson = JsonConvert.SerializeObject((MantaBounceEvent)evt);
 						break;
+
 					case MantaEventType.TimedOutInQueue:
 						eventJson = JsonConvert.SerializeObject((MantaTimedOutInQueueEvent)evt);
 						break;
+
 					default:
 						eventJson = JsonConvert.SerializeObject(evt);
 						break;

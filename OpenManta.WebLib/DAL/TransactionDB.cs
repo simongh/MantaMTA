@@ -10,6 +10,18 @@ namespace OpenManta.WebLib.DAL
 {
 	internal class TransactionDB : ITransactionDB
 	{
+		private readonly IDataRetrieval _dataRetrieval;
+		private readonly IMantaDB _mantaDb;
+
+		public TransactionDB(IDataRetrieval dataRetrieval, IMantaDB mantaDb)
+		{
+			Guard.NotNull(dataRetrieval, nameof(dataRetrieval));
+			Guard.NotNull(mantaDb, nameof(mantaDb));
+
+			_dataRetrieval = dataRetrieval;
+			_mantaDb = mantaDb;
+		}
+
 		/// <summary>
 		/// Gets information about the speed of a send.
 		/// </summary>
@@ -17,7 +29,7 @@ namespace OpenManta.WebLib.DAL
 		/// <returns>SendSpeedInfo</returns>
 		public SendSpeedInfo GetSendSpeedInfo(string sendID)
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
@@ -33,7 +45,7 @@ WHERE [msg].mta_send_internalId = @internalSendID
 GROUP BY [tran].mta_transactionStatus_id, CONVERT(smalldatetime, [tran].mta_transaction_timestamp)
 ORDER BY CONVERT(smalldatetime, [tran].mta_transaction_timestamp)";
 				cmd.Parameters.AddWithValue("@sndID", sendID);
-				return new SendSpeedInfo(DataRetrieval.GetCollectionFromDatabase<SendSpeedInfoItem>(cmd, CreateAndFillSendSpeedInfoItemFromRecord));
+				return new SendSpeedInfo(_dataRetrieval.GetCollectionFromDatabase<SendSpeedInfoItem>(cmd, CreateAndFillSendSpeedInfoItemFromRecord));
 			}
 		}
 
@@ -43,7 +55,7 @@ ORDER BY CONVERT(smalldatetime, [tran].mta_transaction_timestamp)";
 		/// <returns>SendSpeedInfo</returns>
 		public SendSpeedInfo GetLastHourSendSpeedInfo()
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
@@ -52,7 +64,7 @@ FROM man_mta_transaction as [tran] WITH (nolock)
 WHERE [tran].mta_transaction_timestamp >= DATEADD(HOUR, -1, GETUTCDATE())
 GROUP BY [tran].mta_transactionStatus_id, CONVERT(smalldatetime, [tran].mta_transaction_timestamp)
 ORDER BY CONVERT(smalldatetime, [tran].mta_transaction_timestamp)";
-				return new SendSpeedInfo(DataRetrieval.GetCollectionFromDatabase<SendSpeedInfoItem>(cmd, CreateAndFillSendSpeedInfoItemFromRecord));
+				return new SendSpeedInfo(_dataRetrieval.GetCollectionFromDatabase<SendSpeedInfoItem>(cmd, CreateAndFillSendSpeedInfoItemFromRecord));
 			}
 		}
 
@@ -82,7 +94,7 @@ ORDER BY CONVERT(smalldatetime, [tran].mta_transaction_timestamp)";
 		public IEnumerable<BounceInfo> GetBounceInfo(string sendID, int pageNum, int pageSize)
 		{
 			bool hasSendID = !string.IsNullOrWhiteSpace(sendID);
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = (hasSendID ? @"
@@ -110,7 +122,7 @@ FROM (
 WHERE [Row] >= " + (((pageNum * pageSize) - pageSize) + 1) + " AND [Row] <= " + (pageNum * pageSize);
 				if (hasSendID)
 					cmd.Parameters.AddWithValue("@sndID", sendID);
-				return DataRetrieval.GetCollectionFromDatabase<BounceInfo>(cmd, CreateAndFillBounceInfo).ToArray();
+				return _dataRetrieval.GetCollectionFromDatabase<BounceInfo>(cmd, CreateAndFillBounceInfo).ToArray();
 			}
 		}
 
@@ -124,7 +136,7 @@ WHERE [Row] >= " + (((pageNum * pageSize) - pageSize) + 1) + " AND [Row] <= " + 
 		public IEnumerable<BounceInfo> GetFailedInfo(string sendID, int pageNum, int pageSize)
 		{
 			bool hasSendID = !string.IsNullOrWhiteSpace(sendID);
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = (hasSendID ? @"
@@ -152,7 +164,7 @@ FROM (
 WHERE [Row] >= " + (((pageNum * pageSize) - pageSize) + 1) + " AND [Row] <= " + (pageNum * pageSize);
 				if (hasSendID)
 					cmd.Parameters.AddWithValue("@sndID", sendID);
-				return DataRetrieval.GetCollectionFromDatabase<BounceInfo>(cmd, CreateAndFillBounceInfo).ToArray();
+				return _dataRetrieval.GetCollectionFromDatabase<BounceInfo>(cmd, CreateAndFillBounceInfo).ToArray();
 			}
 		}
 
@@ -166,7 +178,7 @@ WHERE [Row] >= " + (((pageNum * pageSize) - pageSize) + 1) + " AND [Row] <= " + 
 		public IEnumerable<BounceInfo> GetDeferralInfo(string sendID, int pageNum, int pageSize)
 		{
 			bool hasSendID = !string.IsNullOrWhiteSpace(sendID);
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = (hasSendID ? @"
@@ -194,7 +206,7 @@ FROM (
 WHERE [Row] >= " + (((pageNum * pageSize) - pageSize) + 1) + " AND [Row] <= " + (pageNum * pageSize);
 				if (hasSendID)
 					cmd.Parameters.AddWithValue("@sndID", sendID);
-				return DataRetrieval.GetCollectionFromDatabase<BounceInfo>(cmd, CreateAndFillBounceInfo).ToArray();
+				return _dataRetrieval.GetCollectionFromDatabase<BounceInfo>(cmd, CreateAndFillBounceInfo).ToArray();
 			}
 		}
 
@@ -205,7 +217,7 @@ WHERE [Row] >= " + (((pageNum * pageSize) - pageSize) + 1) + " AND [Row] <= " + 
 		/// <returns>Information about the bounces</returns>
 		public IEnumerable<BounceInfo> GetLastHourBounceInfo(int count)
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
@@ -224,7 +236,7 @@ AND mta_transactionStatus_id IN (1, 2, 3, 6)
 AND mta_transaction_serverHostname NOT LIKE ''
 GROUP BY mta_transactionStatus_id, mta_transaction_serverResponse, mta_transaction_serverHostname,[ip].ip_ipAddress_hostname, [ip].ip_ipAddress_ipAddress
 ORDER BY COUNT(*) DESC";
-				return DataRetrieval.GetCollectionFromDatabase<BounceInfo>(cmd, CreateAndFillBounceInfo).ToArray();
+				return _dataRetrieval.GetCollectionFromDatabase<BounceInfo>(cmd, CreateAndFillBounceInfo).ToArray();
 			}
 		}
 
@@ -236,7 +248,7 @@ ORDER BY COUNT(*) DESC";
 		public int GetBounceCount(string sendID)
 		{
 			bool hasSendID = !string.IsNullOrWhiteSpace(sendID);
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = (hasSendID ? @"
@@ -270,7 +282,7 @@ SELECT 1 as 'Col'
 		public int GetDeferredCount(string sendID)
 		{
 			bool hasSendID = !string.IsNullOrWhiteSpace(sendID);
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = (hasSendID ? @"
@@ -304,7 +316,7 @@ SELECT 1 as 'Col'
 		public int GetFailedCount(string sendID)
 		{
 			bool hasSendID = !string.IsNullOrWhiteSpace(sendID);
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = (hasSendID ? @"
@@ -337,7 +349,7 @@ SELECT 1 as 'Col'
 		/// <param name="rejected">Returns the rejected count.</param>
 		public void GetBounceDeferredAndRejected(out long deferred, out long rejected)
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
@@ -386,14 +398,14 @@ SELECT @deferred as 'Deferred', @rejected as 'Rejected'";
 		/// <returns>Transaction Summary</returns>
 		public SendTransactionSummaryCollection GetLastHourTransactionSummary()
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"SELECT [tran].mta_transactionStatus_id, COUNT(*) AS 'Count'
 FROM man_mta_transaction as [tran] WITH(nolock)
 WHERE [tran].mta_transaction_timestamp >= DATEADD(HOUR, -1, GETUTCDATE())
 GROUP BY [tran].mta_transactionStatus_id";
-				return new SendTransactionSummaryCollection(DataRetrieval.GetCollectionFromDatabase<SendTransactionSummary>(cmd, CreateAndFillTransactionSummary));
+				return new SendTransactionSummaryCollection(_dataRetrieval.GetCollectionFromDatabase<SendTransactionSummary>(cmd, CreateAndFillTransactionSummary));
 			}
 		}
 

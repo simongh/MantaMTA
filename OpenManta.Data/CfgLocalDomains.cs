@@ -8,11 +8,23 @@ namespace OpenManta.Data
 {
 	public static class CfgLocalDomainsFactory
 	{
-		public static ICfgLocalDomains Instance => new CfgLocalDomains();
+		public static ICfgLocalDomains Instance { get; internal set; }
 	}
 
 	internal class CfgLocalDomains : ICfgLocalDomains
 	{
+		private readonly IDataRetrieval _dataRetrieval;
+		private readonly IMantaDB _mantaDb;
+
+		public CfgLocalDomains(IDataRetrieval dataRetrieval, IMantaDB mantaDb)
+		{
+			Guard.NotNull(dataRetrieval, nameof(dataRetrieval));
+			Guard.NotNull(mantaDb, nameof(mantaDb));
+
+			_dataRetrieval = dataRetrieval;
+			_mantaDb = mantaDb;
+		}
+
 		/// <summary>
 		/// Gets an array of the local domains from the database.
 		/// All domains are toLowered!
@@ -20,13 +32,13 @@ namespace OpenManta.Data
 		/// <returns></returns>
 		public IList<LocalDomain> GetLocalDomainsArray()
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
 SELECT *
 FROM man_cfg_localDomain";
-				return DataRetrieval.GetCollectionFromDatabase<LocalDomain>(cmd, CreateAndFillLocalDomainFromRecord);
+				return _dataRetrieval.GetCollectionFromDatabase<LocalDomain>(cmd, CreateAndFillLocalDomainFromRecord);
 			}
 		}
 
@@ -35,7 +47,7 @@ FROM man_cfg_localDomain";
 		/// </summary>
 		public void ClearLocalDomains()
 		{
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"DELETE FROM man_cfg_localDomain";
@@ -52,7 +64,7 @@ FROM man_cfg_localDomain";
 		{
 			Guard.NotNull(localDomain, nameof(localDomain));
 
-			using (SqlConnection conn = MantaDB.GetSqlConnection())
+			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
