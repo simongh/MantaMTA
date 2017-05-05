@@ -9,36 +9,40 @@ using System.Threading.Tasks;
 using OpenManta.Core;
 using OpenManta.Data;
 using Newtonsoft.Json;
+using log4net;
 
 namespace OpenManta.Framework
 {
-	public class EventHttpForwarder : IStopRequired
+	public class EventHttpForwarder : IEventHttpForwarder
 	{
+		private volatile bool _IsStopping;
+
+		// Should be set to true when processing events and false when done.
+		private bool _IsRunning;
+
 		private readonly IEventDB _eventDb;
+		private readonly ILog _logging;
+		private readonly IMantaCoreEvents _coreEvents;
+		private readonly IEventsManager _events;
+		private readonly IMtaParameters _config;
 
-		public static EventHttpForwarder Instance { get; private set; }
-
-		static EventHttpForwarder()
-		{
-			Instance = new EventHttpForwarder(EventDbFactory.Instance);
-		}
-
-		private EventHttpForwarder(IEventDB eventDb)
+		public EventHttpForwarder(IEventDB eventDb, ILog logging, IMantaCoreEvents coreEvents, IEventsManager events, IMtaParameters config)
 		{
 			Guard.NotNull(eventDb, nameof(eventDb));
+			Guard.NotNull(logging, nameof(logging));
+			Guard.NotNull(coreEvents, nameof(coreEvents));
+			Guard.NotNull(events, nameof(events));
+			Guard.NotNull(config, nameof(config));
 
 			_eventDb = eventDb;
+			_logging = logging;
+			_coreEvents = coreEvents;
+			_events = events;
+			_config = config;
+
+			_IsStopping = false;
+			_IsRunning = false;
 		}
-
-		/// <summary>
-		/// Will be set to true when MTA is stopping.
-		/// </summary>
-		private volatile bool _IsStopping = false;
-
-		/// <summary>
-		/// Should be set to true when processing events and false when done.
-		/// </summary>
-		private bool _IsRunning = false;
 
 		/// <summary>
 		/// IStopRequired method. Will stop the EventHttpForwarder when the MTA is stopping.
@@ -56,7 +60,7 @@ namespace OpenManta.Framework
 		/// </summary>
 		public void Start()
 		{
-			if (MtaParameters.EventForwardingHttpPostUrl != null)
+			if (_config.EventForwardingHttpPostUrl != null)
 			{
 				var t = new Thread(new ThreadStart(ForwardEvents));
 				t.Start();
@@ -98,7 +102,7 @@ namespace OpenManta.Framework
 						//for (var i = 0; i < events.Count; i++)
 						Parallel.ForEach(events, e =>
 						{
-							ForwardEventAsync(e).Wait();
+							ForwardEventAsync(e).GetAwaiter().GetResult();
 						});
 					}
 				}
@@ -106,8 +110,8 @@ namespace OpenManta.Framework
 			catch (Exception ex)
 			{
 				// Something went wrong.
-				Logging.Error("EventHttpForwarder encountered an error.", ex);
-				MantaCoreEvents.InvokeMantaCoreStopping();
+				_logging.Error("EventHttpForwarder encountered an error.", ex);
+				_coreEvents.InvokeMantaCoreStopping();
 				Environment.Exit(-1);
 			}
 
@@ -122,7 +126,7 @@ namespace OpenManta.Framework
 					return;
 
 				// Create the HTTP POST request to the remove endpoint.
-				var httpRequest = (HttpWebRequest)WebRequest.Create(MtaParameters.EventForwardingHttpPostUrl);
+				var httpRequest = (HttpWebRequest)WebRequest.Create(_config.EventForwardingHttpPostUrl);
 				httpRequest.Method = "POST";
 				httpRequest.ContentType = "text/json";
 
@@ -171,13 +175,13 @@ namespace OpenManta.Framework
 				{
 					// Log that the event forwared.
 					evt.Forwarded = true;
-					await EventsManager.Instance.SaveAsync(evt);
+					await _events.SaveAsync(evt);
 				}
 			}
 			catch (Exception ex)
 			{
 				// We failed to forward the event. Most likly because the remote server didn't respond.
-				Logging.Error("Failed to forward event " + evt.ID, ex);
+				_logging.Error("Failed to forward event " + evt.ID, ex);
 			}
 		}
 	}

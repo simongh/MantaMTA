@@ -32,6 +32,9 @@
       <HintPath>..\packages\Newtonsoft.Json.8.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Ninject, Version=3.2.0.0, Culture=neutral, PublicKeyToken=c7192dc5380945e7, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ninject.3.2.2.0\lib\net45-full\Ninject.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="RabbitMQ.Client">
@@ -45,6 +48,24 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FrameworkModule.cs" />
+    <Compile Include="IBounceRulesManager.cs" />
+    <Compile Include="IDnsApi.cs" />
+    <Compile Include="IDnsManager.cs" />
+    <Compile Include="IEventHttpForwarder.cs" />
+    <Compile Include="IEventsFileHandler.cs" />
+    <Compile Include="IEventsManager.cs" />
+    <Compile Include="IMantaCoreEvents.cs" />
+    <Compile Include="IMessageManager.cs" />
+    <Compile Include="IMessageSender.cs" />
+    <Compile Include="IMtaMessageHelper.cs" />
+    <Compile Include="IMtaParameters.cs" />
+    <Compile Include="IOutboundRuleManager.cs" />
+    <Compile Include="IQueueManager.cs" />
+    <Compile Include="ISmtpServer.cs" />
+    <Compile Include="ISmtpServerTransaction.cs" />
+    <Compile Include="IThrottleManager.cs" />
+    <Compile Include="IVirtualMtaManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="MtaMessageService.cs" />
     <Compile Include="MessageSender.cs" />
@@ -60,10 +81,18 @@
     <Compile Include="MessageManager.cs" />
     <Compile Include="ReturnPathManager.cs" />
     <Compile Include="OutboundRuleManager.cs" />
+    <Compile Include="Smtp\IMantaOutboundClient.cs" />
+    <Compile Include="Smtp\IMantaOutboundClientPool.cs" />
+    <Compile Include="Smtp\IMantaSmtpClientPoolCollection.cs" />
+    <Compile Include="Smtp\IOutboundClientFactory.cs" />
+    <Compile Include="Smtp\ISmtpStreamHandler.cs" />
+    <Compile Include="Smtp\ISmtpTransactionLogger.cs" />
+    <Compile Include="Smtp\ISmtpServerFactory.cs" />
     <Compile Include="Smtp\MantaOutboundClient.cs" />
     <Compile Include="Smtp\MantaOutboundClientPool.cs" />
     <Compile Include="Smtp\MantaOutboundClientPoolCollection.cs" />
     <Compile Include="Smtp\MantaOutboundClientResult.cs" />
+    <Compile Include="Smtp\SmtpFactory.cs" />
     <Compile Include="ThrottleManager.cs" />
     <Compile Include="RabbitMq\RabbitMqInboundQueueManager.cs" />
     <Compile Include="RabbitMq\RabbitMqInboundStagingHandler.cs" />

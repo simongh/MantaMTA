@@ -7,29 +7,36 @@ using System.Data.SqlClient;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
+using log4net;
 
 namespace OpenManta.Framework
 {
-	public class QueueManager : IStopRequired
+	internal class QueueManager : IQueueManager, IStopRequired
 	{
 		/// <summary>
 		/// The maximum time between looking for messages that have been queued in RabbitMQ.
 		/// </summary>
 		private readonly TimeSpan RABBITMQ_EMPTY_QUEUE_SLEEP_TIME = TimeSpan.FromSeconds(10);
 
-		private readonly static QueueManager _Instance = new QueueManager();
-
 		/// <summary>
 		/// Will be set to true when the Stop() method is called.
 		/// </summary>
 		private volatile bool _isStopping = false;
 
-		private QueueManager()
-		{
-			MantaCoreEvents.RegisterStopRequiredInstance(this);
-		}
+		private readonly ILog _logging;
+		private readonly IMantaDB _mantaDb;
 
-		public static QueueManager Instance { get { return _Instance; } }
+		private QueueManager(IMantaCoreEvents coreEvents, log4net.ILog logging, IMantaDB mantaDb)
+		{
+			Guard.NotNull(coreEvents, nameof(coreEvents));
+			Guard.NotNull(logging, nameof(logging));
+			Guard.NotNull(mantaDb, nameof(mantaDb));
+
+			_logging = logging;
+			_mantaDb = mantaDb;
+
+			coreEvents.RegisterStopRequiredInstance(this);
+		}
 
 		/// <summary>
 		/// Enqueues the Inbound Message for Relaying.
@@ -102,7 +109,7 @@ namespace OpenManta.Framework
 					try
 					{
 						// Create a record of the messages in SQL server.
-						using (SqlConnection conn = MantaDbFactory.Instance.GetSqlConnection())
+						using (SqlConnection conn = _mantaDb.GetSqlConnection())
 						{
 							SqlBulkCopy bulk = new SqlBulkCopy(conn);
 							bulk.DestinationTableName = "man_mta_msg_staging";
@@ -130,7 +137,7 @@ COMMIT TRANSACTION";
 					}
 					catch (Exception ex)
 					{
-						Logging.Warn("Server Queue Manager", ex);
+						_logging.Warn("Server Queue Manager", ex);
 					}
 				}
 				catch (Exception)

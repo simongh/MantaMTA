@@ -1,50 +1,90 @@
-﻿using OpenManta.Core;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using log4net;
+using OpenManta.Core;
 
 namespace OpenManta.Framework
 {
-	public class EventsFileHandler : IStopRequired
+	internal class EventsFileHandler : IEventsFileHandler, IStopRequired
 	{
-		private static EventsFileHandler _Instance = new EventsFileHandler();
-		public static EventsFileHandler Instance { get { return _Instance; } }
-		private EventsFileHandler()
+		/// <summary>
+		/// Will be set to true when MantaMTA is stopping.
+		/// </summary>
+		private volatile bool _IsStopping;
+
+		private static object _Lock = new object();
+
+		/// <summary>
+		/// If true then a Task is already running for processing bounced emails.
+		/// </summary>
+		private static bool _BounceProcessingRunning = false;
+
+		/// <summary>
+		/// If true then a Task is already running for processing of feedback loops.
+		/// </summary>
+		private static bool _AbuseProcessingRunning = false;
+
+		/// <summary>
+		/// This is the name of the subdirectory where bounce/fbl emails that can't
+		/// be processed are placed.
+		/// </summary>
+		private const string _SubdirectoryForProblemEmails = "UnableToProcess";
+
+		/// <summary>
+		/// This is the name of the subdirectory where bounce emails are placed when the MtaParameters.KeepBounceFiles flag is set to true.
+		/// </summary>
+		private const string _SubdirectoryForProcessedBounceEmails = "SuccessfullyProcessed";
+
+		private readonly IEventHttpForwarder _events;
+		private readonly ILog _logging;
+		private readonly IEventsManager _eventsManager;
+		private readonly IMtaParameters _config;
+
+		public EventsFileHandler(IEventHttpForwarder events, IMantaCoreEvents coreEvents, log4net.ILog logging, IEventsManager eventsManager, IMtaParameters config)
 		{
+			Guard.NotNull(events, nameof(events));
+			Guard.NotNull(coreEvents, nameof(coreEvents));
+			Guard.NotNull(logging, nameof(logging));
+			Guard.NotNull(eventsManager, nameof(eventsManager));
+			Guard.NotNull(config, nameof(config));
+
+			_events = events;
+			_logging = logging;
+			_eventsManager = eventsManager;
+			_config = config;
+
+			_IsStopping = false;
+
 			// EventsFileHandler needs to be stopped when MantaMTA is stopping.
-			MantaCoreEvents.RegisterStopRequiredInstance(this);
+			coreEvents.RegisterStopRequiredInstance(this);
 
 			// Make sure the drop folders exist.
-			Directory.CreateDirectory(MtaParameters.BounceDropFolder);
-			Directory.CreateDirectory(Path.Combine(MtaParameters.BounceDropFolder, _SubdirectoryForProblemEmails));
-			Directory.CreateDirectory(MtaParameters.FeedbackLoopDropFolder);
-			Directory.CreateDirectory(Path.Combine(MtaParameters.FeedbackLoopDropFolder, _SubdirectoryForProblemEmails));
+			Directory.CreateDirectory(_config.BounceDropFolder);
+			Directory.CreateDirectory(Path.Combine(_config.BounceDropFolder, _SubdirectoryForProblemEmails));
+			Directory.CreateDirectory(_config.FeedbackLoopDropFolder);
+			Directory.CreateDirectory(Path.Combine(_config.FeedbackLoopDropFolder, _SubdirectoryForProblemEmails));
 
 			// Setup and start the bounce email file watcher.
-			FileSystemWatcher bounceWatcher = new FileSystemWatcher(MtaParameters.BounceDropFolder, "*.eml");
+			FileSystemWatcher bounceWatcher = new FileSystemWatcher(_config.BounceDropFolder, "*.eml");
 			bounceWatcher.Created += DoBounceFileProcessing;
 			bounceWatcher.EnableRaisingEvents = true;
 
 			// Setup and start the feedback loop email file watcher.
-			FileSystemWatcher abuseWatcher = new FileSystemWatcher(MtaParameters.FeedbackLoopDropFolder, "*.eml");
+			FileSystemWatcher abuseWatcher = new FileSystemWatcher(_config.FeedbackLoopDropFolder, "*.eml");
 			abuseWatcher.Created += DoAbuseFileProcessing;
 			abuseWatcher.EnableRaisingEvents = true;
 
-			Thread t = new Thread(new ThreadStart(delegate()
+			Thread t = new Thread(new ThreadStart(delegate ()
 			{
-				DoBounceFileProcessing(bounceWatcher, new FileSystemEventArgs(WatcherChangeTypes.All, MtaParameters.BounceDropFolder, string.Empty));
-				DoAbuseFileProcessing(abuseWatcher, new FileSystemEventArgs(WatcherChangeTypes.All, MtaParameters.FeedbackLoopDropFolder, string.Empty));
+				DoBounceFileProcessing(bounceWatcher, new FileSystemEventArgs(WatcherChangeTypes.All, _config.BounceDropFolder, string.Empty));
+				DoAbuseFileProcessing(abuseWatcher, new FileSystemEventArgs(WatcherChangeTypes.All, _config.FeedbackLoopDropFolder, string.Empty));
 			}));
 			t.Start();
 		}
-
-		/// <summary>
-		/// Will be set to true when MantaMTA is stopping.
-		/// </summary>
-		private volatile bool _IsStopping = false;
 
 		/// <summary>
 		/// Method will be called to stop EventsFileHandler.
@@ -60,35 +100,8 @@ namespace OpenManta.Framework
 		public void Start()
 		{
 			// Start the events forwarder.
-			EventHttpForwarder.Instance.Start();
+			_events.Start();
 		}
-
-		/// <summary>
-		/// Lock is used to prevent more than one abuse/fbl processor task from starting
-		/// at the same time.
-		/// </summary>
-		private static object _Lock = new object();
-
-		/// <summary>
-		/// If true then a Task is already running for processing bounced emails.
-		/// </summary>
-		private static bool _BounceProcessingRunning = false;
-
-		/// <summary>
-		/// If true then a Task is already running for processing of feedback loops.
-		/// </summary>
-		private static bool _AbuseProcessingRunning = false;
-
-		/// <summary>
-		/// This is the name of the subdirectory where bounce/fbl emails that can't 
-		/// be processed are placed.
-		/// </summary>
-		private const string _SubdirectoryForProblemEmails = "UnableToProcess";
-
-		/// <summary>
-		/// This is the name of the subdirectory where bounce emails are placed when the MtaParameters.KeepBounceFiles flag is set to true.
-		/// </summary>
-		private const string _SubdirectoryForProcessedBounceEmails = "SuccessfullyProcessed";
 
 		/// <summary>
 		/// Filesystem watcher callback for Bounced Emails directory.
@@ -98,7 +111,7 @@ namespace OpenManta.Framework
 		private void DoBounceFileProcessing(object sender, FileSystemEventArgs e)
 		{
 			FileSystemWatcher bounceWatcher = (FileSystemWatcher)sender;
-			
+
 			lock (_Lock)
 			{
 				// If bounce processing is already running don't need to do anything.
@@ -113,12 +126,12 @@ namespace OpenManta.Framework
 			try
 			{
 				// Run the bounce processing task.
-				DirectoryHandler(MtaParameters.BounceDropFolder, EventsManager.Instance.ProcessBounceEmail);
+				DirectoryHandler(_config.BounceDropFolder, _eventsManager.ProcessBounceEmail);
 			}
 			catch (Exception ex)
 			{
 				// Warn if anything went wrong.
-				Logging.Debug("DoBounceFileProcessing something went wrong.", ex);
+				_logging.Debug("DoBounceFileProcessing something went wrong.", ex);
 			}
 			finally
 			{
@@ -147,14 +160,14 @@ namespace OpenManta.Framework
 
 			try
 			{
-                Task.Run(() =>
-                {
-                    DirectoryHandler(MtaParameters.FeedbackLoopDropFolder, EventsManager.Instance.ProcessFeedbackLoop);
-                });
+				Task.Run(() =>
+				{
+					DirectoryHandler(_config.FeedbackLoopDropFolder, _eventsManager.ProcessFeedbackLoop);
+				});
 			}
 			catch (Exception ex)
 			{
-				Logging.Warn("DoAbuseFileProcessing something went wrong.", ex);
+				_logging.Warn("DoAbuseFileProcessing something went wrong.", ex);
 			}
 			finally
 			{
@@ -162,7 +175,6 @@ namespace OpenManta.Framework
 				abuseWatcher.EnableRaisingEvents = true;
 			}
 		}
-
 
 		/// <summary>
 		/// DirectoryHandler provides a standard way of processing a directory of email files.
@@ -176,7 +188,6 @@ namespace OpenManta.Framework
 			// A filter to use when pulling out files to process; likely to be "*.eml".
 			string fileSearchPattern = "*.eml";
 
-
 			FileInfo[] files = new DirectoryInfo(path).GetFiles(fileSearchPattern);
 
 			// Keep going until there aren't any more files to process, then we wait for the FileSystemWatcher to nudge us
@@ -184,14 +195,14 @@ namespace OpenManta.Framework
 			do
 			{
 				// Loop through and process all the files we've picked up.
-				Parallel.ForEach<FileInfo>(files, delegate(FileInfo f)
+				Parallel.ForEach<FileInfo>(files, delegate (FileInfo f)
 				{
 					if (_IsStopping)
 						return;
 
 					if (!File.Exists(f.FullName))
 					{
-						Logging.Debug(String.Format("File not found: \"{0}\".", f.FullName));
+						_logging.Debug(String.Format("File not found: \"{0}\".", f.FullName));
 						return;
 					}
 
@@ -200,8 +211,6 @@ namespace OpenManta.Framework
 						return;
 
 					string content = File.ReadAllText(f.FullName);
-
-
 
 					// Send the content to the delegate method that'll process its contents.
 					EmailProcessingDetails processingDetails = fileProcessor(content);
@@ -217,10 +226,9 @@ namespace OpenManta.Framework
 
 							// To enable reviewing of bounce emails and how Manta has processed them, a flag can be set that
 							// keeps processed files.  Files that result in an error when being processed are always kept.
-							if (MtaParameters.KeepBounceFiles)
+							if (_config.KeepBounceFiles)
 							{
 								// Retain files.
-
 
 								string keepPath = Path.Combine(Path.GetDirectoryName(f.FullName), _SubdirectoryForProcessedBounceEmails, processingDetails.BounceIdentifier.ToString());
 
@@ -235,7 +243,6 @@ namespace OpenManta.Framework
 										keepPath = Path.Combine(keepPath, processingDetails.MatchingValue);
 										break;
 								}
-
 
 								Directory.CreateDirectory(keepPath);
 
@@ -279,13 +286,13 @@ namespace OpenManta.Framework
 								}
 								catch (TimeoutException)
 								{
-									Logging.Fatal("Tried to move file " + f.Name + " for 10 seconds but failed.");
-									Logging.Fatal("This is a FATAL failure.");
+									_logging.Fatal("Tried to move file " + f.Name + " for 10 seconds but failed.");
+									_logging.Fatal("This is a FATAL failure.");
 									Environment.Exit(-1);
 								}
 								catch (Exception)
 								{
-									Logging.Debug("Attempt " + version.ToString() + " Failed.");
+									_logging.Debug("Attempt " + version.ToString() + " Failed.");
 									version++;
 								}
 							}

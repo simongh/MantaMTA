@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections;
-using System.ComponentModel;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 namespace OpenManta.Framework
@@ -8,7 +8,7 @@ namespace OpenManta.Framework
 	/// <summary>
 	/// .Net doesn't provide deep enough access to the Windows DNS API so we need to interop are way in.
 	/// </summary>
-	internal class dnsapi
+	internal class dnsapi : IDnsApi
 	{
 		/// <summary>
 		/// The DnsQuery function type is the generic query interface to the DNS namespace, and provides application developers with a DNS query resolution interface.
@@ -25,7 +25,7 @@ namespace OpenManta.Framework
 		private static extern int DnsQuery_W([MarshalAs(UnmanagedType.VBByRefStr)]ref string lpstrName, QueryTypes wType, QueryOptions Options, int pExtra, ref IntPtr ppQueryResultsSet, int pReserved);
 
 		/// <summary>
-		/// 
+		///
 		/// </summary>
 		/// <param name="pRecordList"></param>
 		/// <param name="FreeType"></param>
@@ -40,7 +40,7 @@ namespace OpenManta.Framework
 		/// <param name="domain">The domain to get MXs for.</param>
 		/// <returns>See description.</returns>
 		/// <throws>Win32 Exception. (123)</throws>
-		internal static string[] GetMXRecords(string domain)
+		public IEnumerable<string> GetMXRecords(string domain)
 		{
 			// Pointer to the first DNS result.
 			IntPtr ptrFirstRecord = IntPtr.Zero;

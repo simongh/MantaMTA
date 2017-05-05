@@ -5,23 +5,21 @@ using OpenManta.Data;
 
 namespace OpenManta.Framework
 {
-	public static class MtaMessageHelper
+	internal class MtaMessageHelper : IMtaMessageHelper
 	{
-		/// <summary>
-		/// This method handles message deferal.
-		///	Logs deferral
-		///	Fails the message if timed out
-		/// or
-		/// Sets the next rety date time
-		/// </summary>
-		/// <param name="defMsg">The deferal message from the SMTP server.</param>
-		/// <param name="ipAddress">IP Address that send was attempted from.</param>
-		/// <param name="mxRecord">MX Record of the server tried to send too.</param>
-		/// <param name="isServiceUnavailable">If false will backoff the retry, if true will use the MtaParameters.MtaRetryInterval,
-		/// this is needed to reduce the tail when sending as a message could get multiple try again laters and soon be 1h+ before next retry.</param>
-		public static void HandleDeliveryDeferral(MtaQueuedMessage msg, string defMsg, VirtualMTA ipAddress, MXRecord mxRecord, bool isServiceUnavailable = false)
+		private readonly IEventsManager _eventsManager;
+		private readonly IMtaTransaction _mtaTransation;
+		private readonly IMtaParameters _config;
+
+		public MtaMessageHelper(IEventsManager eventsManager, IMtaTransaction mtaTransaction, IMtaParameters config)
 		{
-			HandleDeliveryDeferralAsync(msg, defMsg, ipAddress, mxRecord, isServiceUnavailable).Wait();
+			Guard.NotNull(eventsManager, nameof(eventsManager));
+			Guard.NotNull(mtaTransaction, nameof(mtaTransaction));
+			Guard.NotNull(config, nameof(config));
+
+			_eventsManager = eventsManager;
+			_mtaTransation = mtaTransaction;
+			_config = config;
 		}
 
 		/// <summary>
@@ -36,10 +34,31 @@ namespace OpenManta.Framework
 		/// <param name="mxRecord">MX Record of the server tried to send too.</param>
 		/// <param name="isServiceUnavailable">If false will backoff the retry, if true will use the MtaParameters.MtaRetryInterval,
 		/// this is needed to reduce the tail when sending as a message could get multiple try again laters and soon be 1h+ before next retry.</param>
-		public static async Task<bool> HandleDeliveryDeferralAsync(MtaQueuedMessage msg, string defMsg, VirtualMTA ipAddress, MXRecord mxRecord, bool isServiceUnavailable = false, int? overrideTimeminutes = null)
+		public void HandleDeliveryDeferral(MtaQueuedMessage msg, string defMsg, VirtualMTA ipAddress, MXRecord mxRecord, bool isServiceUnavailable = false)
 		{
+			Guard.NotNull(msg, nameof(msg));
+
+			HandleDeliveryDeferralAsync(msg, defMsg, ipAddress, mxRecord, isServiceUnavailable).GetAwaiter().GetResult();
+		}
+
+		/// <summary>
+		/// This method handles message deferal.
+		///	Logs deferral
+		///	Fails the message if timed out
+		/// or
+		/// Sets the next rety date time
+		/// </summary>
+		/// <param name="defMsg">The deferal message from the SMTP server.</param>
+		/// <param name="ipAddress">IP Address that send was attempted from.</param>
+		/// <param name="mxRecord">MX Record of the server tried to send too.</param>
+		/// <param name="isServiceUnavailable">If false will backoff the retry, if true will use the MtaParameters.MtaRetryInterval,
+		/// this is needed to reduce the tail when sending as a message could get multiple try again laters and soon be 1h+ before next retry.</param>
+		public async Task<bool> HandleDeliveryDeferralAsync(MtaQueuedMessage msg, string defMsg, VirtualMTA ipAddress, MXRecord mxRecord, bool isServiceUnavailable = false, int? overrideTimeminutes = null)
+		{
+			Guard.NotNull(msg, nameof(msg));
+
 			// Log the deferral.
-			await MtaTransactionFactory.Instance.LogTransactionAsync(msg, TransactionStatus.Deferred, defMsg, ipAddress, mxRecord);
+			await _mtaTransation.LogTransactionAsync(msg, TransactionStatus.Deferred, defMsg, ipAddress, mxRecord);
 
 			// This holds the maximum interval between send retries. Should be put in the database.
 			int maxInterval = 3 * 60;
@@ -48,7 +67,7 @@ namespace OpenManta.Framework
 			msg.DeferredCount++;
 
 			// Hold the minutes to wait until next retry.
-			double nextRetryInterval = MtaParameters.MtaRetryInterval;
+			double nextRetryInterval = _config.MtaRetryInterval;
 
 			if (overrideTimeminutes.HasValue)
 			{
@@ -83,9 +102,9 @@ namespace OpenManta.Framework
 		/// Deletes queued data
 		/// </summary>
 		/// <param name="failMsg"></param>
-		public static async Task<bool> HandleDeliveryFailAsync(MtaQueuedMessage msg, string failMsg, VirtualMTA ipAddress, MXRecord mxRecord)
+		public async Task<bool> HandleDeliveryFailAsync(MtaQueuedMessage msg, string failMsg, VirtualMTA ipAddress, MXRecord mxRecord)
 		{
-			await MtaTransactionFactory.Instance.LogTransactionAsync(msg, TransactionStatus.Failed, failMsg, ipAddress, mxRecord);
+			await _mtaTransation.LogTransactionAsync(msg, TransactionStatus.Failed, failMsg, ipAddress, mxRecord);
 
 			try
 			{
@@ -93,7 +112,7 @@ namespace OpenManta.Framework
 				for (int i = 0; i < msg.RcptTo.Length; i++)
 				{
 					EmailProcessingDetails processingInfo = null;
-					EventsManager.Instance.ProcessSmtpResponseMessage(failMsg, msg.RcptTo[i], msg.InternalSendID, out processingInfo);
+					_eventsManager.ProcessSmtpResponseMessage(failMsg, msg.RcptTo[i], msg.InternalSendID, out processingInfo);
 				}
 			}
 			catch (Exception)
@@ -110,9 +129,9 @@ namespace OpenManta.Framework
 		/// Logs success
 		/// Deletes queued data
 		/// </summary>
-		public static async Task<bool> HandleDeliverySuccessAsync(MtaQueuedMessage msg, VirtualMTA ipAddress, MXRecord mxRecord, string response)
+		public async Task<bool> HandleDeliverySuccessAsync(MtaQueuedMessage msg, VirtualMTA ipAddress, MXRecord mxRecord, string response)
 		{
-			await MtaTransactionFactory.Instance.LogTransactionAsync(msg, TransactionStatus.Success, response, ipAddress, mxRecord);
+			await _mtaTransation.LogTransactionAsync(msg, TransactionStatus.Success, response, ipAddress, mxRecord);
 			msg.IsHandled = true;
 			return true;
 		}
@@ -123,7 +142,7 @@ namespace OpenManta.Framework
 		/// <param name="ipAddress"></param>
 		/// <param name="mxRecord"></param>
 		/// <returns></returns>
-		public static async Task<bool> HandleFailedToConnectAsync(MtaQueuedMessage msg, VirtualMTA ipAddress, MXRecord mxRecord)
+		public async Task<bool> HandleFailedToConnectAsync(MtaQueuedMessage msg, VirtualMTA ipAddress, MXRecord mxRecord)
 		{
 			// If there was no MX record in DNS, so using A, we should fail and not retry.
 			if (mxRecord.MxRecordSrc == MxRecordSrc.A)
@@ -136,9 +155,11 @@ namespace OpenManta.Framework
 		/// Discards the message.
 		/// </summary>
 		/// <param name="failMsg"></param>
-		public static async Task<bool> HandleMessageDiscardAsync(MtaQueuedMessage msg)
+		public async Task<bool> HandleMessageDiscardAsync(MtaQueuedMessage msg)
 		{
-			await MtaTransactionFactory.Instance.LogTransactionAsync(msg, TransactionStatus.Discarded, string.Empty, null, null);
+			Guard.NotNull(msg, nameof(msg));
+
+			await _mtaTransation.LogTransactionAsync(msg, TransactionStatus.Discarded, string.Empty, null, null);
 			msg.IsHandled = true;
 			return true;
 		}
@@ -148,10 +169,12 @@ namespace OpenManta.Framework
 		///	Logs throttle
 		/// Sets the next rety date time
 		/// </summary>
-		internal static async Task<bool> HandleDeliveryThrottleAsync(MtaQueuedMessage msg, VirtualMTA ipAddress, MXRecord mxRecord)
+		public async Task<bool> HandleDeliveryThrottleAsync(MtaQueuedMessage msg, VirtualMTA ipAddress, MXRecord mxRecord)
 		{
+			Guard.NotNull(msg, nameof(msg));
+
 			// Log deferral
-			await MtaTransactionFactory.Instance.LogTransactionAsync(msg, TransactionStatus.Throttled, string.Empty, ipAddress, mxRecord);
+			await _mtaTransation.LogTransactionAsync(msg, TransactionStatus.Throttled, string.Empty, ipAddress, mxRecord);
 
 			// Set next retry time and release the lock.
 			msg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(1);
@@ -164,8 +187,10 @@ namespace OpenManta.Framework
 		/// Handle the message for a paused send.
 		/// Should increase attempt send after timestamp and requeue in RabbitMQ.
 		/// </summary>
-		internal static async Task HandleSendPaused(MtaQueuedMessage msg)
+		public async Task HandleSendPaused(MtaQueuedMessage msg)
 		{
+			Guard.NotNull(msg, nameof(msg));
+
 			msg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(1);
 			await Requeue(msg);
 		}
@@ -174,10 +199,12 @@ namespace OpenManta.Framework
 		/// Handles a service unavailable event, should be same as defer but only wait 1 minute before next retry.
 		/// </summary>
 		/// <param name="sndIpAddress"></param>
-		internal static async Task<bool> HandleServiceUnavailableAsync(MtaQueuedMessage msg, VirtualMTA ipAddress)
+		public async Task<bool> HandleServiceUnavailableAsync(MtaQueuedMessage msg, VirtualMTA ipAddress)
 		{
+			Guard.NotNull(msg, nameof(msg));
+
 			// Log deferral
-			await MtaTransactionFactory.Instance.LogTransactionAsync(msg, TransactionStatus.Deferred, "Service Unavailable", ipAddress, null);
+			await _mtaTransation.LogTransactionAsync(msg, TransactionStatus.Deferred, "Service Unavailable", ipAddress, null);
 
 			// Set next retry time and release the lock.
 			msg.AttemptSendAfterUtc = DateTime.UtcNow.AddSeconds(15);
@@ -188,7 +215,7 @@ namespace OpenManta.Framework
 		/// <summary>
 		/// Requeue the message in RabbitMQ.
 		/// </summary>
-		private static async Task Requeue(MtaQueuedMessage msg)
+		private async Task Requeue(MtaQueuedMessage msg)
 		{
 			await RabbitMq.RabbitMqOutboundQueueManager.Enqueue(msg);
 			msg.IsHandled = true;

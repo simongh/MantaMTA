@@ -1,30 +1,31 @@
-﻿using OpenManta.Core;
-using OpenManta.Data;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using log4net;
+using OpenManta.Core;
+using OpenManta.Data;
 
 namespace OpenManta.Framework
 {
-	internal static class OutboundRuleManager
+	internal class OutboundRuleManager : IOutboundRuleManager
 	{
 		/// <summary>
 		/// Holds a cached copy of the Outbound MX Patterns from the database.
 		/// </summary>
-		private static IList<OutboundMxPattern> _MXPatterns { get; set; }
+		private IList<OutboundMxPattern> _MXPatterns;
 
 		/// <summary>
 		/// Holds a cached copy of the Outbound Rules from the database.
 		/// </summary>
-		private static IList<OutboundRule> _Rules { get; set; }
+		private IList<OutboundRule> _Rules;
 
 		/// <summary>
 		/// Holds a cached collection of matched patterns.
 		/// Key: IP Address tostring()
 		/// </summary>
-		private static ConcurrentDictionary<string, MatchedMxPatternCollection> _matchedPatterns { get; set; }
+		private ConcurrentDictionary<string, MatchedMxPatternCollection> _matchedPatterns;
 
 		/// <summary>
 		/// Class represents a matched MX Pattern
@@ -57,7 +58,7 @@ namespace OpenManta.Framework
 		/// Holds a collection of matched MX patterns
 		/// Key: MX Record hostname.
 		/// </summary>
-		private class MatchedMxPatternCollection : ConcurrentDictionary<string, OutboundRuleManager.MatchedMxPattern>
+		private class MatchedMxPatternCollection : ConcurrentDictionary<string, MatchedMxPattern>
 		{
 			/// <summary>
 			/// Adds or updates.
@@ -101,7 +102,7 @@ namespace OpenManta.Framework
 			/// </summary>
 			/// <param name="ipAddress"></param>
 			/// <returns></returns>
-			public OutboundRuleManager.MatchedMxPattern GetMatchedMxPattern(VirtualMTA ipAddress)
+			public MatchedMxPattern GetMatchedMxPattern(VirtualMTA ipAddress)
 			{
 				OutboundRuleManager.MatchedMxPattern tmp;
 				if (base.TryGetValue(ipAddress.IPAddress.ToString(), out tmp))
@@ -122,6 +123,21 @@ namespace OpenManta.Framework
 			}
 		}
 
+		private readonly IOutboundRuleDB _ruleDb;
+		private readonly ILog _logging;
+		private readonly IMantaCoreEvents _coreEvents;
+
+		public OutboundRuleManager(IOutboundRuleDB ruleDb, ILog logging, IMantaCoreEvents coreEvents)
+		{
+			Guard.NotNull(ruleDb, nameof(ruleDb));
+			Guard.NotNull(logging, nameof(logging));
+			Guard.NotNull(coreEvents, nameof(coreEvents));
+
+			_ruleDb = ruleDb;
+			_logging = logging;
+			_coreEvents = coreEvents;
+		}
+
 		/// <summary>
 		/// Gets the Outbound Rules for the specified destination MX and optionally IP Address.
 		/// </summary>
@@ -129,17 +145,20 @@ namespace OpenManta.Framework
 		/// <param name="mtaIpAddress">Outbound IP Address</param>
 		/// <param name="mxPatternID">OUT: the ID of MxPattern that caused match.</param>
 		/// <returns></returns>
-		public static IList<OutboundRule> GetRules(MXRecord mxRecord, VirtualMTA mtaIpAddress, out int mxPatternID)
+		public IList<OutboundRule> GetRules(MXRecord mxRecord, VirtualMTA mtaIpAddress, out int mxPatternID)
 		{
-			// Get the data from the database. This needs to be cleverer and reload every x minutes.
-			if (OutboundRuleManager._MXPatterns == null)
-				OutboundRuleManager._MXPatterns = OutboundRuleDBFactory.Instance.GetOutboundRulePatterns();
-			if (OutboundRuleManager._Rules == null)
-				OutboundRuleManager._Rules = OutboundRuleDBFactory.Instance.GetOutboundRules();
+			Guard.NotNull(mxRecord, nameof(mxRecord));
+			Guard.NotNull(mtaIpAddress, nameof(mtaIpAddress));
 
-			int patternID = OutboundRuleManager.GetMxPatternID(mxRecord, mtaIpAddress);
+			// Get the data from the database. This needs to be cleverer and reload every x minutes.
+			if (_MXPatterns == null)
+				_MXPatterns = _ruleDb.GetOutboundRulePatterns();
+			if (_Rules == null)
+				_Rules = _ruleDb.GetOutboundRules();
+
+			int patternID = GetMxPatternID(mxRecord, mtaIpAddress);
 			mxPatternID = patternID;
-			return (from r in OutboundRuleManager._Rules
+			return (from r in _Rules
 					where r.OutboundMxPatternID == patternID
 					select r).ToList();
 		}
@@ -150,7 +169,7 @@ namespace OpenManta.Framework
 		/// <param name="record"></param>
 		/// <param name="ipAddress"></param>
 		/// <returns></returns>
-		private static int GetMxPatternID(MXRecord record, VirtualMTA ipAddress)
+		private int GetMxPatternID(MXRecord record, VirtualMTA ipAddress)
 		{
 			if (_matchedPatterns == null)
 				_matchedPatterns = new ConcurrentDictionary<string, MatchedMxPatternCollection>();
@@ -227,14 +246,14 @@ namespace OpenManta.Framework
 				else
 				{
 					// Don't know what to do with this pattern so move on to the next.
-					Logging.Error("Unknown OutboundMxPatternType : " + pattern.Type.ToString());
+					_logging.Error("Unknown OutboundMxPatternType : " + pattern.Type.ToString());
 					continue;
 				}
 			}
 
 			// Should have been found by default at least, but hasn't.
-			Logging.Fatal("No MX Pattern Rules! Default Deleted?");
-			MantaCoreEvents.InvokeMantaCoreStopping();
+			_logging.Fatal("No MX Pattern Rules! Default Deleted?");
+			_coreEvents.InvokeMantaCoreStopping();
 			Environment.Exit(0);
 			return -1;
 		}
@@ -245,8 +264,11 @@ namespace OpenManta.Framework
 		/// <param name="record">MX Record for the destination.</param>
 		/// <param name="ipAddress">IPAddress that we are sending from.</param>
 		/// <returns>Max number of messages per connection.</returns>
-		public static int GetMaxMessagesPerConnection(MXRecord record, VirtualMTA ipAddress)
+		public int GetMaxMessagesPerConnection(MXRecord record, VirtualMTA ipAddress)
 		{
+			Guard.NotNull(record, nameof(record));
+			Guard.NotNull(ipAddress, nameof(ipAddress));
+
 			int mxPatternID = 0;
 			IList<OutboundRule> rules = GetRules(record, ipAddress, out mxPatternID);
 			for (int i = 0; i < rules.Count; i++)
@@ -258,18 +280,21 @@ namespace OpenManta.Framework
 						return tmp;
 					else
 					{
-						Logging.Error("Failed to get max messages per connection for " + record.Host + " using " + ipAddress.IPAddress.ToString() + " value wasn't valid [" + rules[i].Value + "], defaulting to 1");
+						_logging.Error("Failed to get max messages per connection for " + record.Host + " using " + ipAddress.IPAddress.ToString() + " value wasn't valid [" + rules[i].Value + "], defaulting to 1");
 						return 1;
 					}
 				}
 			}
 
-			Logging.Error("Failed to get max messages per connection for " + record.Host + " using " + ipAddress.IPAddress.ToString() + " defaulting to 1");
+			_logging.Error("Failed to get max messages per connection for " + record.Host + " using " + ipAddress.IPAddress.ToString() + " defaulting to 1");
 			return 1;
 		}
 
-		public static int GetMaxMessagesDestinationHour(VirtualMTA vmta, MXRecord mx)
+		public int GetMaxMessagesDestinationHour(VirtualMTA vmta, MXRecord mx)
 		{
+			Guard.NotNull(vmta, nameof(vmta));
+			Guard.NotNull(mx, nameof(mx));
+
 			int tmp;
 			return GetMaxMessagesDestinationHour(vmta, mx, out tmp);
 		}
@@ -281,9 +306,12 @@ namespace OpenManta.Framework
 		/// <param name="record">MX Record of destination server.</param>
 		/// <param name="mxPatternID">ID of the pattern used to identify the rule.</param>
 		/// <returns>Maximum number of messages per hour or -1 for unlimited.</returns>
-		public static int GetMaxMessagesDestinationHour(VirtualMTA ipAddress, MXRecord record, out int mxPatternID)
+		public int GetMaxMessagesDestinationHour(VirtualMTA ipAddress, MXRecord record, out int mxPatternID)
 		{
-			IList<OutboundRule> rules = OutboundRuleManager.GetRules(record, ipAddress, out mxPatternID);
+			Guard.NotNull(ipAddress, nameof(ipAddress));
+			Guard.NotNull(record, nameof(record));
+
+			IList<OutboundRule> rules = GetRules(record, ipAddress, out mxPatternID);
 			for (int i = 0; i < rules.Count; i++)
 			{
 				if (rules[i].Type == OutboundRuleType.MaxMessagesPerHour)
@@ -293,13 +321,13 @@ namespace OpenManta.Framework
 						return tmp;
 					else
 					{
-						Logging.Error("Failed to get max messages per hour for " + record.Host + " using " + ipAddress.IPAddress.ToString() + " value wasn't valid [" + rules[i].Value + "], defaulting to unlimited");
+						_logging.Error("Failed to get max messages per hour for " + record.Host + " using " + ipAddress.IPAddress.ToString() + " value wasn't valid [" + rules[i].Value + "], defaulting to unlimited");
 						return -1;
 					}
 				}
 			}
 
-			Logging.Error("Failed to get max messages per hour for " + record.Host + " using " + ipAddress.IPAddress.ToString() + " defaulting to unlimited");
+			_logging.Error("Failed to get max messages per hour for " + record.Host + " using " + ipAddress.IPAddress.ToString() + " defaulting to unlimited");
 			return -1;
 		}
 
@@ -309,10 +337,13 @@ namespace OpenManta.Framework
 		/// <param name="ipAddress">IP Address connecting from.</param>
 		/// <param name="record">MXRecord of the destination.</param>
 		/// <returns>Max number of connections.</returns>
-		internal static int GetMaxConnectionsToDestination(VirtualMTA ipAddress, MXRecord record)
+		public int GetMaxConnectionsToDestination(VirtualMTA ipAddress, MXRecord record)
 		{
+			Guard.NotNull(ipAddress, nameof(ipAddress));
+			Guard.NotNull(record, nameof(record));
+
 			int mxPatternID = -1;
-			IList<OutboundRule> rules = OutboundRuleManager.GetRules(record, ipAddress, out mxPatternID);
+			IList<OutboundRule> rules = GetRules(record, ipAddress, out mxPatternID);
 			for (int i = 0; i < rules.Count; i++)
 			{
 				if (rules[i].Type == OutboundRuleType.MaxConnections)
@@ -322,13 +353,13 @@ namespace OpenManta.Framework
 						return tmp;
 					else
 					{
-						Logging.Error("Failed to get max connections for " + record.Host + " using " + ipAddress.IPAddress.ToString() + " value wasn't valid [" + rules[i].Value + "], defaulting to 1");
+						_logging.Error("Failed to get max connections for " + record.Host + " using " + ipAddress.IPAddress.ToString() + " value wasn't valid [" + rules[i].Value + "], defaulting to 1");
 						return 1;
 					}
 				}
 			}
 
-			Logging.Error("Failed to get max connections for " + record.Host + " using " + ipAddress.IPAddress.ToString() + " defaulting to 1");
+			_logging.Error("Failed to get max connections for " + record.Host + " using " + ipAddress.IPAddress.ToString() + " defaulting to 1");
 			return 1;
 		}
 	}

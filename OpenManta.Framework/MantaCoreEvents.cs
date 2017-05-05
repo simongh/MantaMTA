@@ -1,21 +1,33 @@
 ﻿using OpenManta.Framework.RabbitMq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using OpenManta.Core;
+using log4net;
 
 namespace OpenManta.Framework
 {
-    public static class MantaCoreEvents
+	internal class MantaCoreEvents : IMantaCoreEvents
 	{
 		/// <summary>
 		/// List of all the objects that need to be stopped.
 		/// </summary>
-		private static List<IStopRequired> _StopRequiredTasks = new List<IStopRequired>();
+		private List<IStopRequired> _StopRequiredTasks;
+
+		private readonly ILog _logging;
+
+		public MantaCoreEvents(ILog logging)
+		{
+			Guard.NotNull(logging, nameof(logging));
+
+			_logging = logging;
+			_StopRequiredTasks = new List<IStopRequired>();
+		}
 
 		/// <summary>
 		/// Registers an instance of a class that implements IStopRequired.
 		/// </summary>
 		/// <param name="instance">Thing that needs to be stopped.</param>
-		internal static void RegisterStopRequiredInstance(IStopRequired instance)
+		public void RegisterStopRequiredInstance(IStopRequired instance)
 		{
 			_StopRequiredTasks.Add(instance);
 		}
@@ -23,21 +35,21 @@ namespace OpenManta.Framework
 		/// <summary>
 		/// This should be called when the MTA is stopping as it will stop stuff that needs stopping.
 		/// </summary>
-		public static void InvokeMantaCoreStopping()
+		public void InvokeMantaCoreStopping()
 		{
-            Logging.Debug("InvokeMantaCoreStopping Started.");
+			_logging.Debug("InvokeMantaCoreStopping Started.");
 
-            // Loop through the things that need stopping and stop them :)
-            Parallel.ForEach(_StopRequiredTasks, instance =>
-            {
-                Logging.Debug("InvokeMantaCoreStopping > " + instance.GetType());
-                instance.Stop();
-            });
+			// Loop through the things that need stopping and stop them :)
+			Parallel.ForEach(_StopRequiredTasks, instance =>
+			{
+				_logging.Debug("InvokeMantaCoreStopping > " + instance.GetType());
+				instance.Stop();
+			});
 
-            // Close the RabbitMQ connection when were done.
-            RabbitMqManager.LocalhostConnection.Close();
+			// Close the RabbitMQ connection when were done.
+			RabbitMqManager.LocalhostConnection.Close();
 
-            Logging.Debug("InvokeMantaCoreStopping Finished.");
+			_logging.Debug("InvokeMantaCoreStopping Finished.");
 		}
 	}
 }

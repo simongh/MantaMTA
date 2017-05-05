@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using log4net;
 using OpenManta.Core;
 using OpenManta.Data;
 
@@ -14,37 +13,33 @@ namespace OpenManta.Framework
 	/// <summary>
 	/// Handles events such as Abuse and Bounces as a result of emails being sent.
 	/// </summary>
-	public class EventsManager
+	internal class EventsManager : IEventsManager
 	{
 		private readonly ISendDB _sendDb;
 		private readonly IEventDB _eventDb;
 		private readonly IMimeMessageParser _parser;
+		private readonly IBounceRulesManager _bounceRules;
+		private readonly ILog _logging;
 
-		/// <summary>
-		/// Holds a singleton instance of the EventsManager.
-		/// </summary>
-		public static EventsManager Instance { get; private set; }
-
-		static EventsManager()
-		{
-			Instance = new EventsManager(SendDBFactory.Instance, EventDbFactory.Instance, MimeMessageParserFactory.Instance);
-		}
-
-		private EventsManager(ISendDB sendDb, IEventDB eventDb, IMimeMessageParser parser)
+		public EventsManager(ISendDB sendDb, IEventDB eventDb, IMimeMessageParser parser, IBounceRulesManager bounceRules, log4net.ILog logging)
 		{
 			Guard.NotNull(sendDb, nameof(sendDb));
 			Guard.NotNull(eventDb, nameof(eventDb));
 			Guard.NotNull(parser, nameof(parser));
+			Guard.NotNull(bounceRules, nameof(bounceRules));
+			Guard.NotNull(logging, nameof(logging));
 
 			_sendDb = sendDb;
 			_eventDb = eventDb;
 			_parser = parser;
+			_bounceRules = bounceRules;
+			_logging = logging;
 		}
 
 		/// <summary>
 		/// Class to store any re-usable Regex patterns.
 		/// </summary>
-		internal static class RegexPatterns
+		private static class RegexPatterns
 		{
 			/// <summary>
 			/// Regex pattern to grab an SMTP code (e.g. "550") and/or an NDR code (e.g. "5.1.1") as well as any detail that follows them.
@@ -266,7 +261,7 @@ namespace OpenManta.Framework
 
 				if (m.Success)
 				{
-					bouncePair = BounceRulesManager.Instance.ConvertNdrCodeToMantaBouncePair(m.Value);
+					bouncePair = _bounceRules.ConvertNdrCodeToMantaBouncePair(m.Value);
 					bounceMessage = m.Value;
 
 					bounceIdentification.BounceIdentifier = BounceIdentifier.NdrCode;
@@ -321,7 +316,7 @@ namespace OpenManta.Framework
 		/// <param name="rcptTo">The email address that was being sent to.</param>
 		/// <param name="internalSendID">The internal Manta SendID.</param>
 		/// <returns>True if a bounce was found and recorded, false if not.</returns>
-		internal bool ProcessSmtpResponseMessage(string response, string rcptTo, int internalSendID, out EmailProcessingDetails bounceIdentification)
+		public bool ProcessSmtpResponseMessage(string response, string rcptTo, int internalSendID, out EmailProcessingDetails bounceIdentification)
 		{
 			bounceIdentification = new EmailProcessingDetails();
 
@@ -390,7 +385,7 @@ namespace OpenManta.Framework
 			bounceIdentification = new EmailProcessingDetails();
 
 			// Check all Bounce Rules for a match.
-			foreach (BounceRule r in BounceRulesManager.Instance.BounceRules)
+			foreach (BounceRule r in _bounceRules.BounceRules)
 			{
 				// If we get a match, we're done processing Rules.
 				if (r.IsMatch(message, out bounceMessage))
@@ -421,7 +416,7 @@ namespace OpenManta.Framework
 				// Check for anything useful with the NDR code first as it contains more specific detail than the SMTP code.
 				if (match.Groups["NdrCode"].Success && match.Groups["NdrCode"].Length > 0)
 				{
-					bouncePair = BounceRulesManager.Instance.ConvertNdrCodeToMantaBouncePair(match.Groups["NdrCode"].Value);
+					bouncePair = _bounceRules.ConvertNdrCodeToMantaBouncePair(match.Groups["NdrCode"].Value);
 					if (bouncePair.BounceType != MantaBounceType.Unknown)
 					{
 						bounceIdentification.BounceIdentifier = BounceIdentifier.NdrCode;
@@ -434,7 +429,7 @@ namespace OpenManta.Framework
 				// Try the SMTP code as there wasn't an NDR.
 				if (match.Groups["SmtpCode"].Success && match.Groups["SmtpCode"].Length > 0)
 				{
-					bouncePair = BounceRulesManager.Instance.ConvertSmtpCodeToMantaBouncePair(Int32.Parse(match.Groups["SmtpCode"].Value));
+					bouncePair = _bounceRules.ConvertSmtpCodeToMantaBouncePair(Int32.Parse(match.Groups["SmtpCode"].Value));
 
 					bounceIdentification.BounceIdentifier = BounceIdentifier.SmtpCode;
 					bounceIdentification.MatchingValue = match.Groups["SmtpCode"].Value;
@@ -679,7 +674,7 @@ namespace OpenManta.Framework
 			}
 			catch (Exception) { }
 
-			Logging.Debug("Failed to find return path!");
+			_logging.Debug("Failed to find return path!");
 
 			processingDetails.ProcessingResult = EmailProcessingResult.ErrorNoReturnPath;
 			return processingDetails;
@@ -692,10 +687,10 @@ namespace OpenManta.Framework
 		/// <returns>The Events ID</returns>
 		internal int Save(MantaEvent evt)
 		{
-			return SaveAsync(evt).Result;
+			return SaveAsync(evt).GetAwaiter().GetResult();
 		}
 
-		internal Task<int> SaveAsync(MantaEvent evt)
+		public Task<int> SaveAsync(MantaEvent evt)
 		{
 			return _eventDb.SaveAsync(evt);
 		}

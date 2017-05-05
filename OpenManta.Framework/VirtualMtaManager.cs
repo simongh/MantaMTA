@@ -11,39 +11,61 @@ namespace OpenManta.Framework
 	/// Manager for VirtualMTAs.
 	/// Has own cache (5 min) so the database doesn't need to be hit for every message.
 	/// </summary>
-	public static class VirtualMtaManager
+	internal class VirtualMtaManager : IVirtualMtaManager
 	{
 		/// <summary>
 		/// Collection of the IP addresses that can be used by the MTA.
 		/// </summary>
-		private static IList<VirtualMTA> _vmtaCollection = null;
+		private IList<VirtualMTA> _vmtaCollection = null;
 
 		/// <summary>
 		/// Collection of the IP addresses that can be used by the MTA for sending.
 		/// </summary>
-		private static IList<VirtualMTA> _outboundMtas = null;
+		private IList<VirtualMTA> _outboundMtas = null;
 
 		/// <summary>
 		/// Collection of the IP addresses that can be used by the MTA to receive mail.
 		/// </summary>
-		private static IList<VirtualMTA> _inboundMtas = null;
+		private IList<VirtualMTA> _inboundMtas = null;
 
 		/// <summary>
 		/// Timestamp of when the _ipAddresses collection was filled.
 		/// </summary>
-		private static DateTime _lastGotVirtualMtas = DateTime.MinValue;
+		private DateTime _lastGotVirtualMtas = DateTime.MinValue;
 
 		/// <summary>
 		/// Collection of cached MtaIPGroupCached.
 		/// </summary>
-		private static ConcurrentDictionary<int, VirtualMtaGroup> _vmtaGroups = new ConcurrentDictionary<int, VirtualMtaGroup>();
+		private ConcurrentDictionary<int, VirtualMtaGroup> _vmtaGroups = new ConcurrentDictionary<int, VirtualMtaGroup>();
+
+		private VirtualMtaGroup _DefaultVirtualMtaGroup;
+
+		/// <summary>
+		/// Object used to lock inside the GetMtaIPGroup method.
+		/// </summary>
+		private static object _MtaVirtualMtaGroupSyncLock = new object();
+
+		private readonly ICfgPara _config;
+		private readonly IVirtualMtaDB _virtualMtaDb;
+		private readonly IVirtualMtaGroupDB _virtualMtaGroupDb;
+
+		public VirtualMtaManager(ICfgPara config, IVirtualMtaDB virtualMtaDb, IVirtualMtaGroupDB virtualMtaGroupDb)
+		{
+			Guard.NotNull(config, nameof(config));
+			Guard.NotNull(virtualMtaDb, nameof(virtualMtaDb));
+			Guard.NotNull(virtualMtaGroupDb, nameof(virtualMtaGroupDb));
+
+			_config = config;
+			_virtualMtaDb = virtualMtaDb;
+			_virtualMtaGroupDb = virtualMtaGroupDb;
+		}
 
 		/// <summary>
 		/// Method will load IP addresses from the database if required.
 		/// This method should be called before doing anything with the
 		/// private IP collections.
 		/// </summary>
-		private static void LoadVirtualMtas()
+		private void LoadVirtualMtas()
 		{
 			if (_vmtaCollection != null &&
 				_lastGotVirtualMtas.AddMinutes(MtaParameters.MTA_CACHE_MINUTES) > DateTime.UtcNow)
@@ -51,7 +73,7 @@ namespace OpenManta.Framework
 
 			_outboundMtas = null;
 			_inboundMtas = null;
-			_vmtaCollection = VirtualMtaDBFactory.Instance.GetVirtualMtas();
+			_vmtaCollection = _virtualMtaDb.GetVirtualMtas();
 		}
 
 		/// <summary>
@@ -59,7 +81,7 @@ namespace OpenManta.Framework
 		/// used by the MTA for receiving messages.
 		/// </summary>
 		/// <returns></returns>
-		public static IList<VirtualMTA> GetVirtualMtasForListeningOn()
+		public IList<VirtualMTA> GetVirtualMtasForListeningOn()
 		{
 			LoadVirtualMtas();
 
@@ -77,7 +99,7 @@ namespace OpenManta.Framework
 		/// by the MTA for sending of messages.
 		/// </summary>
 		/// <returns></returns>
-		public static IList<VirtualMTA> GetVirtualMtasForSending()
+		public IList<VirtualMTA> GetVirtualMtasForSending()
 		{
 			LoadVirtualMtas();
 
@@ -94,30 +116,23 @@ namespace OpenManta.Framework
 		/// Gets the default MTA IP Group.
 		/// </summary>
 		/// <returns></returns>
-		public static VirtualMtaGroup GetDefaultVirtualMtaGroup()
+		public VirtualMtaGroup GetDefaultVirtualMtaGroup()
 		{
 			if (_DefaultVirtualMtaGroup == null)
 			{
-				int defaultGroupID = CfgParaFactory.Instance.DefaultVirtualMtaGroupID;
+				int defaultGroupID = _config.DefaultVirtualMtaGroupID;
 				_DefaultVirtualMtaGroup = GetVirtualMtaGroup(defaultGroupID);
 			}
 
 			return _DefaultVirtualMtaGroup;
 		}
 
-		private static VirtualMtaGroup _DefaultVirtualMtaGroup { get; set; }
-
-		/// <summary>
-		/// Object used to lock inside the GetMtaIPGroup method.
-		/// </summary>
-		private static object _MtaVirtualMtaGroupSyncLock = new object();
-
 		/// <summary>
 		/// Gets the specfied MTA IP Group
 		/// </summary>
 		/// <param name="id">ID of the group to get.</param>
 		/// <returns>The IP Group or NULL if doesn't exist.</returns>
-		public static VirtualMtaGroup GetVirtualMtaGroup(int id)
+		public VirtualMtaGroup GetVirtualMtaGroup(int id)
 		{
 			VirtualMtaGroup group = null;
 
@@ -139,14 +154,14 @@ namespace OpenManta.Framework
 					return group;
 
 				// Get group from the database.
-				group = VirtualMtaGroupDBFactory.Instance.GetVirtualMtaGroup(id);
+				group = _virtualMtaGroupDb.GetVirtualMtaGroup(id);
 
 				// Group doesn't exist, so don't try and get it's IPs
 				if (group == null)
 					return null;
 
 				// Got the group, go get it's IPs.
-				group.VirtualMtaCollection = VirtualMtaDBFactory.Instance.GetVirtualMtasInVirtualMtaGroup(id);
+				group.VirtualMtaCollection = _virtualMtaDb.GetVirtualMtasInVirtualMtaGroup(id);
 
 				// Add the group to collection, so others can use it.
 				_vmtaGroups.AddOrUpdate(id, group, new Func<int, VirtualMtaGroup, VirtualMtaGroup>(delegate (int key, VirtualMtaGroup existing)

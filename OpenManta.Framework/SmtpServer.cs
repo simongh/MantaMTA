@@ -7,31 +7,52 @@ using System.Net.Mail;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
+using log4net;
+using OpenManta.Framework.Smtp;
 
 namespace OpenManta.Framework
 {
 	/// <summary>
 	/// Provides a server for receiving SMTP commands/messages.
 	/// </summary>
-	public class SmtpServer : IDisposable
+	public class SmtpServer : ISmtpServer
 	{
 		/// <summary>
 		/// Listens to TCP socket.
 		/// </summary>
 		private TcpListener _TcpListener = null;
 
+		private bool disposed;
+		private readonly ILog _logging;
+		private readonly ISmtpServerFactory _handlerFactory;
+		private readonly IMtaParameters _config;
+
+		public SmtpServer(ILog logging, Smtp.ISmtpServerFactory handlerFactory, IMtaParameters config)
+		{
+			Guard.NotNull(logging, nameof(logging));
+			Guard.NotNull(handlerFactory, nameof(handlerFactory));
+			Guard.NotNull(config, nameof(config));
+
+			_logging = logging;
+			_handlerFactory = handlerFactory;
+			_config = config;
+		}
+
 		/// <summary>
 		/// Creates an instance of the Colony101 SMTP Server.
 		/// </summary>
 		/// <param name="port">Port number that server bind to.</param>
-		public SmtpServer(int port) : this(IPAddress.Any, port) { }
+		public void Open(int port)
+		{
+			Open(IPAddress.Any, port);
+		}
 
 		/// <summary>
 		/// Creates an instance of the Colony101 SMTP Server.
 		/// </summary>
 		/// <param name="iPAddress">IP Address to use for binding.</param>
 		/// <param name="port">Port number that server bind to.</param>
-		public SmtpServer(IPAddress ipAddress, int port)
+		public void Open(IPAddress ipAddress, int port)
 		{
 			// Create the TCP Listener using specified port on all IPs
 			_TcpListener = new TcpListener(ipAddress, port);
@@ -43,11 +64,16 @@ namespace OpenManta.Framework
 			}
 			catch (SocketException ex)
 			{
-				Logging.Error("Failed to create server on " + ipAddress.ToString() + ":" + port, ex);
+				_logging.Error("Failed to create server on " + ipAddress.ToString() + ":" + port, ex);
 				return;
 			}
 
-			Logging.Info("Server started on " + ipAddress.ToString() + ":" + port);
+			_logging.Info("Server started on " + ipAddress.ToString() + ":" + port);
+		}
+
+		~SmtpServer()
+		{
+			Dispose(false);
 		}
 
 		/// <summary>
@@ -55,8 +81,19 @@ namespace OpenManta.Framework
 		/// </summary>
 		public void Dispose()
 		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
+		protected void Dispose(bool disposing)
+		{
+			if (disposed)
+				return;
+
 			_TcpListener.Stop();
 			_TcpListener = null;
+
+			disposed = true;
 		}
 
 		/// <summary>
@@ -111,12 +148,12 @@ namespace OpenManta.Framework
 		private async Task<bool> HandleSmtpConnection(object obj)
 		{
 			TcpClient client = (TcpClient)obj;
-			client.ReceiveTimeout = MtaParameters.Client.ConnectionReceiveTimeoutInterval * 1000;
-			client.SendTimeout = MtaParameters.Client.ConnectionSendTimeoutInterval * 1000;
+			client.ReceiveTimeout = _config.Client.ConnectionReceiveTimeoutInterval * 1000;
+			client.SendTimeout = _config.Client.ConnectionSendTimeoutInterval * 1000;
 
 			try
 			{
-				Smtp.SmtpStreamHandler smtpStream = new Smtp.SmtpStreamHandler(client);
+				Smtp.ISmtpStreamHandler smtpStream = _handlerFactory.GetHandler(client);
 				string serverHostname = await GetServerHostnameAsync(client);
 
 				// Identify our MTA
@@ -131,7 +168,7 @@ namespace OpenManta.Framework
 				// Hostname of the client as it self identified in the HELO.
 				string heloHost = string.Empty;
 
-				SmtpServerTransaction mailTransaction = null;
+				ISmtpServerTransaction mailTransaction = null;
 
 				// As long as the client is connected and hasn't sent the quit command then keep accepting commands.
 				while (client.Connected && !quit)
@@ -223,7 +260,7 @@ namespace OpenManta.Framework
 					// Do this by creating new instance of SmtpTransaction class.
 					if (cmd.StartsWith("MAIL FROM:", StringComparison.OrdinalIgnoreCase))
 					{
-						mailTransaction = new SmtpServerTransaction();
+						mailTransaction = _handlerFactory.GetTransaction();
 
 						// Check for the 8BITMIME body parameter
 						int bodyParaIndex = cmd.IndexOf(" BODY=", StringComparison.OrdinalIgnoreCase);
@@ -300,11 +337,11 @@ namespace OpenManta.Framework
 						}
 
 						// Check to see if mail is to be delivered locally or relayed for delivery somewhere else.
-						if (MtaParameters.LocalDomains.Count(ld => ld.Hostname.Equals(rcptTo.Host, StringComparison.OrdinalIgnoreCase)) < 1)
+						if (_config.LocalDomains.Count(ld => ld.Hostname.Equals(rcptTo.Host, StringComparison.OrdinalIgnoreCase)) < 1)
 						{
 							// Messages isn't for delivery on this server.
 							// Check if we are allowed to relay for the client IP
-							if (!MtaParameters.IPsToAllowRelaying.Contains(smtpStream.RemoteAddress.ToString()))
+							if (!_config.IPsToAllowRelaying.Contains(smtpStream.RemoteAddress.ToString()))
 							{
 								// This server cannot deliver or relay message for the MAIL FROM + RCPT TO addresses.
 								// This should be treated as a permament failer, tell client not to retry.
@@ -387,25 +424,25 @@ namespace OpenManta.Framework
 							DateTime.UtcNow.ToString("ddd, dd MMM yyyy HH':'mm':'ss -0000 (UTC)")));
 
 						// Complete the transaction,either saving to local mailbox or queueing for relay.
-						SmtpServerTransaction.SmtpServerTransactionAsyncResult result = await mailTransaction.SaveAsync();
+						SmtpServerTransactionAsyncResult result = await mailTransaction.SaveAsync();
 
 						// Send a response to the client depending on the result of saving the transaction.
 						switch (result)
 						{
-							case SmtpServerTransaction.SmtpServerTransactionAsyncResult.SuccessMessageDelivered:
-							case SmtpServerTransaction.SmtpServerTransactionAsyncResult.SuccessMessageQueued:
+							case SmtpServerTransactionAsyncResult.SuccessMessageDelivered:
+							case SmtpServerTransactionAsyncResult.SuccessMessageQueued:
 								await smtpStream.WriteLineAsync("250 Message queued for delivery");
 								break;
 
-							case SmtpServerTransaction.SmtpServerTransactionAsyncResult.FailedSendDiscarding:
+							case SmtpServerTransactionAsyncResult.FailedSendDiscarding:
 								await smtpStream.WriteLineAsync("554 Send Discarding.");
 								break;
 
-							case SmtpServerTransaction.SmtpServerTransactionAsyncResult.FailedToEnqueue:
+							case SmtpServerTransactionAsyncResult.FailedToEnqueue:
 								await smtpStream.WriteLineAsync("421 Service unavailable");
 								break;
 
-							case SmtpServerTransaction.SmtpServerTransactionAsyncResult.Unknown:
+							case SmtpServerTransactionAsyncResult.Unknown:
 							default:
 								await smtpStream.WriteLineAsync("451 Requested action aborted: local error in processing.");
 								break;

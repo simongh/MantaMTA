@@ -5,21 +5,11 @@ using OpenManta.Data;
 
 namespace OpenManta.Framework
 {
-	internal partial class BounceRulesManager
+	internal partial class BounceRulesManager : IBounceRulesManager
 	{
 		private readonly IEventDB _eventDb;
 
-		/// <summary>
-		/// Holds a singleton instance of the BounceRulesManager.
-		/// </summary>
-		public static BounceRulesManager Instance { get; private set; }
-
-		static BounceRulesManager()
-		{
-			Instance = new BounceRulesManager(EventDbFactory.Instance);
-		}
-
-		private BounceRulesManager(IEventDB eventDb)
+		public BounceRulesManager(IEventDB eventDb)
 		{
 			Guard.NotNull(eventDb, nameof(eventDb));
 

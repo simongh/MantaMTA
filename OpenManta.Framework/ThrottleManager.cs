@@ -8,18 +8,25 @@ using System.Threading;
 
 namespace OpenManta.Framework
 {
-	internal class ThrottleManager
+	internal class ThrottleManager : IThrottleManager
 	{
-		#region Singleton
-		public static ThrottleManager Instance { get { return _Instance; } }
-		private static readonly ThrottleManager _Instance = new ThrottleManager();
-		private ThrottleManager() { }
-		#endregion
+		private IPSendHistory _sendHistory;
 
 		/// <summary>
-		/// <IpAddress, <MxPatternID, DateTime[]>
+		/// Thread will be used to run in background removing old values from _sendHistory.
 		/// </summary>
-		private IPSendHistory _sendHistory = new IPSendHistory();
+		private Thread _SendHistoryCleaner;
+
+		private readonly IOutboundRuleManager _outboundRuleManager;
+
+		public ThrottleManager(IOutboundRuleManager outboundRuleManager)
+		{
+			Guard.NotNull(outboundRuleManager, nameof(outboundRuleManager));
+
+			_outboundRuleManager = outboundRuleManager;
+
+			_sendHistory = new IPSendHistory();
+		}
 
 		/// <summary>
 		/// Holds an IP addresses send history grouped by MX Pattern ID
@@ -43,7 +50,7 @@ namespace OpenManta.Framework
 			public int IntervalMinutes { get; set; }
 
 			/// <summary>
-			/// Holds a timestamp of when the IntervalMinutes & IntervalMaxMessages 
+			/// Holds a timestamp of when the IntervalMinutes & IntervalMaxMessages
 			/// should next be recalculated.
 			/// </summary>
 			public DateTime IntervalValuesNeedRecalcTimestamp { get; set; }
@@ -55,11 +62,6 @@ namespace OpenManta.Framework
 				this.IntervalValuesNeedRecalcTimestamp = DateTime.UtcNow;
 			}
 		}
-
-		/// <summary>
-		/// Thread will be used to run in background removing old values from _sendHistory.
-		/// </summary>
-		private Thread _SendHistoryCleaner { get; set; }
 
 		/// <summary>
 		/// Start the _SendHistoryCleaner if it isn't running.
@@ -133,8 +135,10 @@ namespace OpenManta.Framework
 		/// <returns>TRUE if we can send FALSE if we should throttle.</returns>
 		public bool TryGetSendAuth(VirtualMTA ipAddress, MXRecord mxRecord)
 		{
+			Guard.NotNull(ipAddress, nameof(ipAddress));
+
 			int mxPatternID = -1;
-			int maxMessagesHour = OutboundRuleManager.GetMaxMessagesDestinationHour(ipAddress, mxRecord, out mxPatternID);
+			int maxMessagesHour = _outboundRuleManager.GetMaxMessagesDestinationHour(ipAddress, mxRecord, out mxPatternID);
 
 			// If the Max messages is -1 then unlimited so can just return true here.
 			// No need for any logging or calculating.
@@ -166,7 +170,6 @@ namespace OpenManta.Framework
 				mxSndHist.IntervalMinutes = maxMessagesIntervalMinute;
 				mxSndHist.IntervalValuesNeedRecalcTimestamp = DateTime.UtcNow.AddMinutes(MtaParameters.MTA_CACHE_MINUTES);
 			}
-
 
 			lock (sndHistory)
 			{

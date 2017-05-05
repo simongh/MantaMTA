@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using OpenManta.Core;
 
@@ -8,19 +9,29 @@ namespace OpenManta.Framework
 	[Serializable]
 	internal class DNSDomainNotFoundException : Exception { }
 
-	internal static class DNSManager
+	internal class DNSManager : IDnsManager
 	{
 		/// <summary>
 		/// Holds a thread safe collection of MX Records so we don't need to query the DNS API every time.
 		/// </summary>
-		private static ConcurrentDictionary<string, MXRecord[]> _Records = new ConcurrentDictionary<string, MXRecord[]>();
+		private ConcurrentDictionary<string, MXRecord[]> _Records;
+
+		private readonly IDnsApi _dnsApi;
+
+		public DNSManager(IDnsApi dnsApi)
+		{
+			Guard.NotNull(dnsApi, nameof(dnsApi));
+
+			_dnsApi = dnsApi;
+			_Records = new ConcurrentDictionary<string, MXRecord[]>();
+		}
 
 		/// <summary>
 		/// Gets an Array of MX Records for the specified domain. If none found returns null.
 		/// </summary>
 		/// <param name="domain"></param>
 		/// <returns></returns>
-		public static MXRecord[] GetMXRecords(string domain)
+		public IEnumerable<MXRecord> GetMXRecords(string domain)
 		{
 			// Make sure the domain is all lower.
 			domain = domain.ToLower();
@@ -29,7 +40,7 @@ namespace OpenManta.Framework
 			MXRecord[] mxRecords = null;
 
 			// Try and get DNS from internal cache.
-			if (DNSManager._Records.TryGetValue(domain, out mxRecords))
+			if (_Records.TryGetValue(domain, out mxRecords))
 			{
 				// Found cached records.
 				// Make sure they haven't expired.
@@ -37,12 +48,12 @@ namespace OpenManta.Framework
 					return mxRecords;
 			}
 
-			string[] records = null;
+			IEnumerable<string> records = null;
 
 			try
 			{
 				// Get the records from DNS
-				records = dnsapi.GetMXRecords(domain);
+				records = _dnsApi.GetMXRecords(domain);
 			}
 			catch (DNSDomainNotFoundException)
 			{
@@ -62,11 +73,11 @@ namespace OpenManta.Framework
 				return mxs;
 			}
 
-			mxRecords = new MXRecord[records.Length];
+			mxRecords = new MXRecord[records.Count()];
 			for (int i = 0; i < mxRecords.Length; i++)
 			{
-				string[] split = records[i].Split(new char[] { ',' });
-				if(split.Length == 3)
+				string[] split = records.ElementAt(i).Split(new char[] { ',' });
+				if (split.Length == 3)
 					mxRecords[i] = new MXRecord(split[1], int.Parse(split[0]), uint.Parse(split[2]), MxRecordSrc.MX);
 			}
 
@@ -76,7 +87,7 @@ namespace OpenManta.Framework
 				where mx != null
 				orderby mx.Preference
 				select mx).ToArray<MXRecord>();
-			DNSManager._Records.TryAdd(domain, mxRecords);
+			_Records.TryAdd(domain, mxRecords);
 			return mxRecords;
 		}
 	}

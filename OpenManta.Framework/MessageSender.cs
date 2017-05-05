@@ -8,15 +8,25 @@ using System.Threading.Tasks;
 using OpenManta.Core;
 using OpenManta.Framework.Smtp;
 using OpenManta.Framework.RabbitMq;
+using log4net;
+using System.Linq;
 
 namespace OpenManta.Framework
 {
 	/// <summary>
 	/// MessageSender sends Emails to other servers from the Queue.
 	/// </summary>
-	public class MessageSender : IStopRequired
+	internal class MessageSender : IMessageSender, IStopRequired
 	{
-		private readonly Data.IMtaTransaction _mtaTransaction;
+		/// <summary>
+		/// If TRUE then request for client to stop has been made.
+		/// </summary>
+		private volatile bool _IsStopping = false;
+
+		/// <summary>
+		/// Holds the maximum amount of Tasks used for sending that should be run at anyone time.
+		/// </summary>
+		private int _MaxSendingWorkerTasks = -1;
 
 		/// <summary>
 		/// List of MX domains that we should not attempt to deliver to. The emails will hard bounce as "Domain Blacklisted".
@@ -39,38 +49,35 @@ namespace OpenManta.Framework
 			"banff-buchan.ac.uk"
 		};
 
-		#region Singleton
+		private readonly Data.IMtaTransaction _mtaTransaction;
+		private readonly ILog _logging;
+		private readonly IDnsManager _dnsManager;
+		private readonly IMtaMessageHelper _messageHelper;
+		private readonly IVirtualMtaManager _virtualMtaManager;
+		private readonly IMantaSmtpClientPoolCollection _clientPools;
+		private readonly IMtaParameters _config;
 
-		private MessageSender(Data.IMtaTransaction mtaTransaction)
+		public MessageSender(Data.IMtaTransaction mtaTransaction, IMantaCoreEvents coreEvents, ILog logging, IDnsManager dnsManager, IMtaMessageHelper messageHelper, IVirtualMtaManager virtualMtaManager, IMantaSmtpClientPoolCollection clientPools, IMtaParameters config)
 		{
 			Guard.NotNull(mtaTransaction, nameof(mtaTransaction));
+			Guard.NotNull(coreEvents, nameof(coreEvents));
+			Guard.NotNull(logging, nameof(logging));
+			Guard.NotNull(dnsManager, nameof(dnsManager));
+			Guard.NotNull(messageHelper, nameof(messageHelper));
+			Guard.NotNull(virtualMtaManager, nameof(virtualMtaManager));
+			Guard.NotNull(clientPools, nameof(clientPools));
+			Guard.NotNull(config, nameof(config));
 
 			_mtaTransaction = mtaTransaction;
+			_logging = logging;
+			_dnsManager = dnsManager;
+			_messageHelper = messageHelper;
+			_virtualMtaManager = virtualMtaManager;
+			_clientPools = clientPools;
+			_config = config;
 
-			MantaCoreEvents.RegisterStopRequiredInstance(this);
+			coreEvents.RegisterStopRequiredInstance(this);
 		}
-
-		static MessageSender()
-		{
-			Instance = new MessageSender(Data.MtaTransactionFactory.Instance);
-		}
-
-		/// <summary>
-		/// Instance of the MessageSender class.
-		/// </summary>
-		public static MessageSender Instance { get; private set; }
-
-		#endregion Singleton
-
-		/// <summary>
-		/// If TRUE then request for client to stop has been made.
-		/// </summary>
-		private volatile bool _IsStopping = false;
-
-		/// <summary>
-		/// Holds the maximum amount of Tasks used for sending that should be run at anyone time.
-		/// </summary>
-		private int _MaxSendingWorkerTasks = -1;
 
 		/// <summary>
 		/// Holds the maximum amount of Tasks used for sending that should be run at anyone time.
@@ -83,17 +90,17 @@ namespace OpenManta.Framework
 				{
 					if (!int.TryParse(ConfigurationManager.AppSettings["MantaMaximumClientWorkers"], out _MaxSendingWorkerTasks))
 					{
-						Logging.Fatal("MantaMaximumClientWorkers not set in AppConfig");
+						_logging.Fatal("MantaMaximumClientWorkers not set in AppConfig");
 						Environment.Exit(-1);
 					}
 					else if (_MaxSendingWorkerTasks < 1)
 					{
-						Logging.Fatal("MantaMaximumClientWorkers must be greater than 0");
+						_logging.Fatal("MantaMaximumClientWorkers must be greater than 0");
 						Environment.Exit(-1);
 					}
 					else
 					{
-						Logging.Info("Maximum Client Workers is " + _MaxSendingWorkerTasks.ToString());
+						_logging.Info("Maximum Client Workers is " + _MaxSendingWorkerTasks.ToString());
 					}
 				}
 
@@ -129,7 +136,7 @@ namespace OpenManta.Framework
 
 								if (!qMsg.IsHandled)
 								{
-									Logging.Warn("Message not handled " + qMsg.ID);
+									_logging.Warn("Message not handled " + qMsg.ID);
 									qMsg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(5);
 									await RabbitMqOutboundQueueManager.Enqueue(qMsg);
 								}
@@ -144,7 +151,7 @@ namespace OpenManta.Framework
 						catch (Exception ex)
 						{
 							// Log if we can't send the message.
-							Logging.Debug("Failed to send message", ex);
+							_logging.Debug("Failed to send message", ex);
 						}
 						finally
 						{
@@ -153,7 +160,7 @@ namespace OpenManta.Framework
 							{
 								if (!qMsg.IsHandled)
 								{
-									Logging.Warn("Message not handled " + qMsg.ID);
+									_logging.Warn("Message not handled " + qMsg.ID);
 									qMsg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(5);
 									await RabbitMqOutboundQueueManager.Enqueue(qMsg);
 								}
@@ -241,11 +248,11 @@ namespace OpenManta.Framework
 			{
 				// The send is being discarded so we should discard the message.
 				case SendStatus.Discard:
-					await MtaMessageHelper.HandleMessageDiscardAsync(msg);
+					await _messageHelper.HandleMessageDiscardAsync(msg);
 					return;
 				// The send is paused, the handle pause state will delay, without deferring, the message for a while so we can move on to other messages.
 				case SendStatus.Paused:
-					await MtaMessageHelper.HandleSendPaused(msg);
+					await _messageHelper.HandleSendPaused(msg);
 					return;
 				// Send is active so we don't need to do anything.
 				case SendStatus.Active:
@@ -254,7 +261,7 @@ namespace OpenManta.Framework
 				default:
 					msg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(1);
 					await RabbitMqOutboundQueueManager.Enqueue(msg);
-					Logging.Error("Failed to send message. Unknown SendStatus[" + snd.SendStatus + "]!");
+					_logging.Error("Failed to send message. Unknown SendStatus[" + snd.SendStatus + "]!");
 					return;
 			}
 
@@ -262,32 +269,32 @@ namespace OpenManta.Framework
 			// Need to do this here as there may be a massive backlog on the server
 			// causing messages to be waiting for ages after there AttemptSendAfter
 			// before picking up. The MAX_TIME_IN_QUEUE should always be enforced.
-			if (msg.AttemptSendAfterUtc - msg.QueuedTimestampUtc > new TimeSpan(0, MtaParameters.MtaMaxTimeInQueue, 0))
+			if (msg.AttemptSendAfterUtc - msg.QueuedTimestampUtc > new TimeSpan(0, _config.MtaMaxTimeInQueue, 0))
 			{
-				await MtaMessageHelper.HandleDeliveryFailAsync(msg, MtaParameters.TIMED_OUT_IN_QUEUE_MESSAGE, null, null);
+				await _messageHelper.HandleDeliveryFailAsync(msg, MtaParameters.TIMED_OUT_IN_QUEUE_MESSAGE, null, null);
 			}
 			else
 			{
 				MailAddress rcptTo = new MailAddress(msg.RcptTo[0]);
 				MailAddress mailFrom = new MailAddress(msg.MailFrom);
-				MXRecord[] mXRecords = DNSManager.GetMXRecords(rcptTo.Host);
+				MXRecord[] mXRecords = _dnsManager.GetMXRecords(rcptTo.Host).ToArray();
 				// If mxs is null then there are no MX records.
 				if (mXRecords == null || mXRecords.Length < 1)
 				{
-					await MtaMessageHelper.HandleDeliveryFailAsync(msg, "550 Domain Not Found.", null, null);
+					await _messageHelper.HandleDeliveryFailAsync(msg, "550 Domain Not Found.", null, null);
 				}
 				else if (IsMxBlacklisted(mXRecords))
 				{
-					await MtaMessageHelper.HandleDeliveryFailAsync(msg, "550 Domain blacklisted.", null, mXRecords[0]);
+					await _messageHelper.HandleDeliveryFailAsync(msg, "550 Domain blacklisted.", null, mXRecords[0]);
 				}
 				else
 				{
-					var vMtaGroup = VirtualMtaManager.GetVirtualMtaGroup(msg.VirtualMTAGroupID);
-					var sendResult = await MantaSmtpClientPoolCollection.Instance.SendAsync(mailFrom, rcptTo, vMtaGroup, mXRecords, msg.Message);
+					var vMtaGroup = _virtualMtaManager.GetVirtualMtaGroup(msg.VirtualMTAGroupID);
+					var sendResult = await _clientPools.SendAsync(mailFrom, rcptTo, vMtaGroup, mXRecords, msg.Message);
 					switch (sendResult.MantaOutboundClientResult)
 					{
 						case MantaOutboundClientResult.FailedToConnect:
-							await MtaMessageHelper.HandleFailedToConnectAsync(msg, sendResult.VirtualMTA, sendResult.MXRecord);
+							await _messageHelper.HandleFailedToConnectAsync(msg, sendResult.VirtualMTA, sendResult.MXRecord);
 							break;
 
 						case MantaOutboundClientResult.MaxConnections:
@@ -295,27 +302,27 @@ namespace OpenManta.Framework
 							break;
 
 						case MantaOutboundClientResult.MaxMessages:
-							await MtaMessageHelper.HandleDeliveryThrottleAsync(msg, sendResult.VirtualMTA, sendResult.MXRecord);
+							await _messageHelper.HandleDeliveryThrottleAsync(msg, sendResult.VirtualMTA, sendResult.MXRecord);
 							break;
 
 						case MantaOutboundClientResult.RejectedByRemoteServer:
 							if (string.IsNullOrWhiteSpace(sendResult.Message))
 							{
-								Logging.Error("RejectedByRemoteServer but no message!");
-								await MtaMessageHelper.HandleDeliveryDeferralAsync(msg, sendResult.Message, sendResult.VirtualMTA, sendResult.MXRecord);
+								_logging.Error("RejectedByRemoteServer but no message!");
+								await _messageHelper.HandleDeliveryDeferralAsync(msg, sendResult.Message, sendResult.VirtualMTA, sendResult.MXRecord);
 							}
 							if (sendResult.Message[0] == '4')
-								await MtaMessageHelper.HandleDeliveryDeferralAsync(msg, sendResult.Message, sendResult.VirtualMTA, sendResult.MXRecord);
+								await _messageHelper.HandleDeliveryDeferralAsync(msg, sendResult.Message, sendResult.VirtualMTA, sendResult.MXRecord);
 							else
-								await MtaMessageHelper.HandleDeliveryFailAsync(msg, sendResult.Message, sendResult.VirtualMTA, sendResult.MXRecord);
+								await _messageHelper.HandleDeliveryFailAsync(msg, sendResult.Message, sendResult.VirtualMTA, sendResult.MXRecord);
 							break;
 
 						case MantaOutboundClientResult.ServiceNotAvalible:
-							await MtaMessageHelper.HandleServiceUnavailableAsync(msg, sendResult.VirtualMTA);
+							await _messageHelper.HandleServiceUnavailableAsync(msg, sendResult.VirtualMTA);
 							break;
 
 						case MantaOutboundClientResult.Success:
-							await MtaMessageHelper.HandleDeliverySuccessAsync(msg, sendResult.VirtualMTA, sendResult.MXRecord, sendResult.Message);
+							await _messageHelper.HandleDeliverySuccessAsync(msg, sendResult.VirtualMTA, sendResult.MXRecord, sendResult.Message);
 							break;
 
 						default:

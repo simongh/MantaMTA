@@ -10,7 +10,7 @@ namespace OpenManta.Framework
 	/// <summary>
 	/// Manager provides methods for working with Email Message Headers.
 	/// </summary>
-	public static class MessageManager
+	internal class MessageManager : IMessageManager
 	{
 		/// <summary>
 		/// The default message line length for email messages.
@@ -23,8 +23,11 @@ namespace OpenManta.Framework
 		/// <param name="message">The original email message.</param>
 		/// <param name="header">The header to add to the email message.</param>
 		/// <returns>The original message with the new header.</returns>
-		public static string AddHeader(string message, MessageHeader header)
+		public string AddHeader(string message, MessageHeader header)
 		{
+			Guard.NotNull(message, nameof(message));
+			Guard.NotNull(header, nameof(header));
+
 			string headingPart = GetHeaderSection(message, false);
 			string bodyPart = GetMessageBodySection(message);
 
@@ -37,8 +40,10 @@ namespace OpenManta.Framework
 		/// <param name="message">Original email message.</param>
 		/// <param name="headerName">Name of the header to remove from the message.</param>
 		/// <returns>The original message with the header removed.</returns>
-		public static string RemoveHeader(string message, string headerName)
+		public string RemoveHeader(string message, string headerName)
 		{
+			Guard.NotNull(message, nameof(message));
+
 			// Grab the header section of the message. Don't unfold as we don't want
 			// to change any headers other than the one we are removing.
 			string headerSection = GetHeaderSection(message, false);
@@ -50,7 +55,6 @@ namespace OpenManta.Framework
 			{
 				// Will hold a single line from the header section. (Unfolded).
 				string line = string.Empty;
-
 
 				// Keep looping until we have gone through all of the lines in the header section.
 				do
@@ -84,15 +88,14 @@ namespace OpenManta.Framework
 					//
 					// FOUND THE HEADER TO REMOVE!!!
 					//
- 					// We remove the header by simply not adding it to the new header section.
+					// We remove the header by simply not adding it to the new header section.
 					// We need to peek at the next line and move through the header section
 					// until we find the next header.
 					while (char.IsWhiteSpace((char)reader.Peek()))
 						reader.ReadLine();
-
 				} while (!string.IsNullOrWhiteSpace(line));
 			}
-			
+
 			// Return the new header section with the original body.
 			return sbNewHeaderSection.ToString() + MtaParameters.NewLine + GetMessageBodySection(message);
 		}
@@ -103,15 +106,15 @@ namespace OpenManta.Framework
 		/// <param name="header">Header to fold.</param>
 		/// <param name="maxLength">The maximum length of the line.</param>
 		/// <returns>The folded header.</returns>
-		internal static string FoldHeader(MessageHeader header, int maxLength)
+		internal string FoldHeader(MessageHeader header, int maxLength)
 		{
 			// Calculate the maximum line length without CLRF
 			int maxLengthBeforeCLRF = maxLength - MtaParameters.NewLine.Length;
-			
+
 			// Build the header string from the message header object.
 			string str = (header.Name + ": " + header.Value.TrimStart()).Replace(MtaParameters.NewLine, string.Empty);
 
-			// If the header lenght is less that the max line lenght no folding 
+			// If the header lenght is less that the max line lenght no folding
 			// is required and it can just be returned.
 			if (str.Length < maxLengthBeforeCLRF)
 				return str + MtaParameters.NewLine;
@@ -133,10 +136,10 @@ namespace OpenManta.Framework
 
 					// Get the max line length substring so we can work back and find some whitespace to split on.
 					string subStr = str.Substring(0, maxLengthBeforeCLRF);
-					
+
 					// Set to true if a whitespace char is found.
 					bool foundWhitespace = false;
-					
+
 					// Set to true if a split char is found.
 					bool foundSplitChar = false;
 
@@ -200,7 +203,6 @@ namespace OpenManta.Framework
 				}
 			}
 
-
 			return foldedHeader.ToString();
 		}
 
@@ -209,8 +211,10 @@ namespace OpenManta.Framework
 		/// </summary>
 		/// <param name="messageData">The raw message data.</param>
 		/// <returns>Collection of headers.</returns>
-		public static MessageHeaderCollection GetMessageHeaders(string messageData)
+		public MessageHeaderCollection GetMessageHeaders(string messageData)
 		{
+			Guard.NotNull(messageData, nameof(messageData));
+
 			// Collection to populate and return.
 			MessageHeaderCollection headers = new MessageHeaderCollection();
 
@@ -247,8 +251,10 @@ namespace OpenManta.Framework
 		/// </summary>
 		/// <param name="headerSection">The messages header section.</param>
 		/// <returns><paramref name="headerSection"/> unfolded.</returns>
-		public static string UnfoldHeaders(string headerSection)
+		public string UnfoldHeaders(string headerSection)
 		{
+			Guard.NotNull(headerSection, nameof(headerSection));
+
 			StringBuilder sb = null;
 			using (StringReader reader = new StringReader(headerSection))
 			{
@@ -258,7 +264,7 @@ namespace OpenManta.Framework
 				// Keep looping until we have gone through all of the lines in the header section.
 				while (!string.IsNullOrWhiteSpace(line))
 				{
-					// If first char of line is not white space then we need to add a new line 
+					// If first char of line is not white space then we need to add a new line
 					// as there is no wrapping.
 					if (!string.IsNullOrWhiteSpace(line.Substring(0, 1)))
 					{
@@ -289,10 +295,10 @@ namespace OpenManta.Framework
 		/// <param name="messageData">The raw message data.</param>
 		/// <param name="unfold">If true will unfold headers into a single line</param>
 		/// <returns>The message header section or string.Empty if no header section in messageData.</returns>
-		private static string GetHeaderSection(string messageData, bool unfold)
+		private string GetHeaderSection(string messageData, bool unfold)
 		{
 			int endOfHeadersIndex = messageData.IndexOf(MtaParameters.NewLine + MtaParameters.NewLine);
-			
+
 			// There are no headers so return an empty string.
 			if (endOfHeadersIndex < 0)
 				return string.Empty;
@@ -312,7 +318,7 @@ namespace OpenManta.Framework
 		/// </summary>
 		/// <param name="messageData">Raw message DATA</param>
 		/// <returns></returns>
-		internal static string GetMessageBodySection(string messageData)
+		internal string GetMessageBodySection(string messageData)
 		{
 			int endOfHeadersIndex = messageData.IndexOf(MtaParameters.NewLine + MtaParameters.NewLine);
 
@@ -327,6 +333,7 @@ namespace OpenManta.Framework
 			return messageData;
 		}
 	}
+
 	/// <summary>
 	/// Names of the MTA Headers.
 	/// </summary>
@@ -336,7 +343,7 @@ namespace OpenManta.Framework
 		/// First bit of control/command headers.
 		/// </summary>
 		public const string HeaderNamePrefix = "X-" + MtaParameters.MTA_NAME + "-";
-		
+
 		/// <summary>
 		/// The send group ID header name.
 		/// Used to pass in the Send Group.
@@ -353,9 +360,9 @@ namespace OpenManta.Framework
 		/// </summary>
 		public const string ReturnPathDomain = HeaderNamePrefix + "ReturnPathDomain";
 
-        /// <summary>
-        /// The priority of the message.
-        /// </summary>
-        public const string Priority = HeaderNamePrefix + "Priority";
+		/// <summary>
+		/// The priority of the message.
+		/// </summary>
+		public const string Priority = HeaderNamePrefix + "Priority";
 	}
 }
