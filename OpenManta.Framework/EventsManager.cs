@@ -18,6 +18,7 @@ namespace OpenManta.Framework
 	{
 		private readonly ISendDB _sendDb;
 		private readonly IEventDB _eventDb;
+		private readonly IMimeMessageParser _parser;
 
 		/// <summary>
 		/// Holds a singleton instance of the EventsManager.
@@ -26,16 +27,18 @@ namespace OpenManta.Framework
 
 		static EventsManager()
 		{
-			Instance = new EventsManager(SendDBFactory.Instance, EventDbFactory.Instance);
+			Instance = new EventsManager(SendDBFactory.Instance, EventDbFactory.Instance, MimeMessageParserFactory.Instance);
 		}
 
-		private EventsManager(ISendDB sendDb, IEventDB eventDb)
+		private EventsManager(ISendDB sendDb, IEventDB eventDb, IMimeMessageParser parser)
 		{
 			Guard.NotNull(sendDb, nameof(sendDb));
 			Guard.NotNull(eventDb, nameof(eventDb));
+			Guard.NotNull(parser, nameof(parser));
 
 			_sendDb = sendDb;
 			_eventDb = eventDb;
+			_parser = parser;
 		}
 
 		/// <summary>
@@ -65,7 +68,7 @@ namespace OpenManta.Framework
 		{
 			EmailProcessingDetails bounceDetails = new EmailProcessingDetails();
 
-			MimeMessage msg = MimeMessage.Parse(message);
+			MimeMessage msg = _parser.Parse(message);
 
 			if (msg == null)
 			{
@@ -119,7 +122,7 @@ namespace OpenManta.Framework
 				// If we've got a delivery report, check it for info.
 
 				// Abuse report content may have long lines whitespace folded.
-				deliveryReport = MimeMessage.UnfoldHeaders(deliveryReportBodyPart.GetDecodedBody());
+				deliveryReport = _parser.UnfoldHeaders(deliveryReportBodyPart.GetDecodedBody());
 
 				if (ParseNdr(deliveryReport, out bouncePair, out bounceMsg, out bounceDetails))
 				{
@@ -538,7 +541,7 @@ namespace OpenManta.Framework
 		{
 			EmailProcessingDetails processingDetails = new EmailProcessingDetails();
 
-			MimeMessage message = MimeMessage.Parse(content);
+			MimeMessage message = _parser.Parse(content);
 			if (message == null)
 			{
 				processingDetails.ProcessingResult = EmailProcessingResult.ErrorContent;
@@ -555,7 +558,7 @@ namespace OpenManta.Framework
 					// Found an abuse report body part to examine.
 
 					// Abuse report content may have long lines whitespace folded.
-					string abuseReportBody = MimeMessage.UnfoldHeaders(abuseBodyPart.GetDecodedBody());
+					string abuseReportBody = _parser.UnfoldHeaders(abuseBodyPart.GetDecodedBody());
 					using (StringReader reader = new StringReader(abuseReportBody))
 					{
 						while (reader.Peek() > -1)

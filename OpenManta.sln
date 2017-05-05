@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenManta.WebLib.Tests", "O
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenManta.Data.Tests", "OpenManta.Data.Tests\OpenManta.Data.Tests.csproj", "{985C1CF7-0781-4F16-9CED-2459B4E2C972}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenManta.Core.Tests", "OpenManta.Core.Tests\OpenManta.Core.Tests.csproj", "{E69938D2-E8ED-49FB-A1B0-6B099B0B8FA2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -65,6 +67,10 @@ Global
 		{985C1CF7-0781-4F16-9CED-2459B4E2C972}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{985C1CF7-0781-4F16-9CED-2459B4E2C972}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{985C1CF7-0781-4F16-9CED-2459B4E2C972}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E69938D2-E8ED-49FB-A1B0-6B099B0B8FA2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E69938D2-E8ED-49FB-A1B0-6B099B0B8FA2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E69938D2-E8ED-49FB-A1B0-6B099B0B8FA2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E69938D2-E8ED-49FB-A1B0-6B099B0B8FA2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -72,6 +78,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{8F3FC2BB-8FB0-40B2-A0DD-A21C06E2BD0F} = {25570F4D-C106-4377-9E40-22A09C7C8667}
 		{985C1CF7-0781-4F16-9CED-2459B4E2C972} = {25570F4D-C106-4377-9E40-22A09C7C8667}
+		{E69938D2-E8ED-49FB-A1B0-6B099B0B8FA2} = {25570F4D-C106-4377-9E40-22A09C7C8667}
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
 		Policies = $0
