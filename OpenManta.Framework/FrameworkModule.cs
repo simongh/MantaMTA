@@ -19,12 +19,15 @@ namespace OpenManta.Framework
 			Bind<IMantaCoreEvents>().To<MantaCoreEvents>();
 			Bind<IMessageManager>().To<MessageManager>();
 			Bind<IMessageSender>().To<MessageSender>().InSingletonScope();
+			Bind<IMtaMessageHelper>().To<MtaMessageHelper>();
+			Bind<IMtaParameters>().To<MtaParameters>();
 			Bind<IOutboundRuleManager>().To<OutboundRuleManager>();
 			Bind<IQueueManager>().To<QueueManager>().InSingletonScope();
+			Bind<IReturnPathManager>().To<ReturnPathManager>();
+			Bind<ISmtpServer>().To<SmtpServer>();
 			Bind<ISmtpServerTransaction>().To<SmtpServerTransaction>();
 			Bind<IThrottleManager>().To<ThrottleManager>().InSingletonScope();
 			Bind<IVirtualMtaManager>().To<VirtualMtaManager>();
-			Bind<IMtaParameters>().To<MtaParameters>();
 
 			Bind<Smtp.IMantaSmtpClientPoolCollection>().To<Smtp.MantaSmtpClientPoolCollection>().InSingletonScope();
 			Bind<Smtp.IMantaOutboundClientPool>().To<Smtp.MantaOutboundClientPool>();
@@ -32,8 +35,15 @@ namespace OpenManta.Framework
 			Bind<Smtp.ISmtpStreamHandler>().To<Smtp.SmtpStreamHandler>();
 			Bind<Smtp.ISmtpTransactionLogger>().To<Smtp.SmtpTransactionLogger>().InSingletonScope();
 
+			Bind<RabbitMq.IRabbitMqInboundQueueManager>().To<RabbitMq.RabbitMqInboundQueueManager>();
+			Bind<RabbitMq.IRabbitMqInboundStagingHandler>().To<RabbitMq.RabbitMqInboundStagingHandler>();
+			Bind<RabbitMq.IRabbitMqManager>().To<RabbitMq.RabbitMqManager>();
+			Bind<RabbitMq.IRabbitMqOutboundQueueManager>().To<RabbitMq.RabbitMqOutboundQueueManager>();
+
 			Bind<Smtp.IOutboundClientFactory>().To<Smtp.SmtpFactory>();
 			Bind<Smtp.ISmtpServerFactory>().To<Smtp.SmtpFactory>();
+
+			MtaParametersFactory.Initialise(Kernel);
 		}
 	}
 }

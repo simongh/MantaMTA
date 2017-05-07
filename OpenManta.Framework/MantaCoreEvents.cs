@@ -14,12 +14,15 @@ namespace OpenManta.Framework
 		private List<IStopRequired> _StopRequiredTasks;
 
 		private readonly ILog _logging;
+		private readonly IRabbitMqManager _manager;
 
-		public MantaCoreEvents(ILog logging)
+		public MantaCoreEvents(ILog logging, IRabbitMqManager manager)
 		{
 			Guard.NotNull(logging, nameof(logging));
+			Guard.NotNull(manager, nameof(manager));
 
 			_logging = logging;
+			_manager = manager;
 			_StopRequiredTasks = new List<IStopRequired>();
 		}
 
@@ -47,7 +50,7 @@ namespace OpenManta.Framework
 			});
 
 			// Close the RabbitMQ connection when were done.
-			RabbitMqManager.LocalhostConnection.Close();
+			_manager.Close();
 
 			_logging.Debug("InvokeMantaCoreStopping Finished.");
 		}

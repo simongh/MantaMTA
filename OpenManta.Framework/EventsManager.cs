@@ -20,20 +20,23 @@ namespace OpenManta.Framework
 		private readonly IMimeMessageParser _parser;
 		private readonly IBounceRulesManager _bounceRules;
 		private readonly ILog _logging;
+		private readonly IReturnPathManager _returnPath;
 
-		public EventsManager(ISendDB sendDb, IEventDB eventDb, IMimeMessageParser parser, IBounceRulesManager bounceRules, log4net.ILog logging)
+		public EventsManager(ISendDB sendDb, IEventDB eventDb, IMimeMessageParser parser, IBounceRulesManager bounceRules, ILog logging, IReturnPathManager returnPath)
 		{
 			Guard.NotNull(sendDb, nameof(sendDb));
 			Guard.NotNull(eventDb, nameof(eventDb));
 			Guard.NotNull(parser, nameof(parser));
 			Guard.NotNull(bounceRules, nameof(bounceRules));
 			Guard.NotNull(logging, nameof(logging));
+			Guard.NotNull(returnPath, nameof(returnPath));
 
 			_sendDb = sendDb;
 			_eventDb = eventDb;
 			_parser = parser;
 			_bounceRules = bounceRules;
 			_logging = logging;
+			_returnPath = returnPath;
 		}
 
 		/// <summary>
@@ -84,7 +87,7 @@ namespace OpenManta.Framework
 			string rcptTo = string.Empty;
 			int internalSendID = 0;
 
-			if (!ReturnPathManager.TryDecode(returnPath.Value, out rcptTo, out internalSendID))
+			if (!_returnPath.TryDecode(returnPath.Value, out rcptTo, out internalSendID))
 			{
 				// Not a valid Return-Path so can't process.
 				bounceDetails.ProcessingResult = EmailProcessingResult.ErrorNoReturnPath;
@@ -569,7 +572,7 @@ namespace OpenManta.Framework
 									int internalSendID = -1;
 									string rcptTo = string.Empty;
 
-									if (ReturnPathManager.TryDecode(tmp, out rcptTo, out internalSendID))
+									if (_returnPath.TryDecode(tmp, out rcptTo, out internalSendID))
 									{
 										// NEED TO LOG TO DB HERE!!!!!
 										Send snd = _sendDb.GetSend(internalSendID);
@@ -603,7 +606,7 @@ namespace OpenManta.Framework
 					{
 						int internalSendID = -1;
 						string rcptTo = string.Empty;
-						if (ReturnPathManager.TryDecode(returnPathHeader.Value, out rcptTo, out internalSendID))
+						if (_returnPath.TryDecode(returnPathHeader.Value, out rcptTo, out internalSendID))
 						{
 							if (!rcptTo.StartsWith("redacted@", StringComparison.OrdinalIgnoreCase))
 							{
@@ -630,8 +633,8 @@ namespace OpenManta.Framework
 						{
 							int internalSendID = -1;
 							string rcptTo = string.Empty;
-							tmp = ReturnPathManager.GetReturnPathFromMessageID(messageID);
-							if (ReturnPathManager.TryDecode(tmp, out rcptTo, out internalSendID))
+							tmp = _returnPath.GetReturnPathFromMessageID(messageID);
+							if (_returnPath.TryDecode(tmp, out rcptTo, out internalSendID))
 							{
 								// NEED TO LOG TO DB HERE!!!!!
 								Send snd = _sendDb.GetSend(internalSendID);

@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using OpenManta.Core;
 using OpenManta.Data;
+using OpenManta.Framework.RabbitMq;
 
 namespace OpenManta.Framework
 {
@@ -10,16 +11,19 @@ namespace OpenManta.Framework
 		private readonly IEventsManager _eventsManager;
 		private readonly IMtaTransaction _mtaTransation;
 		private readonly IMtaParameters _config;
+		private readonly IRabbitMqOutboundQueueManager _queueManager;
 
-		public MtaMessageHelper(IEventsManager eventsManager, IMtaTransaction mtaTransaction, IMtaParameters config)
+		public MtaMessageHelper(IEventsManager eventsManager, IMtaTransaction mtaTransaction, IMtaParameters config, RabbitMq.IRabbitMqOutboundQueueManager queueManager)
 		{
 			Guard.NotNull(eventsManager, nameof(eventsManager));
 			Guard.NotNull(mtaTransaction, nameof(mtaTransaction));
 			Guard.NotNull(config, nameof(config));
+			Guard.NotNull(queueManager, nameof(queueManager));
 
 			_eventsManager = eventsManager;
 			_mtaTransation = mtaTransaction;
 			_config = config;
+			_queueManager = queueManager;
 		}
 
 		/// <summary>
@@ -217,7 +221,7 @@ namespace OpenManta.Framework
 		/// </summary>
 		private async Task Requeue(MtaQueuedMessage msg)
 		{
-			await RabbitMq.RabbitMqOutboundQueueManager.Enqueue(msg);
+			await _queueManager.Enqueue(msg);
 			msg.IsHandled = true;
 		}
 	}

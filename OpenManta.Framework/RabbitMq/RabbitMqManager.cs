@@ -8,7 +8,7 @@ using OpenManta.Core;
 
 namespace OpenManta.Framework.RabbitMq
 {
-	public static class RabbitMqManager
+	internal class RabbitMqManager : IRabbitMqManager
 	{
 		/// <summary>
 		/// Name of the Exchange in RabbitMQ to route dead letters from the wait* queues back in to the waiting queue.
@@ -23,12 +23,53 @@ namespace OpenManta.Framework.RabbitMq
 		/// <summary>
 		/// The connection to the RabbitMQ instance.
 		/// </summary>
-		public static IConnection LocalhostConnection = new ConnectionFactory
+		public IConnection LocalhostConnection;
+
+		/// <summary>
+		/// Collection of Channels for Publishing.
+		/// </summary>
+		private Dictionary<int, PublishChannel> _PublishChannels = new Dictionary<int, PublishChannel>();
+
+		/// <summary>
+		/// Lock for getting a publish channel.
+		/// </summary>
+		private static object _PublishChannelsLock = new object();
+
+		/// <summary>
+		/// Holds the Channels to the RabbitMQ queues.
+		/// </summary>
+		private Dictionary<RabbitMqQueue, IModel> _Channels = new Dictionary<RabbitMqQueue, IModel>();
+
+		/// <summary>
+		/// Lock for getting the channels, ensures only one exists per queue.
+		/// </summary>
+		private static object _GetChannelLock = new object();
+
+		/// <summary>
+		/// Holds the RabbitMQ queue consumers.
+		/// </summary>
+		private Dictionary<RabbitMqQueue, QueueingBasicConsumer> _Consumers = new Dictionary<RabbitMqQueue, QueueingBasicConsumer>();
+
+		/// <summary>
+		/// Lock for getting the consumers, ensures only one exists per queue.
+		/// </summary>
+		private static object _GetConsumerLock = new object();
+
+		private readonly IMtaParameters _config;
+
+		public RabbitMqManager(IMtaParameters config)
 		{
-			HostName = MtaParameters.RabbitMQ.Hostname,
-			UserName = MtaParameters.RabbitMQ.Username,
-			Password = MtaParameters.RabbitMQ.Password
-		}.CreateConnection();
+			Guard.NotNull(config, nameof(config));
+
+			_config = config;
+
+			LocalhostConnection = new ConnectionFactory
+			{
+				HostName = config.RabbitMq.Hostname,
+				UserName = config.RabbitMq.Username,
+				Password = config.RabbitMq.Password
+			}.CreateConnection();
+		}
 
 		/// <summary>
 		/// (Spec method) Acknowledge one or more delivered message(s).
@@ -36,7 +77,7 @@ namespace OpenManta.Framework.RabbitMq
 		/// <param name="queue">Queue the message or messages are from.</param>
 		/// <param name="deliveryTag">ID of the message delivery.</param>
 		/// <param name="multiple">Ack all deliverys upto and including specified.</param>
-		public static void Ack(RabbitMqQueue queue, ulong deliveryTag, bool multiple)
+		public void Ack(RabbitMqQueue queue, ulong deliveryTag, bool multiple)
 		{
 			IModel channel = GetChannel(queue);
 			channel.BasicAck(deliveryTag, multiple);
@@ -49,12 +90,12 @@ namespace OpenManta.Framework.RabbitMq
 		/// <param name="maxItems">The maximum amount of messages to dequeue.</param>
 		/// <param name="millisecondsTimeout">If queue is empty the max time to wait for more to appear.</param>
 		/// <returns>List of BasicDeliverEventArgs.</returns>
-		public static List<BasicDeliverEventArgs> Dequeue(RabbitMqQueue queue, int maxItems, int millisecondsTimeout)
+		public IList<BasicDeliverEventArgs> Dequeue(RabbitMqQueue queue, int maxItems, int millisecondsTimeout)
 		{
 			GetChannel(queue);
 			List<BasicDeliverEventArgs> items = new List<BasicDeliverEventArgs>();
 			QueueingBasicConsumer consumer = GetQueueingBasicConsumer(queue);
-				
+
 			while (items.Count < maxItems)
 			{
 				BasicDeliverEventArgs ea = null;
@@ -93,25 +134,9 @@ namespace OpenManta.Framework.RabbitMq
 			}
 		}
 
-		/// <summary>
-		/// Collection of Channels for Publishing.
-		/// </summary>
-		public static Dictionary<int, PublishChannel> _PublishChannels = new Dictionary<int, PublishChannel>();
-
-		/// <summary>
-		/// Lock for getting a publish channel.
-		/// </summary>
-		public static object _PublishChannelsLock = new object();
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="queue"></param>
-		/// <returns></returns>
-		public static PublishChannel GetPublishChannel(RabbitMqQueue queue, bool noConfirm)
+		public PublishChannel GetPublishChannel(RabbitMqQueue queue, bool noConfirm)
 		{
 			IModel channel = GetChannel(queue); // Ensure the Queue exists.
-
 
 			if (noConfirm)
 				return new PublishChannel(channel);
@@ -131,14 +156,13 @@ namespace OpenManta.Framework.RabbitMq
 			return _PublishChannels[threadID];
 		}
 
-
 		/// <summary>
 		/// Publishes the specified message to the specified queue.
 		/// </summary>
 		/// <param name="message">Message to queue.</param>
 		/// <param name="queue">Queue to place message in.</param>
-        /// <param name="priority">Priority of message.</param>
-		public static bool Publish(byte[] message, RabbitMqQueue queue, bool noConfirm, RabbitMqPriority priority)
+		/// <param name="priority">Priority of message.</param>
+		public bool Publish(byte[] message, RabbitMqQueue queue, bool noConfirm, RabbitMqPriority priority)
 		{
 			var pChannel = GetPublishChannel(queue, noConfirm);
 			lock (pChannel.Lock)
@@ -146,21 +170,21 @@ namespace OpenManta.Framework.RabbitMq
 				var channel = pChannel.Channel;
 				var msgProps = channel.CreateBasicProperties();
 				msgProps.Persistent = true;
-                msgProps.Priority = (byte)priority;
+				msgProps.Priority = (byte)priority;
 				channel.BasicPublish(string.Empty, GetQueueNameFromEnum(queue), true, msgProps, message);
 
-                return noConfirm ? true
-                                 : channel.WaitForConfirms();
+				return noConfirm ? true
+								 : channel.WaitForConfirms();
 			}
 		}
 
-        /// <summary>
-        /// Publishes the specified message to the specified queue.
-        /// </summary>
-        /// <param name="message">Message to queue.</param>
-        /// <param name="queue">Queue to place message in.</param>
-        /// <param name="priority">Priority of message.</param>
-        public static async Task<bool> Publish(object obj, RabbitMqQueue queue, bool confirm = true, RabbitMqPriority priority = RabbitMqPriority.Low)
+		/// <summary>
+		/// Publishes the specified message to the specified queue.
+		/// </summary>
+		/// <param name="message">Message to queue.</param>
+		/// <param name="queue">Queue to place message in.</param>
+		/// <param name="priority">Priority of message.</param>
+		public async Task<bool> Publish(object obj, RabbitMqQueue queue, bool confirm = true, RabbitMqPriority priority = RabbitMqPriority.Low)
 		{
 			byte[] bytes = await Serialisation.Serialise(obj);
 			return Publish(bytes, queue, !confirm, priority);
@@ -171,7 +195,7 @@ namespace OpenManta.Framework.RabbitMq
 		/// </summary>
 		/// <param name="queue">Queue to get the name of.</param>
 		/// <returns>The name of the queue.</returns>
-		private static string GetQueueNameFromEnum(RabbitMqQueue queue)
+		private string GetQueueNameFromEnum(RabbitMqQueue queue)
 		{
 			const string manta_queue_prefix = "manta_mta_";
 
@@ -179,39 +203,36 @@ namespace OpenManta.Framework.RabbitMq
 			{
 				case RabbitMqQueue.Inbound:
 					return manta_queue_prefix + "inbound";
+
 				case RabbitMqQueue.InboundStaging:
 					return manta_queue_prefix + "inbound_staging";
+
 				case RabbitMqQueue.OutboundWaiting:
 					return manta_queue_prefix + "outbound_waiting";
+
 				case RabbitMqQueue.OutboundWait1:
 					return manta_queue_prefix + "outbound_wait_____1";
+
 				case RabbitMqQueue.OutboundWait10:
 					return manta_queue_prefix + "outbound_wait____10";
+
 				case RabbitMqQueue.OutboundWait60:
 					return manta_queue_prefix + "outbound_wait____60";
+
 				case RabbitMqQueue.OutboundWait300:
 					return manta_queue_prefix + "outbound_wait___300";
+
 				default:
 					throw new Exception("Cannot get name for RabbitMqQueue");
 			}
 		}
 
 		/// <summary>
-		/// Holds the Channels to the RabbitMQ queues.
-		/// </summary>
-		private static Dictionary<RabbitMqQueue, IModel> _Channels = new Dictionary<RabbitMqQueue, IModel>();
-
-		/// <summary>
-		/// Lock for getting the channels, ensures only one exists per queue.
-		/// </summary>
-		private static object _GetChannelLock = new object();
-
-		/// <summary>
 		/// Gets the Common AMQP model for the specified queue, using the the specified connection.
 		/// </summary>
 		/// <param name="queue">The queue to get the AMQP model for.</param>
 		/// <returns>Common AMQP model.</returns>
-		private static IModel GetChannel(RabbitMqQueue queue)
+		private IModel GetChannel(RabbitMqQueue queue)
 		{
 			lock (_GetChannelLock)
 			{
@@ -226,36 +247,35 @@ namespace OpenManta.Framework.RabbitMq
 					if (!LocalhostConnection.IsOpen)
 						LocalhostConnection = new ConnectionFactory
 						{
-							HostName = MtaParameters.RabbitMQ.Hostname,
-							UserName = MtaParameters.RabbitMQ.Username,
-							Password = MtaParameters.RabbitMQ.Password
+							HostName = _config.RabbitMq.Hostname,
+							UserName = _config.RabbitMq.Username,
+							Password = _config.RabbitMq.Password
 						}.CreateConnection();
 
 					channel = LocalhostConnection.CreateModel();
 
-                    var queueArgs = new Dictionary<string, object>();
-                    queueArgs.Add("x-max-priority", 3);
-                    queueArgs.Add("x-queue-mode", "lazy");
+					var queueArgs = new Dictionary<string, object>();
+					queueArgs.Add("x-max-priority", 3);
+					queueArgs.Add("x-queue-mode", "lazy");
 					bool isOutboundWaitingQueue = false;
 
-					switch(queue)
+					switch (queue)
 					{
 						case RabbitMqQueue.OutboundWait1:
 						case RabbitMqQueue.OutboundWait10:
 						case RabbitMqQueue.OutboundWait60:
 						case RabbitMqQueue.OutboundWait300:
 							isOutboundWaitingQueue = true;
-							channel.ExchangeDeclare(MANTA_WAIT_DEAD_LETTER_EXCHANGE,	// Name of the Exchange to declare.
-													"direct",							// The exchange type.
-													true,								// Exchange is durable.
-													false,								// Don't want the exchange auto deleted.
-													null);								// No additional arguments.
+							channel.ExchangeDeclare(MANTA_WAIT_DEAD_LETTER_EXCHANGE,    // Name of the Exchange to declare.
+													"direct",                           // The exchange type.
+													true,                               // Exchange is durable.
+													false,                              // Don't want the exchange auto deleted.
+													null);                              // No additional arguments.
 
-							
 							// The amount of time in milliseconds to allow messages to live in the queue.
 							int messageTTL = 0;
-							
-							// Work out the TTL. 
+
+							// Work out the TTL.
 							if (queue == RabbitMqQueue.OutboundWait1)
 								messageTTL = 1 * 1000;
 							else if (queue == RabbitMqQueue.OutboundWait10)
@@ -271,18 +291,18 @@ namespace OpenManta.Framework.RabbitMq
 							queueArgs.Add("x-dead-letter-routing-key", MANTA_WAIT_DEAD_LETTER_EXCHANGE_ROUTING_KEY);
 							break;
 					}
-					
+
 					// Declare the Queue in RabbitMQ.
-					channel.QueueDeclare(GetQueueNameFromEnum(queue),		// The Queue to use.
-											true,							// True as we want the queue durable.
-											false,							// Queue isn't exclusive.
-											false,							// Don't auto delete from the queue.
-											queueArgs);						// Add any additional Queue arguments.
+					channel.QueueDeclare(GetQueueNameFromEnum(queue),       // The Queue to use.
+											true,                           // True as we want the queue durable.
+											false,                          // Queue isn't exclusive.
+											false,                          // Don't auto delete from the queue.
+											queueArgs);                     // Add any additional Queue arguments.
 
 					// If we are getting a channel to an Outbound Wait X queue, then we need to bind the dead letter exchange and the OutboundWaiting queue.
 					if (isOutboundWaitingQueue)
-						channel.QueueBind(GetQueueNameFromEnum(RabbitMqQueue.OutboundWaiting), 
-										  MANTA_WAIT_DEAD_LETTER_EXCHANGE, 
+						channel.QueueBind(GetQueueNameFromEnum(RabbitMqQueue.OutboundWaiting),
+										  MANTA_WAIT_DEAD_LETTER_EXCHANGE,
 										  MANTA_WAIT_DEAD_LETTER_EXCHANGE_ROUTING_KEY);
 
 					_Channels[queue] = channel;
@@ -293,21 +313,11 @@ namespace OpenManta.Framework.RabbitMq
 		}
 
 		/// <summary>
-		/// Holds the RabbitMQ queue consumers.
-		/// </summary>
-		private static Dictionary<RabbitMqQueue, QueueingBasicConsumer> _Consumers = new Dictionary<RabbitMqQueue, QueueingBasicConsumer>();
-
-		/// <summary>
-		/// Lock for getting the consumers, ensures only one exists per queue.
-		/// </summary>
-		private static object _GetConsumerLock = new object();
-
-		/// <summary>
 		/// Gets the consumer for the specified queue.
 		/// </summary>
 		/// <param name="queue">The queue to get the consumer for.</param>
 		/// <returns>The consumer for th specified queue.</returns>
-		private static QueueingBasicConsumer GetQueueingBasicConsumer(RabbitMqQueue queue)
+		private QueueingBasicConsumer GetQueueingBasicConsumer(RabbitMqQueue queue)
 		{
 			lock (_GetConsumerLock)
 			{
@@ -320,7 +330,7 @@ namespace OpenManta.Framework.RabbitMq
 				if (consumer == null)
 				{
 					IModel channel = GetChannel(queue);
-                    channel.BasicQos(0, 250, false);
+					channel.BasicQos(0, 250, false);
 					consumer = new QueueingBasicConsumer(channel);
 					channel.BasicConsume(GetQueueNameFromEnum(queue), false, consumer);
 				}
@@ -328,6 +338,11 @@ namespace OpenManta.Framework.RabbitMq
 				_Consumers[queue] = consumer;
 				return consumer;
 			}
+		}
+
+		public void Close()
+		{
+			LocalhostConnection.Close();
 		}
 
 		/// <summary>
@@ -339,22 +354,27 @@ namespace OpenManta.Framework.RabbitMq
 			/// The Inbound Queue is a queue of messages that have been received and will be relayed.
 			/// </summary>
 			Inbound = 0,
+
 			/// <summary>
 			/// The Outbound Queue is a queue of messages that have been queued for relaying.
 			/// </summary>
 			OutboundWaiting = 1,
+
 			/// <summary>
 			/// Outbound wait queue, messages live here for one second before routing to OutboundWaiting.
 			/// </summary>
 			OutboundWait1 = 2,
+
 			/// <summary>
 			/// Outbound wait queue, messages live here for one minute before routing to OutboundWaiting.
 			/// </summary>
 			OutboundWait60 = 3,
+
 			/// <summary>
 			/// Outbound wait queue, messages live here for five minutes before routing to OutboundWaiting.
 			/// </summary>
 			OutboundWait300 = 4,
+
 			OutboundWait10 = 5,
 			InboundStaging = 6
 		}

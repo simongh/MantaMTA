@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
 using log4net;
+using OpenManta.Framework.RabbitMq;
 
 namespace OpenManta.Framework
 {
@@ -25,15 +26,21 @@ namespace OpenManta.Framework
 
 		private readonly ILog _logging;
 		private readonly IMantaDB _mantaDb;
+		private readonly IRabbitMqInboundQueueManager _inboundQueue;
+		private readonly IRabbitMqManager _manager;
 
-		private QueueManager(IMantaCoreEvents coreEvents, log4net.ILog logging, IMantaDB mantaDb)
+		private QueueManager(IMantaCoreEvents coreEvents, ILog logging, IMantaDB mantaDb, RabbitMq.IRabbitMqInboundQueueManager inboundQueue, RabbitMq.IRabbitMqManager manager)
 		{
 			Guard.NotNull(coreEvents, nameof(coreEvents));
 			Guard.NotNull(logging, nameof(logging));
 			Guard.NotNull(mantaDb, nameof(mantaDb));
+			Guard.NotNull(inboundQueue, nameof(inboundQueue));
+			Guard.NotNull(manager, nameof(manager));
 
 			_logging = logging;
 			_mantaDb = mantaDb;
+			_inboundQueue = inboundQueue;
+			_manager = manager;
 
 			coreEvents.RegisterStopRequiredInstance(this);
 		}
@@ -51,7 +58,7 @@ namespace OpenManta.Framework
 		/// <returns>True if the Message has been queued, false if not.</returns>
 		public async Task<bool> Enqueue(Guid messageID, int ipGroupID, int internalSendID, string mailFrom, string[] rcptTo, string message, RabbitMqPriority priority)
 		{
-			return await RabbitMq.RabbitMqInboundQueueManager.Enqueue(messageID, ipGroupID, internalSendID, mailFrom, rcptTo, message, priority);
+			return await _inboundQueue.Enqueue(messageID, ipGroupID, internalSendID, mailFrom, rcptTo, message, priority);
 		}
 
 		/// <summary>
@@ -82,7 +89,7 @@ namespace OpenManta.Framework
 				try
 				{
 					// Get queued messages for bulk importing.
-					IList<MtaMessage> recordsToImportToSql = RabbitMq.RabbitMqInboundQueueManager.Dequeue(100).Result;
+					IList<MtaMessage> recordsToImportToSql = _inboundQueue.Dequeue(100).Result;
 
 					// If there are no messages to import then sleep and try again.
 					if (recordsToImportToSql == null || recordsToImportToSql.Count == 0)
@@ -133,7 +140,7 @@ COMMIT TRANSACTION";
 							cmd.ExecuteNonQuery();
 						}
 
-						RabbitMq.RabbitMqManager.Ack(RabbitMq.RabbitMqManager.RabbitMqQueue.Inbound, recordsToImportToSql.Max(r => r.RabbitMqDeliveryTag), true);
+						_manager.Ack(RabbitMqManager.RabbitMqQueue.Inbound, recordsToImportToSql.Max(r => r.RabbitMqDeliveryTag), true);
 					}
 					catch (Exception ex)
 					{

@@ -47,18 +47,21 @@ namespace OpenManta.Framework
 		private readonly IVirtualMtaManager _virtualMtaManager;
 		private readonly IQueueManager _queueManager;
 		private readonly IMtaParameters _config;
+		private readonly IReturnPathManager _returnPath;
 
-		public SmtpServerTransaction(IMessageManager messageManager, IVirtualMtaManager virtualMtaManager, IQueueManager queueManager, IMtaParameters config)
+		public SmtpServerTransaction(IMessageManager messageManager, IVirtualMtaManager virtualMtaManager, IQueueManager queueManager, IMtaParameters config, IReturnPathManager returnPath)
 		{
 			Guard.NotNull(messageManager, nameof(messageManager));
 			Guard.NotNull(virtualMtaManager, nameof(virtualMtaManager));
 			Guard.NotNull(queueManager, nameof(queueManager));
 			Guard.NotNull(config, nameof(config));
+			Guard.NotNull(returnPath, nameof(returnPath));
 
 			_messageManager = messageManager;
 			_virtualMtaManager = virtualMtaManager;
 			_queueManager = queueManager;
 			_config = config;
+			_returnPath = returnPath;
 
 			RcptTo = new List<string>();
 			MessageDestination = MessageDestination.Unknown;
@@ -197,11 +200,11 @@ namespace OpenManta.Framework
 					_config.LocalDomains.Count(d => d.Hostname.Equals(returnPathDomainOverrideHeader.Value, StringComparison.OrdinalIgnoreCase)) > 0)
 					// The message contained a local domain in the returnpathdomain
 					// header so use it instead of the default.
-					returnPath = ReturnPathManager.GenerateReturnPath(RcptTo[0], internalSendId, returnPathDomainOverrideHeader.Value);
+					returnPath = _returnPath.GenerateReturnPath(RcptTo[0], internalSendId, returnPathDomainOverrideHeader.Value);
 				else
 					// The message didn't specify a return path overide or it didn't
 					// contain a localdomain so use the default.
-					returnPath = ReturnPathManager.GenerateReturnPath(RcptTo[0], internalSendId);
+					returnPath = _returnPath.GenerateReturnPath(RcptTo[0], internalSendId);
 
 				// Insert the return path header.
 				Data = _messageManager.AddHeader(Data, new MessageHeader("Return-Path", "<" + returnPath + ">"));

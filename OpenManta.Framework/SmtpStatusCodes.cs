@@ -9,10 +9,9 @@ namespace OpenManta.Framework
 		/// </summary>
 		/// <param name="smtpCode">A standard SMTP code, e.g. "550".</param>
 		/// <returns>The appropriate MantaBounceCode for the SMTP code provided in <paramref name="smtpCode"/>.</returns>
-		internal BouncePair ConvertSmtpCodeToMantaBouncePair(int smtpCode)
+		public BouncePair ConvertSmtpCodeToMantaBouncePair(int smtpCode)
 		{
 			BouncePair bp = new BouncePair();
-
 
 			// Based on the first character of the SMTP code, we can tell if it's not actually a bounce
 			// or at least get the BounceType (whether it's a permanent or temporary problem).
@@ -30,7 +29,6 @@ namespace OpenManta.Framework
 			else if (codeClass == '4')
 				// Temporary problem.
 				bp.BounceType = MantaBounceType.Soft;
-
 			else if (codeClass == '5')
 				// Permanent problem.
 				bp.BounceType = MantaBounceType.Hard;
@@ -42,8 +40,6 @@ namespace OpenManta.Framework
 
 				return bp;
 			}
-
-
 
 			switch (smtpCode)
 			{
@@ -61,7 +57,7 @@ namespace OpenManta.Framework
 					return bp;
 
 				case 420:// Timeout communication problem encountered during transmission
-				case 421://	Service not available, closing transmission channel				
+				case 421://	Service not available, closing transmission channel
 				case 521://	<domain> does not accept mail (see rfc1846)
 				case 530://	Access denied (???a Sendmailism)
 					bp.BounceCode = MantaBounceCode.ServiceUnavailable;
@@ -102,7 +98,6 @@ namespace OpenManta.Framework
 			return bp;
 		}
 
-
 		/// <summary>
 		/// Converts a Non-Delivery Report (NDR) code to a MantaBounceType and MantaBounceCode.
 		/// </summary>
@@ -110,10 +105,9 @@ namespace OpenManta.Framework
 		/// http://tools.ietf.org/html/rfc3463.</param>
 		/// <returns>A BouncePair object with the appropriate MantaBounceCode and MantaBounceType values
 		/// for the NDR code provided in <paramref name="ndrCode"/>.</returns>
-		internal BouncePair ConvertNdrCodeToMantaBouncePair(string ndrCode)
+		public BouncePair ConvertNdrCodeToMantaBouncePair(string ndrCode)
 		{
 			BouncePair bp = new BouncePair();
-
 
 			int firstDotPos = ndrCode.IndexOf('.');
 
@@ -125,7 +119,6 @@ namespace OpenManta.Framework
 
 				return bp;
 			}
-
 
 			// Identify if it's a temporary or permanent bounce (or even not one at all).
 			if (ndrCode.StartsWith("2") || ndrCode.StartsWith("3"))
@@ -149,71 +142,66 @@ namespace OpenManta.Framework
 				return bp;
 			}
 
-
-
-
-			
 			// Check the rest of the code.
 			string endPart = ndrCode.Substring(firstDotPos);
-
 
 			// List of status codes as per RFC 3463 ().
 			//
 			// TODO BenC (2013-07-08): Needs refining/reviewing as just did a rough first pass through.
 			switch (endPart)
 			{
-				case ".0.0":	// "Other undefined Status".  Should be used for all errors for which only the class of the error is known.
+				case ".0.0":    // "Other undefined Status".  Should be used for all errors for which only the class of the error is known.
 					bp.BounceCode = MantaBounceCode.BounceUnknown;
 					break;
 
-				case ".1.5":	// Destination mailbox address valid
+				case ".1.5":    // Destination mailbox address valid
 					bp.BounceCode = MantaBounceCode.NotABounce;
 					break;
 
-				case ".1.0":	// Other address status
-				case ".1.1":	// Bad destination mailbox address
-				case ".1.2":	// Bad destination system address
-				case ".1.3":	// Bad destination mailbox address syntax
-				case ".1.4":	// Destination mailbox address ambiguous
-				case ".1.6":	// Mailbox has moved
-				case ".2.0":	// Other or undefined mailbox status
-				case ".2.1":	// Mailbox disabled, not accepting messages
+				case ".1.0":    // Other address status
+				case ".1.1":    // Bad destination mailbox address
+				case ".1.2":    // Bad destination system address
+				case ".1.3":    // Bad destination mailbox address syntax
+				case ".1.4":    // Destination mailbox address ambiguous
+				case ".1.6":    // Mailbox has moved
+				case ".2.0":    // Other or undefined mailbox status
+				case ".2.1":    // Mailbox disabled, not accepting messages
 					bp.BounceCode = MantaBounceCode.BadEmailAddress;
-					break;					
+					break;
 
-				case ".2.2":	// Mailbox full
-				case ".3.1":	// Mail system full
+				case ".2.2":    // Mailbox full
+				case ".3.1":    // Mail system full
 					bp.BounceCode = MantaBounceCode.MailboxFull;
 					break;
 
-				case ".2.3":	// Message length exceeds administrative limit.
-				case ".3.4":	// Message too big for system
+				case ".2.3":    // Message length exceeds administrative limit.
+				case ".3.4":    // Message too big for system
 					bp.BounceCode = MantaBounceCode.MessageSizeTooLarge;
 					break;
 
-				case ".2.4":	// Mailing list expansion problem
-				case ".3.0":	// Other or undefined mail system status
-				case ".3.2":	// System not accepting network messages
-				case ".3.3":	// System not capable of selected features
-				case ".4.0":	// Other or undefined network or routing status
-				case ".4.1":	// No answer from host
-				case ".4.2":	// Bad connection
-				case ".4.3":	// Routing server failure
-				case ".4.4":	// Unable to route
-				case ".4.5":	// Network congestion
-				case ".4.6":	// Routing loop detected
-				case ".4.7":	// Delivery time expired
-				case ".5.0":	// Other or undefined protocol status
+				case ".2.4":    // Mailing list expansion problem
+				case ".3.0":    // Other or undefined mail system status
+				case ".3.2":    // System not accepting network messages
+				case ".3.3":    // System not capable of selected features
+				case ".4.0":    // Other or undefined network or routing status
+				case ".4.1":    // No answer from host
+				case ".4.2":    // Bad connection
+				case ".4.3":    // Routing server failure
+				case ".4.4":    // Unable to route
+				case ".4.5":    // Network congestion
+				case ".4.6":    // Routing loop detected
+				case ".4.7":    // Delivery time expired
+				case ".5.0":    // Other or undefined protocol status
 					bp.BounceCode = MantaBounceCode.UnableToConnect;
 					break;
 
-				case ".1.7":	// Bad sender's mailbox address syntax
-				case ".1.8":	// Bad sender's system address
+				case ".1.7":    // Bad sender's mailbox address syntax
+				case ".1.8":    // Bad sender's system address
 					bp.BounceCode = MantaBounceCode.ConfigurationErrorWithSendingAddress;
 					break;
 
 				// BenC (2013-08-21): Don't know why these are commented out (doesn't affect things as they're handled by default anyway), but leaving for now.
-				/*				
+				/*
 				case ".5.1":	// Invalid command
 				case ".5.2":	// Syntax error
 				case ".5.3":	// Too many recipients

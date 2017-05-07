@@ -56,8 +56,9 @@ namespace OpenManta.Framework
 		private readonly IVirtualMtaManager _virtualMtaManager;
 		private readonly IMantaSmtpClientPoolCollection _clientPools;
 		private readonly IMtaParameters _config;
+		private readonly IRabbitMqOutboundQueueManager _queueManager;
 
-		public MessageSender(Data.IMtaTransaction mtaTransaction, IMantaCoreEvents coreEvents, ILog logging, IDnsManager dnsManager, IMtaMessageHelper messageHelper, IVirtualMtaManager virtualMtaManager, IMantaSmtpClientPoolCollection clientPools, IMtaParameters config)
+		public MessageSender(Data.IMtaTransaction mtaTransaction, IMantaCoreEvents coreEvents, ILog logging, IDnsManager dnsManager, IMtaMessageHelper messageHelper, IVirtualMtaManager virtualMtaManager, IMantaSmtpClientPoolCollection clientPools, IMtaParameters config, IRabbitMqOutboundQueueManager queueManager)
 		{
 			Guard.NotNull(mtaTransaction, nameof(mtaTransaction));
 			Guard.NotNull(coreEvents, nameof(coreEvents));
@@ -67,6 +68,7 @@ namespace OpenManta.Framework
 			Guard.NotNull(virtualMtaManager, nameof(virtualMtaManager));
 			Guard.NotNull(clientPools, nameof(clientPools));
 			Guard.NotNull(config, nameof(config));
+			Guard.NotNull(queueManager, nameof(queueManager));
 
 			_mtaTransaction = mtaTransaction;
 			_logging = logging;
@@ -75,6 +77,7 @@ namespace OpenManta.Framework
 			_virtualMtaManager = virtualMtaManager;
 			_clientPools = clientPools;
 			_config = config;
+			_queueManager = queueManager;
 
 			coreEvents.RegisterStopRequiredInstance(this);
 		}
@@ -115,6 +118,7 @@ namespace OpenManta.Framework
 				// Dictionary will hold a single int for each running task. The int means nothing.
 				ConcurrentDictionary<Guid, int> runningTasks = new ConcurrentDictionary<Guid, int>();
 
+				// Send the message.
 				Action<MtaQueuedMessage> taskWorker = (qMsg) =>
 				{
 					// Generate a unique ID for this task.
@@ -131,21 +135,20 @@ namespace OpenManta.Framework
 							// Loop while there is a task message to send.
 							while (qMsg != null && !_IsStopping)
 							{
-								// Send the message.
 								await SendMessageAsync(qMsg);
 
 								if (!qMsg.IsHandled)
 								{
 									_logging.Warn("Message not handled " + qMsg.ID);
 									qMsg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(5);
-									await RabbitMqOutboundQueueManager.Enqueue(qMsg);
+									await _queueManager.Enqueue(qMsg);
 								}
 
 								// Acknowledge of the message.
-								RabbitMqOutboundQueueManager.Ack(qMsg);
+								_queueManager.Ack(qMsg);
 
 								// Try to get another message to send.
-								qMsg = await RabbitMqOutboundQueueManager.Dequeue();
+								qMsg = await _queueManager.Dequeue();
 							}
 						}
 						catch (Exception ex)
@@ -162,10 +165,10 @@ namespace OpenManta.Framework
 								{
 									_logging.Warn("Message not handled " + qMsg.ID);
 									qMsg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(5);
-									await RabbitMqOutboundQueueManager.Enqueue(qMsg);
+									await _queueManager.Enqueue(qMsg);
 								}
 
-								RabbitMqOutboundQueueManager.Ack(qMsg);
+								_queueManager.Ack(qMsg);
 							}
 
 							// Remove this task from the dictionary
@@ -179,7 +182,7 @@ namespace OpenManta.Framework
 				{
 					while ((runningTasks.Count < MAX_SENDING_WORKER_TASKS) && !_IsStopping)
 					{
-						MtaQueuedMessage qmsg = RabbitMqOutboundQueueManager.Dequeue().Result;
+						MtaQueuedMessage qmsg = _queueManager.Dequeue().Result;
 						if (qmsg == null)
 							break; // Nothing to do, so don't start anymore workers.
 
@@ -231,7 +234,7 @@ namespace OpenManta.Framework
 			// Check that the message next attempt after has passed.
 			if (msg.AttemptSendAfterUtc > DateTime.UtcNow)
 			{
-				await RabbitMqOutboundQueueManager.Enqueue(msg);
+				await _queueManager.Enqueue(msg);
 				await Task.Delay(50); // To prevent a tight loop within a Task thread we should sleep here.
 				return;
 			}
@@ -260,7 +263,7 @@ namespace OpenManta.Framework
 				// Unknown send state, requeue the message and log error. Cannot send!
 				default:
 					msg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(1);
-					await RabbitMqOutboundQueueManager.Enqueue(msg);
+					await _queueManager.Enqueue(msg);
 					_logging.Error("Failed to send message. Unknown SendStatus[" + snd.SendStatus + "]!");
 					return;
 			}
@@ -298,7 +301,7 @@ namespace OpenManta.Framework
 							break;
 
 						case MantaOutboundClientResult.MaxConnections:
-							await RabbitMqOutboundQueueManager.Enqueue(msg);
+							await _queueManager.Enqueue(msg);
 							break;
 
 						case MantaOutboundClientResult.MaxMessages:
@@ -328,7 +331,7 @@ namespace OpenManta.Framework
 						default:
 							// Something weird happening with this message, get it out of the way for a bit.
 							msg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(5);
-							await RabbitMqOutboundQueueManager.Enqueue(msg);
+							await _queueManager.Enqueue(msg);
 							break;
 					}
 				}
