@@ -43,6 +43,8 @@ namespace OpenManta.Framework
 			Bind<Smtp.IOutboundClientFactory>().To<Smtp.SmtpFactory>();
 			Bind<Smtp.ISmtpServerFactory>().To<Smtp.SmtpFactory>();
 
+			Bind<log4net.ILog>().ToMethod(ctx => log4net.LogManager.GetLogger(MtaParameters.MTA_NAME));
+
 			MtaParametersFactory.Initialise(Kernel);
 		}
 	}

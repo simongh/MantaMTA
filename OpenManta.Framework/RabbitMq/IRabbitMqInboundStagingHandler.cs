@@ -2,5 +2,8 @@
 {
 	public interface IRabbitMqInboundStagingHandler
 	{
+		void Start();
+
+		void Stop();
 	}
 }

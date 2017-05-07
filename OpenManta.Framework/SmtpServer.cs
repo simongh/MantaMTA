@@ -15,7 +15,7 @@ namespace OpenManta.Framework
 	/// <summary>
 	/// Provides a server for receiving SMTP commands/messages.
 	/// </summary>
-	public class SmtpServer : ISmtpServer
+	internal class SmtpServer : ISmtpServer
 	{
 		/// <summary>
 		/// Listens to TCP socket.

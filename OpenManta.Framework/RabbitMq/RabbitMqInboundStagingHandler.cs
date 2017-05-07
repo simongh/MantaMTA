@@ -1,7 +1,7 @@
-﻿using OpenManta.Core;
-using RabbitMQ.Client.Events;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
+using OpenManta.Core;
+using RabbitMQ.Client.Events;
 
 namespace OpenManta.Framework.RabbitMq
 {

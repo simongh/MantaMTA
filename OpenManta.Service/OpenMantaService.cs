@@ -1,61 +1,97 @@
-﻿using OpenManta.Framework;
-using OpenManta.Framework.RabbitMq;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.ServiceProcess;
+using log4net;
+using OpenManta.Core;
+using OpenManta.Framework;
+using OpenManta.Framework.RabbitMq;
 
 namespace OpenManta.Service
 {
-    public partial class OpenMantaService : ServiceBase
+	public class OpenMantaService
 	{
 		// Array will hold all instances of SmtpServer, one for each port we will be listening on.
-		private readonly IList<SmtpServer> SmtpServers = new List<SmtpServer>();
+		private readonly IList<ISmtpServer> SmtpServers;
 
-		public OpenMantaService()
+		private readonly ILog _logging;
+		private readonly IRabbitMqInboundStagingHandler _handler;
+		private readonly IQueueManager _queues;
+		private readonly IVirtualMtaManager _virtualMtas;
+		private readonly IMtaParameters _config;
+		private readonly ISmtpServerFactory _factory;
+		private readonly IMessageSender _sender;
+		private readonly IMantaCoreEvents _coreEvents;
+		private readonly IEventsFileHandler _eventHandler;
+
+		public OpenMantaService(ILog logging, IRabbitMqInboundStagingHandler handler, IQueueManager queues, IVirtualMtaManager virtualMtas, IMtaParameters config, ISmtpServerFactory factory, IMessageSender sender, IMantaCoreEvents coreEvents, IEventsFileHandler eventHandler)
 		{
-			InitializeComponent();
+			Guard.NotNull(logging, nameof(logging));
+			Guard.NotNull(handler, nameof(handler));
+			Guard.NotNull(queues, nameof(queues));
+			Guard.NotNull(virtualMtas, nameof(virtualMtas));
+			Guard.NotNull(config, nameof(config));
+			Guard.NotNull(factory, nameof(factory));
+			Guard.NotNull(sender, nameof(sender));
+			Guard.NotNull(coreEvents, nameof(coreEvents));
+			Guard.NotNull(eventHandler, nameof(eventHandler));
+
+			_logging = logging;
+			_handler = handler;
+			_queues = queues;
+			_virtualMtas = virtualMtas;
+			_config = config;
+			_factory = factory;
+			_sender = sender;
+			_coreEvents = coreEvents;
+			_eventHandler = eventHandler;
+
+			SmtpServers = new List<ISmtpServer>();
 		}
 
-		protected override void OnStart(string[] args)
+		public void Start()
 		{
-            Logging.Info("Starting OpenManta Service.");
-			AppDomain.CurrentDomain.UnhandledException += delegate(object sender, UnhandledExceptionEventArgs e)
+			_logging.Info("Starting OpenManta Service.");
+			AppDomain.CurrentDomain.UnhandledException += delegate (object sender, UnhandledExceptionEventArgs e)
 			{
 				Exception ex = (Exception)e.ExceptionObject;
-				Logging.Fatal(ex.Message, ex);
+				_logging.Fatal(ex.Message, ex);
 			};
 
-            RabbitMqInboundStagingHandler.Instance.Start();
+			_handler.Start();
 
-            // Start the RabbitMQ Bulk inserter.
-            QueueManager.Instance.Start();
-            			
+			// Start the RabbitMQ Bulk inserter.
+			_queues.Start();
+
 			// Create the SmtpServers
-            foreach(var vmta in VirtualMtaManager.GetVirtualMtasForListeningOn())
+			foreach (var vmta in _virtualMtas.GetVirtualMtasForListeningOn())
 			{
-                foreach(var port in MtaParameters.ServerListeningPorts)
-					SmtpServers.Add(new SmtpServer(vmta.IPAddress, port));
+				foreach (var port in _config.ServerListeningPorts)
+				{
+					var server = _factory.Create();
+					SmtpServers.Add(server);
+
+					server.Open(vmta.IPAddress, port);
+				}
 			}
 
 			// Start the SMTP Client.
-			MessageSender.Instance.Start();
+			_sender.Start();
 
 			// Start the events (bounce/abuse) handler.
-			EventsFileHandler.Instance.Start();
+			_eventHandler.Start();
 
-			Logging.Info("OpenManta Service has started.");
+			_logging.Info("OpenManta Service has started.");
 		}
 
-		protected override void OnStop()
+		public void Stop()
 		{
-			Logging.Info("Stopping OpenManta Service");
+			_logging.Info("Stopping OpenManta Service");
 
 			// Need to wait while servers & client shutdown.
-			MantaCoreEvents.InvokeMantaCoreStopping();
-            foreach (var smtp in SmtpServers)
-                smtp.Dispose();
+			_coreEvents.InvokeMantaCoreStopping();
+			foreach (var smtp in SmtpServers)
+				smtp.Dispose();
 
-			Logging.Info("OpenManta Service has stopped.");
+			_logging.Info("OpenManta Service has stopped.");
 		}
 	}
 }
