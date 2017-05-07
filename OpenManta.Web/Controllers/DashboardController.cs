@@ -15,14 +15,17 @@ namespace WebInterface.Controllers
 	{
 		private readonly ISendDB _sendDb;
 		private readonly ITransactionDB _transactionDb;
+		private readonly IMtaParameters _config;
 
-		public DashboardController(ISendDB sendDb, ITransactionDB transactionDb)
+		public DashboardController(ISendDB sendDb, ITransactionDB transactionDb, IMtaParameters config)
 		{
 			Guard.NotNull(sendDb, nameof(sendDb));
 			Guard.NotNull(transactionDb, nameof(transactionDb));
+			Guard.NotNull(config, nameof(config));
 
 			_sendDb = sendDb;
 			_transactionDb = transactionDb;
+			_config = config;
 		}
 
 		//
@@ -42,7 +45,7 @@ namespace WebInterface.Controllers
 			{
 				// Connect to Rabbit MQ and grab basic queue counts.
 				HttpWebRequest request = HttpWebRequest.CreateHttp("http://localhost:15672/api/queues");
-				request.Credentials = new NetworkCredential(MtaParameters.RabbitMQ.Username, MtaParameters.RabbitMQ.Password);
+				request.Credentials = new NetworkCredential(_config.RabbitMq.Username, _config.RabbitMq.Password);
 				using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
 				{
 					string json = new StreamReader(response.GetResponseStream()).ReadToEnd();
