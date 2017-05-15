@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using FluentMigrator;
+﻿using FluentMigrator;
+using FluentMigrator.Runner.Extensions;
 
 namespace OpenManta.Data.Migrations
 {
+	[Migration(1)]
 	public class Initial : Migration
 	{
 		public override void Down()
@@ -82,25 +79,25 @@ namespace OpenManta.Data.Migrations
 				.WithColumn("cfg_localDomain_name").AsString(50).Nullable()
 				.WithColumn("cfg_localDomain_description").AsString(250).Nullable();
 
-			Create.Table("man_cf_para")
-				.WithColumn("[cfg_para_dropFolder").AsString(255).NotNullable()
-				.WithColumn("[cfg_para_queueFolder").AsString(255).NotNullable()
-				.WithColumn("[cfg_para_logFolder").AsString(255).NotNullable()
-				.WithColumn("[cfg_para_listenPorts").AsString(255).NotNullable()
-				.WithColumn("[cfg_para_retryIntervalMinutes").AsInt32().NotNullable()
-				.WithColumn("[cfg_para_maxTimeInQueueMinutes").AsInt32().NotNullable()
-				.WithColumn("[cfg_para_defaultIpGroupId").AsInt32().NotNullable()
-				.WithColumn("[cfg_para_clientIdleTimeout").AsInt32().NotNullable()
-				.WithColumn("[cfg_para_receiveTimeout").AsInt32().NotNullable()
-				.WithColumn("[cfg_para_sendTimeout").AsInt32().NotNullable()
-				.WithColumn("[cfg_para_returnPathDomain_id").AsInt32().NotNullable()
-				.WithColumn("[cfg_para_maxDaysToKeepSmtpLogs").AsInt32().NotNullable()
-				.WithColumn("[cfg_para_eventForwardingHttpPostUrl").AsString().NotNullable()
-				.WithColumn("[cfg_para_keepBounceFilesFlag").AsBoolean().NotNullable()
-				.WithColumn("[cfg_para_rabbitMqEnabled").AsBoolean().NotNullable()
-				.WithColumn("[cfg_para_rabbitMqUsername").AsString().NotNullable()
-				.WithColumn("[cfg_para_rabbitMqPassword").AsString().NotNullable()
-				.WithColumn("[cfg_para_rabbitMqHostname").AsString().NotNullable();
+			Create.Table("man_cfg_para")
+				.WithColumn("cfg_para_dropFolder").AsString(255).NotNullable()
+				.WithColumn("cfg_para_queueFolder").AsString(255).NotNullable()
+				.WithColumn("cfg_para_logFolder").AsString(255).NotNullable()
+				.WithColumn("cfg_para_listenPorts").AsString(255).NotNullable()
+				.WithColumn("cfg_para_retryIntervalMinutes").AsInt32().NotNullable()
+				.WithColumn("cfg_para_maxTimeInQueueMinutes").AsInt32().NotNullable()
+				.WithColumn("cfg_para_defaultIpGroupId").AsInt32().NotNullable()
+				.WithColumn("cfg_para_clientIdleTimeout").AsInt32().NotNullable()
+				.WithColumn("cfg_para_receiveTimeout").AsInt32().NotNullable()
+				.WithColumn("cfg_para_sendTimeout").AsInt32().NotNullable()
+				.WithColumn("cfg_para_returnPathDomain_id").AsInt32().NotNullable()
+				.WithColumn("cfg_para_maxDaysToKeepSmtpLogs").AsInt32().NotNullable()
+				.WithColumn("cfg_para_eventForwardingHttpPostUrl").AsString().NotNullable()
+				.WithColumn("cfg_para_keepBounceFilesFlag").AsBoolean().NotNullable()
+				.WithColumn("cfg_para_rabbitMqEnabled").AsBoolean().NotNullable()
+				.WithColumn("cfg_para_rabbitMqUsername").AsString().NotNullable()
+				.WithColumn("cfg_para_rabbitMqPassword").AsString().NotNullable()
+				.WithColumn("cfg_para_rabbitMqHostname").AsString().NotNullable();
 
 			Create.Table("man_cfg_relayingPermittedIp")
 				.WithColumn("cfg_relayingPermittedIp_ip").AsString(45).NotNullable().PrimaryKey()
@@ -259,7 +256,7 @@ namespace OpenManta.Data.Migrations
 
 			Create.Index("mta_msg_id")
 				.OnTable("man_mta_msg")
-				.WithOptions().Clustered()
+				.WithOptions().NonClustered()
 				.WithOptions().Unique()
 				.OnColumn("mta_send_internalId");
 
@@ -275,6 +272,7 @@ namespace OpenManta.Data.Migrations
 				.OnColumn("mta_queue_isPickupLocked");
 
 			Insert.IntoTable("man_cfg_localDomain")
+				.WithIdentityInsert()
 				.Row(new
 				{
 					cfg_localDomain_id = 1,
@@ -773,6 +771,202 @@ namespace OpenManta.Data.Migrations
 					evn_bounceRuleCriteriaType_id = 2,
 					evn_bounceRuleCriteriaType_name = "StringMatch",
 					evn_bounceRuleCriteriaType_description = "The criteria is a string that may appear within the message."
+				});
+
+			Insert.IntoTable("man_evn_bounceType")
+				.Row(new
+				{
+					evn_bounceType_id = 0,
+					evn_bounceType_name = "Unknown",
+					evn_bounceType_description = ""
+				})
+				.Row(new
+				{
+					evn_bounceType_id = 1,
+					evn_bounceType_name = "Hard",
+					evn_bounceType_description = "Email send attempt has failed. Do not retry."
+				})
+				.Row(new
+				{
+					evn_bounceType_id = 2,
+					evn_bounceType_name = "Soft",
+					evn_bounceType_description = "Email send failed, but may be accepted in the future. Retry later."
+				})
+				.Row(new
+				{
+					evn_bounceType_id = 3,
+					evn_bounceType_name = "Spam",
+					evn_bounceType_description = "Email send failed as the Email was identified by the receiving server as spam."
+				});
+
+			Insert.IntoTable("man_evn_type")
+				.Row(new
+				{
+					evn_type_id = 0,
+					evn_type_name = "Unknown",
+					evn_type_description = ""
+				})
+				.Row(new
+				{
+					evn_type_id = 1,
+					evn_type_name = "Bounce",
+					evn_type_description = "Event occurs when delivery of a message is unsuccessful."
+				})
+				.Row(new
+				{
+					evn_type_id = 2,
+					evn_type_name = "Abuse",
+					evn_type_description = "Event occurs when a feedback loop reports that someone marked the email as spam."
+				});
+
+			Insert.IntoTable("man_ip_group")
+				.WithIdentityInsert()
+				.Row(new
+				{
+					ip_group_id = 1,
+					ip_group_name = "Default",
+					ip_group_description = "You need at least one"
+				});
+
+			Insert.IntoTable("man_ip_ipAddress")
+				.WithIdentityInsert()
+				.Row(new
+				{
+					ip_ipAddress_id = 1,
+					ip_ipAddress_ipAddress = "127.0.0.1",
+					ip_ipAddress_hostname = "localhost",
+					ip_ipAddress_isInbound = 1,
+					ip_ipAddress_isOutbound = 0
+				});
+
+			Insert.IntoTable("man_mta_fblAddress")
+				.Row(new
+				{
+					mta_fblAddress_address = "fbl@localhost",
+					mta_fblAddress_name = "Testing feedback loop address",
+					mta_fblAddress_description = "Used for NUnit Tests"
+				});
+
+			Insert.IntoTable("man_mta_sendStatus")
+				.Row(new
+				{
+					mta_sendStatus_id = 1,
+					mta_sendStatus_name = "Active",
+					mta_sendStatus_description = ""
+				})
+				.Row(new
+				{
+					mta_sendStatus_id = 2,
+					mta_sendStatus_name = "Paused",
+					mta_sendStatus_description = ""
+				})
+				.Row(new
+				{
+					mta_sendStatus_id = 3,
+					mta_sendStatus_name = "Cancelled",
+					mta_sendStatus_description = ""
+				});
+
+			Insert.IntoTable("man_mta_transactionStatus")
+				.Row(new
+				{
+					mta_transactionStatus_id = 0,
+					mta_transactionStatus_name = "Unknown"
+				})
+				.Row(new
+				{
+					mta_transactionStatus_id = 1,
+					mta_transactionStatus_name = "Deferred"
+				})
+				.Row(new
+				{
+					mta_transactionStatus_id = 2,
+					mta_transactionStatus_name = "Failed"
+				})
+				.Row(new
+				{
+					mta_transactionStatus_id = 3,
+					mta_transactionStatus_name = "Timed Out"
+				})
+				.Row(new
+				{
+					mta_transactionStatus_id = 4,
+					mta_transactionStatus_name = "Success"
+				})
+				.Row(new
+				{
+					mta_transactionStatus_id = 5,
+					mta_transactionStatus_name = "Throttled"
+				})
+				.Row(new
+				{
+					mta_transactionStatus_id = 6,
+					mta_transactionStatus_name = "Discarded"
+				});
+
+			Insert.IntoTable("man_rle_mxPattern")
+				.WithIdentityInsert()
+				.Row(new
+				{
+					rle_mxPattern_id = -1,
+					rle_mxPattern_name = "DEFAULT",
+					rle_mxPattern_description = "Do NOT Delete",
+					rle_patternType_id = 1,
+					rle_mxPattern_value = "."
+				});
+
+			Insert.IntoTable("man_rle_patternType")
+				.Row(new
+				{
+					rle_patternType_id = 1,
+					rle_patternType_name = "Regex",
+					rle_patternType_description = ""
+				})
+				.Row(new
+				{
+					rle_patternType_id = 2,
+					rle_patternType_name = "CommaDelimited",
+					rle_patternType_description = ""
+				});
+
+			Insert.IntoTable("man_rle_rule")
+				.Row(new
+				{
+					rle_mxPattern_id = -1,
+					rle_ruleType_id = 1,
+					rle_rule_value = "1"
+				})
+				.Row(new
+				{
+					rle_mxPattern_id = -1,
+					rle_ruleType_id = 2,
+					rle_rule_value = "5"
+				})
+				.Row(new
+				{
+					rle_mxPattern_id = -1,
+					rle_ruleType_id = 3,
+					rle_rule_value = "-1"
+				});
+
+			Insert.IntoTable("man_rle_ruleType")
+				.Row(new
+				{
+					rle_ruleType_id = 1,
+					rle_ruleType_name = "MaxConnections",
+					rle_ruleType_description = ""
+				})
+				.Row(new
+				{
+					rle_ruleType_id = 2,
+					rle_ruleType_name = "MaxMessagesConnection",
+					rle_ruleType_description = ""
+				})
+				.Row(new
+				{
+					rle_ruleType_id = 3,
+					rle_ruleType_name = "MaxMessagesHour",
+					rle_ruleType_description = ""
 				});
 		}
 	}

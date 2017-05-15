@@ -18,8 +18,10 @@ namespace OpenManta.Data
 		public OutboundRuleDB(IDataRetrieval dataRetrieval, IMantaDB mantaDb)
 		{
 			Guard.NotNull(dataRetrieval, nameof(dataRetrieval));
+			Guard.NotNull(mantaDb, nameof(mantaDb));
 
 			_dataRetrieval = dataRetrieval;
+			_mantaDb = mantaDb;
 		}
 
 		/// <summary>

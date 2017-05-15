@@ -29,7 +29,7 @@ namespace OpenManta.Framework
 		private readonly IRabbitMqInboundQueueManager _inboundQueue;
 		private readonly IRabbitMqManager _manager;
 
-		private QueueManager(IMantaCoreEvents coreEvents, ILog logging, IMantaDB mantaDb, RabbitMq.IRabbitMqInboundQueueManager inboundQueue, RabbitMq.IRabbitMqManager manager)
+		public QueueManager(IMantaCoreEvents coreEvents, ILog logging, IMantaDB mantaDb, RabbitMq.IRabbitMqInboundQueueManager inboundQueue, RabbitMq.IRabbitMqManager manager)
 		{
 			Guard.NotNull(coreEvents, nameof(coreEvents));
 			Guard.NotNull(logging, nameof(logging));

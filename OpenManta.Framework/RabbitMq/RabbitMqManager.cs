@@ -63,12 +63,12 @@ namespace OpenManta.Framework.RabbitMq
 
 			_config = config;
 
-			LocalhostConnection = new ConnectionFactory
-			{
-				HostName = config.RabbitMq.Hostname,
-				UserName = config.RabbitMq.Username,
-				Password = config.RabbitMq.Password
-			}.CreateConnection();
+			//LocalhostConnection = new ConnectionFactory
+			//{
+			//	HostName = config.RabbitMq.Hostname,
+			//	UserName = config.RabbitMq.Username,
+			//	Password = config.RabbitMq.Password
+			//}.CreateConnection();
 		}
 
 		/// <summary>
