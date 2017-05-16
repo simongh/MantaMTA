@@ -8,21 +8,21 @@ namespace OpenManta.Data.Migrations
 	{
 		public override void Down()
 		{
-			Delete.Index("IX_man_mta_sendMeta");
+			Delete.Index("IX_man_mta_sendMeta").OnTable("man_mta_sendMeta");
 
-			Delete.Index("IX_man_mta_transaction");
+			Delete.Index("IX_man_mta_transaction").OnTable("man_mta_transaction");
 
-			Delete.Index("BounceGroupingIndex");
+			Delete.Index("BounceGroupingIndex").OnTable("man_mta_transaction");
 
-			Delete.Index("mta_msg_id");
+			Delete.Index("mta_msg_id").OnTable("man_mta_msg");
 
-			Delete.Index("AttemptSendAfter");
+			Delete.Index("AttemptSendAfter").OnTable("man_mta_queue");
 
-			Delete.Index("NonClusteredIndex-20141117-122722");
+			Delete.Index("NonClusteredIndex-20141117-122722").OnTable("man_mta_queue");
 
 			Delete.Table("man_cfg_localDomain");
 
-			Delete.Table("man_cf_para");
+			Delete.Table("man_cfg_para");
 
 			Delete.Table("man_cfg_relayingPermittedIp");
 
