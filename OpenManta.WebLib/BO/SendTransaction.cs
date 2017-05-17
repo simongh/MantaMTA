@@ -19,7 +19,10 @@ namespace OpenManta.WebLib.BO
 		/// </summary>
 		public long Count { get; set; }
 
-		public SendTransactionSummary() { }
+		public SendTransactionSummary()
+		{
+		}
+
 		public SendTransactionSummary(TransactionStatus status, long count)
 		{
 			Status = status;
@@ -32,8 +35,13 @@ namespace OpenManta.WebLib.BO
 	/// </summary>
 	public class SendTransactionSummaryCollection : List<SendTransactionSummary>
 	{
-		public SendTransactionSummaryCollection() { }
-		public SendTransactionSummaryCollection(IEnumerable<SendTransactionSummary> collection) : base(collection) { }
+		public SendTransactionSummaryCollection()
+		{
+		}
+
+		public SendTransactionSummaryCollection(IEnumerable<SendTransactionSummary> collection) : base(collection)
+		{
+		}
 
 		/// <summary>
 		/// The amount of attempts to send that have been made.

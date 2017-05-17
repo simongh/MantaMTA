@@ -29,8 +29,8 @@ namespace OpenManta.WebLib.DAL
 				cmd.CommandText = @"
 IF(@mxPatternID <> " + MtaParameters.OUTBOUND_RULES_DEFAULT_PATTERN_ID + @")
 	BEGIN
-		DELETE FROM man_rle_mxPattern WHERE rle_mxPattern_id = @mxPatternID
-		DELETE FROM man_rle_rule WHERE rle_mxPattern_id = @mxPatternID
+		DELETE FROM Manta.Rules WHERE MxPatternId = @mxPatternID
+		DELETE FROM Manta.MxPatterns WHERE MxPatternId = @mxPatternID
 	END
 ";
 				cmd.Parameters.AddWithValue("@mxPatternID", mxPatternID);
@@ -51,15 +51,15 @@ IF(@mxPatternID <> " + MtaParameters.OUTBOUND_RULES_DEFAULT_PATTERN_ID + @")
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
-IF EXISTS (SELECT 1 FROM man_rle_rule WHERE rle_mxPattern_id = @mxPatternID AND rle_ruleType_id = @type)
+IF EXISTS (SELECT 1 FROM Manta.Rules WHERE MxPatternId = @mxPatternID AND RuleTypeId = @type)
 	BEGIN
-		UPDATE man_rle_rule
-		SET rle_rule_value = @value
-		WHERE rle_mxPattern_id = @mxPatternID AND rle_ruleType_id = @type
+		UPDATE Manta.Rules
+		SET Value = @value
+		WHERE MxPatternId = @mxPatternID AND RuleTypeId = @type
 	END
 ELSE
 	BEGIN
-		INSERT INTO man_rle_rule(rle_mxPattern_id, rle_ruleType_id, rle_rule_value)
+		INSERT INTO Manta.Rules(MxPatternId, RuleTypeId, value)
 		VALUES(@mxPatternID, @type, @value)
 	END
 ";
@@ -84,21 +84,21 @@ ELSE
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
-IF EXISTS (SELECT 1 FROM man_rle_mxPattern WHERE rle_mxPattern_id = @mxPatternID)
+IF EXISTS (SELECT 1 FROM Manta.MxPatterns WHERE MxPatternId = @mxPatternID)
 	BEGIN
-		UPDATE man_rle_mxPattern
-		SET rle_mxPattern_name = @name,
-		rle_mxPattern_description = @description,
-		rle_patternType_id = @type,
-		rle_mxPattern_value = @value,
-		ip_ipAddress_id = @ipAddressID
-		WHERE rle_mxPattern_id = @mxPatternID
+		UPDATE Manta.MxPatterns
+		SET Name = @name,
+		Description = @description,
+		PatternTypeId = @type,
+		Value = @value,
+		IpAddressId = @ipAddressID
+		WHERE MxPatternId = @mxPatternID
 
 		SELECT @mxPatternID
 	END
 ELSE
 	BEGIN
-		INSERT INTO man_rle_mxPattern(rle_mxPattern_name, rle_mxPattern_description, rle_patternType_id, rle_mxPattern_value, ip_ipAddress_id)
+		INSERT INTO Manta.MxPatterns(Name, Description, PatternTypeId, Value, IpAddressId)
 		VALUES(@name, @description, @type, @value, @ipAddressID)
 
 		SELECT @@IDENTITY

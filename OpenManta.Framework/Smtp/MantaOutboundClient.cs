@@ -133,7 +133,7 @@ namespace OpenManta.Framework.Smtp
 					{
 						if (result.MantaOutboundClientResult == MantaOutboundClientResult.ServiceNotAvalible ||
 							result.MantaOutboundClientResult == MantaOutboundClientResult.FailedToConnect)
-							ServiceNotAvailableManager.Add(_VirtualMta.IPAddress.ToString(), MXRecord.Host.ToLower(), DateTime.UtcNow);
+							ServiceNotAvailableManager.Add(_VirtualMta.IPAddress.ToString(), MXRecord.Host.ToLower(), DateTimeOffset.UtcNow);
 
 						return result;
 					}

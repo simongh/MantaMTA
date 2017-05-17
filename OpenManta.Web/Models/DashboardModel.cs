@@ -47,11 +47,11 @@ namespace WebInterface.Models
 			RabbitMqTotalOutbound = 0;
 		}
 
-		private List<DateTime> GetDashboardChartDates()
+		private List<DateTimeOffset> GetDashboardChartDates()
 		{
-			DateTime end = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.UtcNow.Day, DateTime.UtcNow.Hour, DateTime.UtcNow.Minute, 0);
-			DateTime start = end.AddMinutes(-60);
-			List<DateTime> dates = new List<DateTime>();
+			DateTimeOffset end = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.UtcNow.Day, DateTime.UtcNow.Hour, DateTime.UtcNow.Minute, 0);
+			DateTimeOffset start = end.AddMinutes(-60);
+			List<DateTimeOffset> dates = new List<DateTimeOffset>();
 			while (end >= start)
 			{
 				if (!dates.Contains(end))
@@ -69,7 +69,7 @@ namespace WebInterface.Models
 			StringBuilder sb = new StringBuilder();
 			bool first = true;
 
-			foreach (DateTime timestamp in GetDashboardChartDates())
+			foreach (DateTimeOffset timestamp in GetDashboardChartDates())
 			{
 				long accepted, rejected, deferred = 0;
 				SendSpeedInfo.GetDataPoints(timestamp, out accepted, out rejected, out deferred);
@@ -91,7 +91,7 @@ namespace WebInterface.Models
 		{
 			StringBuilder sb = new StringBuilder();
 			bool first = true;
-			foreach (DateTime timestamp in GetDashboardChartDates())
+			foreach (DateTimeOffset timestamp in GetDashboardChartDates())
 			{
 				long accepted, rejected, deferred = 0;
 				SendSpeedInfo.GetDataPoints(timestamp, out accepted, out rejected, out deferred);
@@ -113,7 +113,7 @@ namespace WebInterface.Models
 		{
 			StringBuilder sb = new StringBuilder();
 			bool first = true;
-			foreach (DateTime timestamp in GetDashboardChartDates())
+			foreach (DateTimeOffset timestamp in GetDashboardChartDates())
 			{
 				long accepted, rejected, deferred = 0;
 				SendSpeedInfo.GetDataPoints(timestamp, out accepted, out rejected, out deferred);

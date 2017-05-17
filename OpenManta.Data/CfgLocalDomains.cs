@@ -37,7 +37,7 @@ namespace OpenManta.Data
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
 SELECT *
-FROM man_cfg_localDomain";
+FROM Manta.LocalDomains";
 				return _dataRetrieval.GetCollectionFromDatabase<LocalDomain>(cmd, CreateAndFillLocalDomainFromRecord);
 			}
 		}
@@ -50,7 +50,7 @@ FROM man_cfg_localDomain";
 			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"DELETE FROM man_cfg_localDomain";
+				cmd.CommandText = @"DELETE FROM Manta.LocalDomains";
 				conn.Open();
 				cmd.ExecuteNonQuery();
 			}
@@ -68,25 +68,25 @@ FROM man_cfg_localDomain";
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
-IF EXISTS (SELECT 1 FROM man_cfg_localDomain WHERE cfg_localDomain_id = @id)
-	UPDATE man_cfg_localDomain
-	SET cfg_localDomain_domain = @domain,
-	cfg_localDomain_name = @name,
-	cfg_localDomain_description = @description
-	WHERE cfg_localDomain_domain = @id
+IF EXISTS (SELECT 1 FROM Manta.LocalDomains WHERE LocalDomainId = @id)
+	UPDATE Manta.LocalDomains
+	SET Domain = @domain,
+	Name = @name,
+	Description = @description
+	WHERE Domain = @id
 ELSE
 	BEGIN
 	IF(@id > 0)
 		BEGIN
-			SET IDENTITY_INSERT man_cfg_localDomain ON
+			SET IDENTITY_INSERT Manta.LocalDomains ON
 
-			INSERT INTO man_cfg_localDomain (cfg_localDomain_id, cfg_localDomain_domain, cfg_localDomain_name, cfg_localDomain_description)
+			INSERT INTO Manta.LocalDomains (LocalDomainId, Domain, Name, Description)
 			VALUES(@id, @domain, @name, @description)
 
-			SET IDENTITY_INSERT man_cfg_localDomain OFF
+			SET IDENTITY_INSERT Manta.LocalDomains OFF
 		END
 	ELSE
-		INSERT INTO man_cfg_localDomain (cfg_localDomain_domain, cfg_localDomain_name, cfg_localDomain_description)
+		INSERT INTO Manta.LocalDomains (Domain, Name, Description)
 		VALUES(@domain, @name, @description)
 
 	END";
@@ -112,10 +112,10 @@ ELSE
 		{
 			return new LocalDomain
 			{
-				Description = record.GetStringOrEmpty("cfg_localDomain_description"),
-				ID = record.GetInt32("cfg_localDomain_id"),
-				Name = record.GetStringOrEmpty("cfg_localDomain_name"),
-				Hostname = record.GetString("cfg_localDomain_domain")
+				Description = record.GetStringOrEmpty("Description"),
+				ID = record.GetInt32("LocalDomainId"),
+				Name = record.GetStringOrEmpty("Name"),
+				Hostname = record.GetString("Domain")
 			};
 		}
 	}

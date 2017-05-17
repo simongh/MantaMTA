@@ -29,10 +29,10 @@ namespace OpenManta.WebLib.DAL
 			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"SELECT mta_transactionStatus_id, COUNT(*) AS 'Count'
-FROM man_mta_transaction
-WHERE ip_ipAddress_id = @ipAddressId
-GROUP BY mta_transactionStatus_id";
+				cmd.CommandText = @"SELECT TransactionStatusId, COUNT(*) AS 'Count'
+FROM Manta.Transactions
+WHERE IpAddressId = @ipAddressId
+GROUP BY TransactionStatusId";
 				cmd.Parameters.AddWithValue("@ipAddressId", ipAddressId);
 				return new SendTransactionSummaryCollection(_dataRetrieval.GetCollectionFromDatabase<SendTransactionSummary>(cmd, CreateAndFillSendTransactionSummaryFromRecord));
 			}
@@ -45,7 +45,7 @@ GROUP BY mta_transactionStatus_id";
 		/// <returns>A filled SendTransactionSummary object.</returns>
 		private SendTransactionSummary CreateAndFillSendTransactionSummaryFromRecord(System.Data.IDataRecord record)
 		{
-			return new SendTransactionSummary((TransactionStatus)record.GetInt64("mta_transactionStatus_id"), record.GetInt64("count"));
+			return new SendTransactionSummary((TransactionStatus)record.GetInt64("TransactionStatusId"), record.GetInt64("count"));
 		}
 	}
 }

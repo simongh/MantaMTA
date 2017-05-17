@@ -25,7 +25,7 @@ namespace OpenManta.Framework
 		/// <summary>
 		/// Timestamp of when cached sends were last cleared.
 		/// </summary>
-		private DateTime _SendsLastCleared = DateTime.UtcNow;
+		private DateTimeOffset _SendsLastCleared = DateTimeOffset.UtcNow;
 
 		/// <summary>
 		/// Sends cache lock, used when clearing the cached items.
@@ -55,7 +55,7 @@ namespace OpenManta.Framework
 			{
 				this._Sends.Clear();
 				this._SendsInternalID.Clear();
-				this._SendsLastCleared = DateTime.UtcNow;
+				this._SendsLastCleared = DateTimeOffset.UtcNow;
 			}
 		}
 
@@ -79,7 +79,7 @@ namespace OpenManta.Framework
 		public async Task<Send> GetSendAsync(string sendId)
 		{
 			// Don't want send IDs sitting in memory for to long so clear every so often.
-			if (this._SendsLastCleared.AddSeconds(60) < DateTime.UtcNow)
+			if (this._SendsLastCleared.AddSeconds(60) < DateTimeOffset.UtcNow)
 				this.ClearSendsCache();
 
 			Send snd;
@@ -107,7 +107,7 @@ namespace OpenManta.Framework
 		public async Task<Send> GetSendAsync(int internalSendID)
 		{
 			// Don't want send IDs sitting in memory for to long so clear every so often.
-			if (this._SendsLastCleared.AddSeconds(10) < DateTime.UtcNow)
+			if (this._SendsLastCleared.AddSeconds(10) < DateTimeOffset.UtcNow)
 				this.ClearSendsCache();
 
 			Send snd;
@@ -132,7 +132,7 @@ namespace OpenManta.Framework
 		/// <returns></returns>
 		internal async Task<Send> GetDefaultInternalSendIdAsync()
 		{
-			string sendID = DateTime.UtcNow.ToString("yyyyMMdd");
+			string sendID = DateTimeOffset.UtcNow.ToString("yyyyMMdd");
 			return await this.GetSendAsync(sendID);
 		}
 

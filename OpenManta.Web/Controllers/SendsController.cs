@@ -130,19 +130,19 @@ namespace WebInterface.Controllers
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
 DECLARE @sendInternalID int
-SELECT @sendInternalID = mta_send_internalId
-FROM man_mta_send WITH(nolock)
-WHERE mta_send_id = @sndID
+SELECT @sendInternalID = MtaSendId
+FROM Manta.MtaSend WITH(nolock)
+WHERE SendId = @sndID
 
 SELECT *
 FROM (
-SELECT mta_msg_rcptTo AS 'RCPT',
-	(SELECT MAX(mta_transaction_timestamp) FROM man_mta_transaction as [tran] with(nolock) WHERE [tran].mta_msg_id = [msg].mta_msg_id) as 'Timestamp',
-	(SELECT TOP 1 mta_transactionStatus_id FROM man_mta_transaction as [tran] with(nolock) WHERE [tran].mta_msg_id = [msg].mta_msg_id ORDER BY [tran].mta_transaction_timestamp DESC) as 'Status',
-	(SELECT TOP 1 mta_transaction_serverHostname FROM man_mta_transaction as [tran] with(nolock) WHERE [tran].mta_msg_id = [msg].mta_msg_id ORDER BY [tran].mta_transaction_timestamp DESC) as 'Remote',
-	(SELECT TOP 1 mta_transaction_serverResponse FROM man_mta_transaction as [tran] with(nolock) WHERE [tran].mta_msg_id = [msg].mta_msg_id ORDER BY [tran].mta_transaction_timestamp DESC) as 'Response'
-FROM man_mta_msg as [msg] with(nolock)
-WHERE [msg].mta_send_internalId = @sendInternalID ) as [ExportData]
+SELECT RecipientTo AS 'RCPT',
+	(SELECT MAX(CreatedAt) FROM Manta.Transactions as [tran] with(nolock) WHERE [tran].MessageId = [msg].MessageId) as 'Timestamp',
+	(SELECT TOP 1 TransactionStatusId FROM Manta.Transactions as [tran] with(nolock) WHERE [tran].MessageId = [msg].MessageId ORDER BY [tran].CreatedAt DESC) as 'Status',
+	(SELECT TOP 1 ServerHostname FROM Manta.Transactions as [tran] with(nolock) WHERE [tran].MessageId = [msg].MessageId ORDER BY [tran].CreatedAt DESC) as 'Remote',
+	(SELECT TOP 1 ServerResponse FROM Manta.Transactions as [tran] with(nolock) WHERE [tran].MessageId = [msg].MessageId ORDER BY [tran].CreatedAt DESC) as 'Response'
+FROM Manta.Messages as [msg] with(nolock)
+WHERE [msg].MtaSendId = @sendInternalID ) as [ExportData]
 ORDER BY [ExportData].Timestamp ASC";
 				cmd.Parameters.AddWithValue("@sndID", sendID);
 				DataTable dt = new DataTable();

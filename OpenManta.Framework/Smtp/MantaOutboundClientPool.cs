@@ -41,7 +41,7 @@ namespace OpenManta.Framework.Smtp
 			_logging = logging;
 			_clientFactory = clientFactory;
 
-			_LastUsedTimestamp = DateTime.UtcNow.Ticks;
+			_LastUsedTimestamp = DateTimeOffset.UtcNow.Ticks;
 			MXRecord = mxRecord;
 			VirtualMTA = vmta;
 
@@ -78,12 +78,12 @@ namespace OpenManta.Framework.Smtp
 		public async Task<MantaOutboundClientSendResult> SendAsync(MailAddress mailFrom, MailAddress rcptTo, string msg)
 		{
 			_logging.Debug("MantaOutboundClientPool.SendAsync> From: " + mailFrom + " To: " + rcptTo);
-			_LastUsedTimestamp = DateTime.UtcNow.Ticks;
+			_LastUsedTimestamp = DateTimeOffset.UtcNow.Ticks;
 			if (MaxMessagesMinute.HasValue)
 			{
 				lock (sentMessagesLogLock)
 				{
-					var minuteAgo = DateTime.UtcNow.AddMinutes(-1).Ticks;
+					var minuteAgo = DateTimeOffset.UtcNow.AddMinutes(-1).Ticks;
 					SentMessagesLog = SentMessagesLog.Where(l => l > minuteAgo).ToList();
 
 					if (SentMessagesLog.Count >= MaxMessagesMinute)
@@ -106,7 +106,7 @@ namespace OpenManta.Framework.Smtp
 			{
 				lock (sentMessagesLogLock)
 				{
-					SentMessagesLog.Add(DateTime.UtcNow.Ticks);
+					SentMessagesLog.Add(DateTimeOffset.UtcNow.Ticks);
 				}
 			}
 

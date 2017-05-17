@@ -38,7 +38,7 @@ namespace OpenManta.Framework.Smtp
 						if (IsStopping)
 							break;
 
-						if (_ClientPools[k].LastUsedTimestamp < DateTime.UtcNow.AddMinutes(-2).Ticks)
+						if (_ClientPools[k].LastUsedTimestamp < DateTimeOffset.UtcNow.AddMinutes(-2).Ticks)
 							_ClientPools.Remove(k);
 					}
 				} while (!IsStopping);

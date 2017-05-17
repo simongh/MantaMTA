@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 
 namespace OpenManta.Core
 {
@@ -24,7 +23,7 @@ namespace OpenManta.Core
 		public int VirtualMTAGroupID { get; set; }
 
 		/// <summary>
-		/// Internal ID that identifies the Send that this 
+		/// Internal ID that identifies the Send that this
 		/// message is part of.
 		/// </summary>
 		public int InternalSendID { get; set; }

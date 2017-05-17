@@ -1,7 +1,7 @@
-﻿using OpenManta.Core;
-using System;
+﻿using System;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
+using OpenManta.Core;
 
 namespace OpenManta.Data
 {
@@ -27,9 +27,9 @@ namespace OpenManta.Data
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"IF EXISTS(SELECT 1
-FROM man_mta_transaction WITH(readuncommitted)
-WHERE man_mta_transaction.mta_msg_id = @msgID
-AND man_mta_transaction.mta_transactionStatus_id IN (2,3,4,6))
+FROM Manta.Transactions WITH(readuncommitted)
+WHERE MessageId = @msgID
+AND TransactionStatusId IN (2,3,4,6))
 	SELECT 1
 ELSE
 	SELECT 0";
@@ -57,7 +57,7 @@ ELSE
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
 BEGIN TRANSACTION
-INSERT INTO man_mta_transaction (mta_msg_id, ip_ipAddress_id, mta_transaction_timestamp, mta_transactionStatus_id, mta_transaction_serverResponse, mta_transaction_serverHostname)
+INSERT INTO Manta.Transactions (MessageId, IpAddressId, CreatedAt, TransactionStatusId, ServerResponse, ServerHostname)
 VALUES(@msgID, @ipAddressID, GETUTCDATE(), @status, @serverResponse, @serverHostname)";
 
 				switch (status)
@@ -65,15 +65,15 @@ VALUES(@msgID, @ipAddressID, GETUTCDATE(), @status, @serverResponse, @serverHost
 					case TransactionStatus.Discarded:
 					case TransactionStatus.Failed:
 					case TransactionStatus.TimedOut:
-						cmd.CommandText += @"UPDATE man_mta_send
-								SET mta_send_rejected = mta_send_rejected + 1
-								WHERE mta_send_internalID = @sendInternalID";
+						cmd.CommandText += @"UPDATE Manta.MtaSend
+								SET Rejected = Rejected + 1
+								WHERE MtaSendId = @sendInternalID";
 						break;
 
 					case TransactionStatus.Success:
-						cmd.CommandText += @"UPDATE man_mta_send
-								SET mta_send_accepted = mta_send_accepted + 1
-								WHERE mta_send_internalID = @sendInternalID";
+						cmd.CommandText += @"UPDATE Manta.MtaSend
+								SET Accepted = Accepted + 1
+								WHERE MtaSendId = @sendInternalID";
 						break;
 				}
 

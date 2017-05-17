@@ -161,20 +161,20 @@ namespace WebInterface.Models
 			SendSpeedInfo = info;
 		}
 
-		private List<DateTime> _ChartDates = null;
+		private List<DateTimeOffset> _ChartDates = null;
 
 		/// <summary>
 		/// Gets the dates required for the Report Chart.
 		/// </summary>
 		/// <returns></returns>
-		private List<DateTime> GetChartDates()
+		private List<DateTimeOffset> GetChartDates()
 		{
 			if (_ChartDates == null)
 			{
-				DateTime start = SendSpeedInfo.Min(i => i.Timestamp);
-				DateTime end = SendSpeedInfo.Max(i => i.Timestamp);
+				DateTimeOffset start = SendSpeedInfo.Min(i => i.Timestamp);
+				DateTimeOffset end = SendSpeedInfo.Max(i => i.Timestamp);
 
-				_ChartDates = new List<DateTime>();
+				_ChartDates = new List<DateTimeOffset>();
 				while (start <= end)
 				{
 					_ChartDates.Add(start);
@@ -192,7 +192,7 @@ namespace WebInterface.Models
 		{
 			StringBuilder sb = new StringBuilder();
 			bool first = true;
-			foreach (DateTime timestamp in GetChartDates())
+			foreach (DateTimeOffset timestamp in GetChartDates())
 			{
 				long accepted, rejected, deferred = 0;
 				SendSpeedInfo.GetDataPoints(timestamp, out accepted, out rejected, out deferred);
@@ -214,7 +214,7 @@ namespace WebInterface.Models
 		{
 			StringBuilder sb = new StringBuilder();
 			bool first = true;
-			foreach (DateTime timestamp in GetChartDates())
+			foreach (DateTimeOffset timestamp in GetChartDates())
 			{
 				long accepted, rejected, deferred = 0;
 				SendSpeedInfo.GetDataPoints(timestamp, out accepted, out rejected, out deferred);
@@ -236,7 +236,7 @@ namespace WebInterface.Models
 		{
 			StringBuilder sb = new StringBuilder();
 			bool first = true;
-			foreach (DateTime timestamp in GetChartDates())
+			foreach (DateTimeOffset timestamp in GetChartDates())
 			{
 				long accepted, rejected, deferred = 0;
 				SendSpeedInfo.GetDataPoints(timestamp, out accepted, out rejected, out deferred);

@@ -45,7 +45,7 @@ namespace OpenManta.Framework
 			/// <summary>
 			/// DateTime of the match.
 			/// </summary>
-			public DateTime MatchedUtc { get; set; }
+			public DateTimeOffset MatchedUtc { get; set; }
 
 			public MatchedMxPattern()
 			{
@@ -68,7 +68,7 @@ namespace OpenManta.Framework
 			public void Add(int mxPatternID, VirtualMTA ipAddress)
 			{
 				OutboundRuleManager.MatchedMxPattern newMxPattern = new OutboundRuleManager.MatchedMxPattern();
-				newMxPattern.MatchedUtc = DateTime.UtcNow;
+				newMxPattern.MatchedUtc = DateTimeOffset.UtcNow;
 				newMxPattern.MxPatternID = mxPatternID;
 
 				Func<string, OutboundRuleManager.MatchedMxPattern, OutboundRuleManager.MatchedMxPattern> updateAction = delegate (string key, OutboundRuleManager.MatchedMxPattern existing)
@@ -84,7 +84,7 @@ namespace OpenManta.Framework
 					this.AddOrUpdate(newMxPattern.IPAddress,
 									 new MatchedMxPattern()
 									 {
-										 MatchedUtc = DateTime.UtcNow,
+										 MatchedUtc = DateTimeOffset.UtcNow,
 										 MxPatternID = mxPatternID
 									 }, updateAction);
 				}
@@ -92,7 +92,7 @@ namespace OpenManta.Framework
 					this.AddOrUpdate(string.Empty,
 									 new OutboundRuleManager.MatchedMxPattern
 									 {
-										 MatchedUtc = DateTime.UtcNow,
+										 MatchedUtc = DateTimeOffset.UtcNow,
 										 MxPatternID = mxPatternID
 									 }, updateAction);
 			}
@@ -107,14 +107,14 @@ namespace OpenManta.Framework
 				OutboundRuleManager.MatchedMxPattern tmp;
 				if (base.TryGetValue(ipAddress.IPAddress.ToString(), out tmp))
 				{
-					if (tmp.MatchedUtc.AddMinutes(MtaParameters.MTA_CACHE_MINUTES) < DateTime.UtcNow)
+					if (tmp.MatchedUtc.AddMinutes(MtaParameters.MTA_CACHE_MINUTES) < DateTimeOffset.UtcNow)
 						return tmp;
 				}
 				else
 				{
 					if (base.TryGetValue(string.Empty, out tmp))
 					{
-						if (tmp.MatchedUtc.AddMinutes(MtaParameters.MTA_CACHE_MINUTES) > DateTime.UtcNow)
+						if (tmp.MatchedUtc.AddMinutes(MtaParameters.MTA_CACHE_MINUTES) > DateTimeOffset.UtcNow)
 							return tmp;
 					}
 				}
@@ -185,7 +185,7 @@ namespace OpenManta.Framework
 			MatchedMxPattern matchedPattern = matchedPatterns.GetMatchedMxPattern(ipAddress);
 
 			if (matchedPattern != null &&
-				matchedPattern.MatchedUtc.AddMinutes(MtaParameters.MTA_CACHE_MINUTES) > DateTime.UtcNow)
+				matchedPattern.MatchedUtc.AddMinutes(MtaParameters.MTA_CACHE_MINUTES) > DateTimeOffset.UtcNow)
 				// Found a valid cached pattern ID so return it.
 				return matchedPattern.MxPatternID;
 

@@ -31,7 +31,7 @@ namespace OpenManta.Framework
 		/// <summary>
 		/// Timestamp of when the _ipAddresses collection was filled.
 		/// </summary>
-		private DateTime _lastGotVirtualMtas = DateTime.MinValue;
+		private DateTimeOffset _lastGotVirtualMtas = DateTimeOffset.MinValue;
 
 		/// <summary>
 		/// Collection of cached MtaIPGroupCached.
@@ -68,7 +68,7 @@ namespace OpenManta.Framework
 		private void LoadVirtualMtas()
 		{
 			if (_vmtaCollection != null &&
-				_lastGotVirtualMtas.AddMinutes(MtaParameters.MTA_CACHE_MINUTES) > DateTime.UtcNow)
+				_lastGotVirtualMtas.AddMinutes(MtaParameters.MTA_CACHE_MINUTES) > DateTimeOffset.UtcNow)
 				return;
 
 			_outboundMtas = null;
@@ -140,7 +140,7 @@ namespace OpenManta.Framework
 			if (_vmtaGroups.TryGetValue(id, out group))
 			{
 				// Only cache IP Groups for N minutes.
-				if (group.CreatedTimestamp.AddMinutes(MtaParameters.MTA_CACHE_MINUTES) > DateTime.UtcNow)
+				if (group.CreatedTimestamp.AddMinutes(MtaParameters.MTA_CACHE_MINUTES) > DateTimeOffset.UtcNow)
 					return group;
 			}
 
@@ -150,7 +150,7 @@ namespace OpenManta.Framework
 				// Check that something else didn't already load from the database.
 				// If it did then we can just return that.
 				_vmtaGroups.TryGetValue(id, out group);
-				if (group != null && group.CreatedTimestamp.AddMinutes(MtaParameters.MTA_CACHE_MINUTES) > DateTime.UtcNow)
+				if (group != null && group.CreatedTimestamp.AddMinutes(MtaParameters.MTA_CACHE_MINUTES) > DateTimeOffset.UtcNow)
 					return group;
 
 				// Get group from the database.

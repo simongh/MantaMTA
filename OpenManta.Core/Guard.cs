@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 
 namespace OpenManta.Core
 {
+	[DebuggerStepThrough]
 	public static class Guard
 	{
 		public static void NotNull(object value, string paramName)

@@ -24,20 +24,30 @@ namespace OpenManta.WebLib.BO
 	/// </summary>
 	public class SendWaitingInfoCollection : List<SendWaitingInfo>
 	{
-		public SendWaitingInfoCollection() { }
-		public SendWaitingInfoCollection(IEnumerable<SendWaitingInfo> collection) : base(collection) { }
+		public SendWaitingInfoCollection()
+		{
+		}
+
+		public SendWaitingInfoCollection(IEnumerable<SendWaitingInfo> collection) : base(collection)
+		{
+		}
 	}
 
 	public class SendWaitingByDomainItem
 	{
 		public string Domain { get; set; }
 		public int Waiting { get; set; }
-		public DateTime NextAttempt { get; set; }
+		public DateTimeOffset NextAttempt { get; set; }
 	}
 
 	public class SendWaitingByDomainCollection : List<SendWaitingByDomainItem>
 	{
-		public SendWaitingByDomainCollection() { }
-		public SendWaitingByDomainCollection(IEnumerable<SendWaitingByDomainItem> collection) : base(collection) { }
+		public SendWaitingByDomainCollection()
+		{
+		}
+
+		public SendWaitingByDomainCollection(IEnumerable<SendWaitingByDomainItem> collection) : base(collection)
+		{
+		}
 	}
 }

@@ -40,8 +40,8 @@ namespace OpenManta.Data
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
 SELECT *
-FROM man_evn_bounceRule
-ORDER BY evn_bounceRule_executionOrder ASC";
+FROM Manta.BounceRules
+ORDER BY ExecutionOrder ASC";
 				return new BounceRulesCollection(_dataRetrieval.GetCollectionFromDatabase<BounceRule>(cmd, CreateAndFillBounceRuleFromRecord));
 			}
 		}
@@ -55,15 +55,15 @@ ORDER BY evn_bounceRule_executionOrder ASC";
 		{
 			BounceRule rule = new BounceRule();
 
-			rule.RuleID = record.GetInt32("evn_bounceRule_id");
-			rule.Name = record.GetString("evn_bounceRule_name");
-			rule.Description = record.GetStringOrEmpty("evn_bounceRule_description");
-			rule.ExecutionOrder = record.GetInt32("evn_bounceRule_executionOrder");
-			rule.IsBuiltIn = record.GetBoolean("evn_bounceRule_isBuiltIn");
-			rule.CriteriaType = (BounceRuleCriteriaType)record.GetInt32("evn_bounceRuleCriteriaType_id");
-			rule.Criteria = record.GetString("evn_bounceRule_criteria");
-			rule.BounceTypeIndicated = (MantaBounceType)record.GetInt32("evn_bounceRule_mantaBounceType");
-			rule.BounceCodeIndicated = (MantaBounceCode)record.GetInt32("evn_bounceRule_mantaBounceCode");
+			rule.RuleID = record.GetInt32("BounceRuleId");
+			rule.Name = record.GetString("Name");
+			rule.Description = record.GetStringOrEmpty("Description");
+			rule.ExecutionOrder = record.GetInt32("ExecutionOrder");
+			rule.IsBuiltIn = record.GetBoolean("IsBuiltIn");
+			rule.CriteriaType = (BounceRuleCriteriaType)record.GetInt32("BounceRuleCriteriaTypeId");
+			rule.Criteria = record.GetString("Criteria");
+			rule.BounceTypeIndicated = (MantaBounceType)record.GetInt32("BounceTypeId");
+			rule.BounceCodeIndicated = (MantaBounceCode)record.GetInt32("BounceCodeId");
 
 			return rule;
 		}
@@ -77,10 +77,10 @@ ORDER BY evn_bounceRule_executionOrder ASC";
 			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"SELECT [evt].*, [bnc].evn_bounceCode_id, [bnc].evn_bounceEvent_message, [bnc].evn_bounceType_id
-FROM man_evn_event AS [evt]
-LEFT JOIN man_evn_bounceEvent AS [bnc] ON [evt].evn_event_id = [bnc].evn_event_id
-WHERE [evt].evn_event_id = @eventId";
+				cmd.CommandText = @"SELECT [evt].*, [bnc].BounceCodeId, [bnc].Message, [bnc].BounceTypeId
+FROM Manta.Events AS [evt]
+LEFT JOIN Manta.BounceEvents AS [bnc] ON [evt].EventId = [bnc].EventId
+WHERE [evt].EventId = @eventId";
 				cmd.Parameters.AddWithValue("@eventId", ID);
 				return _dataRetrieval.GetSingleObjectFromDatabase<MantaEvent>(cmd, CreateAndFillMantaEventFromRecord);
 			}
@@ -95,9 +95,9 @@ WHERE [evt].evn_event_id = @eventId";
 			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"SELECT [evt].*, [bnc].evn_bounceCode_id, [bnc].evn_bounceEvent_message, [bnc].evn_bounceType_id
-FROM man_evn_event AS [evt]
-LEFT JOIN man_evn_bounceEvent AS [bnc] ON [evt].evn_event_id = [bnc].evn_event_id";
+				cmd.CommandText = @"SELECT [evt].*, [bnc].BounceCodeId, [bnc].Message, [bnc].BounceTypeId
+FROM Manta.Events AS [evt]
+LEFT JOIN Manta.BounceEvents AS [bnc] ON [evt].EventId = [bnc].EventId";
 				return _dataRetrieval.GetCollectionFromDatabase<MantaEvent>(cmd, CreateAndFillMantaEventFromRecord);
 			}
 		}
@@ -111,11 +111,11 @@ LEFT JOIN man_evn_bounceEvent AS [bnc] ON [evt].evn_event_id = [bnc].evn_event_i
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
-SELECT TOP " + maxEventsToGet + @" [evt].*, [bnc].evn_bounceCode_id, [bnc].evn_bounceEvent_message, [bnc].evn_bounceType_id
-FROM man_evn_event AS [evt]
-LEFT JOIN man_evn_bounceEvent AS [bnc] ON [evt].evn_event_id = [bnc].evn_event_id
-WHERE evn_event_forwarded = 0
-ORDER BY evn_event_id ASC";
+SELECT TOP " + maxEventsToGet + @" [evt].*, [bnc].BounceCodeId, [bnc].Message, [bnc].BounceTypeId
+FROM Manta.Events AS [evt]
+LEFT JOIN Manta.BounceEvents AS [bnc] ON [evt].EventId = [bnc].EventId
+WHERE IsForwarded = 0
+ORDER BY EventId ASC";
 				return _dataRetrieval.GetCollectionFromDatabase<MantaEvent>(cmd, CreateAndFillMantaEventFromRecord);
 			}
 		}
@@ -131,19 +131,19 @@ ORDER BY evn_event_id ASC";
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
-IF EXISTS (SELECT 1 FROM man_evn_event WHERE evn_event_id = @eventID)
+IF EXISTS (SELECT 1 FROM Manta.Events WHERE EventId = @eventID)
 	BEGIN
-		UPDATE man_evn_event
-		SET evn_type_id = @eventType,
-		evn_event_timestamp = @timestamp,
-		evn_event_emailAddress = @emailAddress,
-		snd_send_id = @sendId,
-		evn_event_forwarded = @forwarded
-		WHERE evn_event_id = @eventID
+		UPDATE Manta.Events
+		SET EventTypeId = @eventType,
+		CreatedAt = @timestamp,
+		EmailAddress = @emailAddress,
+		SendId = @sendId,
+		IsForwarded = @forwarded
+		WHERE EventId = @eventID
 	END
 ELSE
 	BEGIN
-		INSERT INTO man_evn_event(evn_type_id, evn_event_timestamp, evn_event_emailAddress, snd_send_id, evn_event_forwarded)
+		INSERT INTO Manta.Events(EventTypeId, CreatedAt, EmailAddress, SendId, IsForwarded)
 		VALUES(@eventType, @timestamp, @emailAddress, @sendId, @forwarded)
 
 		SET @eventID = @@IDENTITY
@@ -159,14 +159,14 @@ ELSE
 				if (evn is MantaBounceEvent)
 				{
 					cmd.CommandText += @"
-IF EXISTS (SELECT 1 FROM man_evn_bounceEvent WHERE evn_event_id = @eventId)
-		UPDATE man_evn_bounceEvent
-		SET evn_bounceCode_id = @bounceCode,
-		evn_bounceEvent_message = @message,
-		evn_bounceType_id = @bounceType
-		WHERE evn_event_id = @eventId
+IF EXISTS (SELECT 1 FROM Manta.BounceEvents WHERE EventId = @eventId)
+		UPDATE Manta.BounceEvents
+		SET BounceCodeId = @bounceCode,
+		Message = @message,
+		BounceTypeId = @bounceType
+		WHERE EventId = @eventId
 ELSE
-		INSERT INTO man_evn_bounceEvent(evn_event_id, evn_bounceCode_id, evn_bounceEvent_message, evn_bounceType_id)
+		INSERT INTO Manta.BounceEvents(EventId, BounceCodeId, Message, BounceTypeId)
 		VALUES(@eventId, @bounceCode, @message, @bounceType)
 ";
 
@@ -190,7 +190,7 @@ ELSE
 		/// <returns>MantaAubseEvent or MantaBounceEvent</returns>
 		private MantaEvent CreateAndFillMantaEventFromRecord(IDataRecord record)
 		{
-			MantaEventType type = (MantaEventType)record.GetInt32("evn_type_id");
+			MantaEventType type = (MantaEventType)record.GetInt32("EventTypeId");
 			MantaEvent thisEvent = null;
 			switch (type)
 			{
@@ -211,12 +211,12 @@ ELSE
 					throw new NotImplementedException("Unknown Event Type (" + type + ")");
 			}
 
-			thisEvent.EmailAddress = record.GetString("evn_event_emailAddress");
-			thisEvent.EventTime = record.GetDateTime("evn_event_timestamp");
+			thisEvent.EmailAddress = record.GetString("EmailAddress");
+			thisEvent.EventTime = record.GetDateTime("CreatedAt");
 			thisEvent.EventType = type;
-			thisEvent.ID = record.GetInt32("evn_event_id");
-			thisEvent.SendID = record.GetString("snd_send_id");
-			thisEvent.Forwarded = record.GetBoolean("evn_event_forwarded");
+			thisEvent.ID = record.GetInt32("EventId");
+			thisEvent.SendID = record.GetString("SendId");
+			thisEvent.Forwarded = record.GetBoolean("IsForwarded");
 			return thisEvent;
 		}
 
@@ -227,7 +227,7 @@ ELSE
 		/// <param name="record">The data record to fill with.</param>
 		private void FillMantaBounceEvent(MantaBounceEvent evt, IDataRecord record)
 		{
-			if (record.IsDBNull("evn_bounceCode_id"))   // The bounce record is incomplete
+			if (record.IsDBNull("BounceCodeId"))   // The bounce record is incomplete
 			{
 				evt.BounceInfo = new BouncePair
 				{
@@ -241,10 +241,10 @@ ELSE
 			{
 				evt.BounceInfo = new BouncePair
 				{
-					BounceCode = (MantaBounceCode)record.GetInt32("evn_bounceCode_id"),
-					BounceType = (MantaBounceType)record.GetInt32("evn_bounceType_id")
+					BounceCode = (MantaBounceCode)record.GetInt32("BounceCodeId"),
+					BounceType = (MantaBounceType)record.GetInt32("BounceTypeId")
 				};
-				evt.Message = record.GetString("evn_bounceEvent_message");
+				evt.Message = record.GetString("Message");
 			}
 		}
 	}

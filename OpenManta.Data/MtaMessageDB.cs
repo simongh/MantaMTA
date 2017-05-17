@@ -30,9 +30,9 @@ namespace OpenManta.Data
 			using (var conn = _mantaDb.GetSqlConnection())
 			{
 				var cmd = conn.CreateCommand();
-				cmd.CommandText = @"SELECT TOP 1 mta_msg_mailFrom
-FROM man_mta_msg
-WHERE mta_msg_id = @msgId";
+				cmd.CommandText = @"SELECT TOP 1 MailFrom
+FROM Manta.Messages
+WHERE MessageId = @msgId";
 				cmd.Parameters.AddWithValue("@msgId", messageId);
 				await conn.OpenAsync().ConfigureAwait(false);
 				var result = await cmd.ExecuteScalarAsync().ConfigureAwait(false);

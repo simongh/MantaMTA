@@ -1,8 +1,8 @@
-﻿using System.Collections.Generic;
-using OpenManta.Core;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-using System;
 using System.Text;
+using OpenManta.Core;
 using OpenManta.WebLib.DAL;
 
 namespace OpenManta.WebLib.BO
@@ -106,7 +106,7 @@ namespace OpenManta.WebLib.BO
 		/// <summary>
 		/// Timestamp of the last transaction. NULL if no transactions.
 		/// </summary>
-		public DateTime? LastTransactionTimestamp { get; set; }
+		public DateTimeOffset? LastTransactionTimestamp { get; set; }
 
 		/// <summary>
 		/// The amount of attempts to send messages that have been made.
@@ -153,7 +153,7 @@ namespace OpenManta.WebLib.BO
 		{
 			get
 			{
-				DateTime sendLastActive = DateTime.UtcNow;
+				DateTimeOffset sendLastActive = DateTimeOffset.UtcNow;
 				if (LastTransactionTimestamp != null && Waiting < 1)
 					sendLastActive = LastTransactionTimestamp.Value;
 

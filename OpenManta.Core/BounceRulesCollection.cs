@@ -12,7 +12,7 @@ namespace OpenManta.Core
 		/// When the BounceRules were last loaded into this collection.
 		/// If this is "too old", the collection will reload them to ensure configuration changes are used.
 		/// </summary>
-		public DateTime LoadedTimestampUtc { get; set; }
+		public DateTimeOffset LoadedTimestampUtc { get; set; }
 
 		/// <summary>
 		/// Standard constructor for a BounceRulesCollection.
@@ -27,4 +27,3 @@ namespace OpenManta.Core
 		public BounceRulesCollection(IEnumerable<BounceRule> collection) : base(collection) { }
 	}
 }
-

@@ -39,18 +39,18 @@ namespace OpenManta.Data
 				cmd.CommandText = @"
 BEGIN TRANSACTION
 
-MERGE man_mta_send WITH (HOLDLOCK) AS target
-USING (SELECT @sndID) AS source(mta_send_id)
-ON (target.mta_send_id = source.mta_send_id)
+MERGE Manta.MtaSend WITH (HOLDLOCK) AS target
+USING (SELECT @sndID) AS source(SendId)
+ON (target.SendId = source.SendId)
 WHEN NOT MATCHED THEN
-	INSERT (mta_send_id, mta_sendStatus_id, mta_send_internalId, mta_send_createdTimestamp)
-	VALUES (@sndID, @activeStatusID, ISNULL((SELECT MAX(mta_send_internalID) + 1 FROM man_mta_send), 1), GETUTCDATE());
+	INSERT (SendId, SendStatusId, MtaSendId, CreatedAt)
+	VALUES (@sndID, @activeStatusID, ISNULL((SELECT MAX(MtaSendId) + 1 FROM Manta.MtaSend), 1), GETUTCDATE());
 
 COMMIT TRANSACTION
 
 SELECT *
-FROM man_mta_send WITH(nolock)
-WHERE mta_send_id = @sndID";
+FROM Manta.MtaSend WITH(nolock)
+WHERE SendId = @sndID";
 				cmd.Parameters.AddWithValue("@sndID", sendID);
 				cmd.Parameters.AddWithValue("@activeStatusID", (int)SendStatus.Active);
 				return await _dataRetrieval.GetSingleObjectFromDatabaseAsync(cmd, CreateAndFillSendFromRecord).ConfigureAwait(false);
@@ -65,11 +65,11 @@ WHERE mta_send_id = @sndID";
 		private Send CreateAndFillSendFromRecord(IDataRecord record)
 		{
 			Send sendID = new Send();
-			sendID.ID = record.GetString("mta_send_id");
-			sendID.InternalID = record.GetInt32("mta_send_internalId");
-			sendID.SendStatus = (SendStatus)record.GetInt32("mta_sendStatus_id");
+			sendID.ID = record.GetString("SendId");
+			sendID.InternalID = record.GetInt32("MtaSendId");
+			sendID.SendStatus = (SendStatus)record.GetInt32("SendStatusId");
 			sendID.LastAccessedTimestamp = DateTime.UtcNow;
-			sendID.CreatedTimestamp = record.GetDateTime("mta_send_createdTimestamp");
+			sendID.CreatedTimestamp = record.GetDateTime("CreatedAt");
 
 			return sendID;
 		}
@@ -96,8 +96,8 @@ WHERE mta_send_id = @sndID";
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
 SELECT *
-FROM man_mta_send WITH(NOLOCK)
-WHERE mta_send_internalId = @internalSndID";
+FROM Manta.MtaSend WITH(NOLOCK)
+WHERE MtaSendId = @internalSndID";
 				cmd.Parameters.AddWithValue("@internalSndID", internalSendID);
 				return await _dataRetrieval.GetSingleObjectFromDatabaseAsync<Send>(cmd, CreateAndFillSendFromRecord);
 			}
@@ -114,9 +114,9 @@ WHERE mta_send_internalId = @internalSndID";
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
-UPDATE man_mta_send
-SET mta_sendStatus_id = @sendStatus
-WHERE mta_send_id = @sendID";
+UPDATE Manta.MtaSend
+SET SendStatusId = @sendStatus
+WHERE SendId = @sendID";
 				cmd.Parameters.AddWithValue("@sendID", sendID);
 				cmd.Parameters.AddWithValue("@sendStatus", (int)status);
 				conn.Open();

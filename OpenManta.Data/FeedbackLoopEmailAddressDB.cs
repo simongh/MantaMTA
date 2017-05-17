@@ -31,8 +31,8 @@ namespace OpenManta.Data
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
 SELECT 1
-FROM man_mta_fblAddress
-WHERE mta_fblAddress_address = @address";
+FROM Manta.FeedbackLoopAddresses
+WHERE Address = @address";
 				cmd.Parameters.AddWithValue("@address", address);
 				conn.Open();
 				object result = cmd.ExecuteScalar();

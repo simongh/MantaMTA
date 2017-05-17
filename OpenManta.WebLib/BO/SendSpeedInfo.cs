@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using OpenManta.Core;
 using System.Linq;
+using OpenManta.Core;
 
 namespace OpenManta.WebLib.BO
 {
@@ -10,13 +10,18 @@ namespace OpenManta.WebLib.BO
 	/// </summary>
 	public class SendSpeedInfo : List<SendSpeedInfoItem>
 	{
-		public SendSpeedInfo() { }
-		public SendSpeedInfo(IEnumerable<SendSpeedInfoItem> collection) : base(collection) { }
+		public SendSpeedInfo()
+		{
+		}
+
+		public SendSpeedInfo(IEnumerable<SendSpeedInfoItem> collection) : base(collection)
+		{
+		}
 
 		/// <summary>
 		/// Gets the first date for this SendSpeedInfoItem. Will be sending started for Reports. 1 hour ago for dashboard.
 		/// </summary>
-		public DateTime FirstTransactionTimestamp
+		public DateTimeOffset FirstTransactionTimestamp
 		{
 			get
 			{
@@ -27,7 +32,7 @@ namespace OpenManta.WebLib.BO
 		/// <summary>
 		/// Gets the last date for this SendSpeedInfoItem. Will be last transaction for Reports. now for dashboard.
 		/// </summary>
-		public DateTime LastTransactionTimestamp
+		public DateTimeOffset LastTransactionTimestamp
 		{
 			get
 			{
@@ -38,14 +43,13 @@ namespace OpenManta.WebLib.BO
 		/// <summary>
 		/// An array of all of the timestamps that make up the send speed info.
 		/// </summary>
-		public DateTime[] Dates
+		public DateTimeOffset[] Dates
 		{
-
 			get
 			{
 				if (_Dates == null)
 				{
-					List<DateTime> dates = new List<DateTime>();
+					List<DateTimeOffset> dates = new List<DateTimeOffset>();
 					foreach (SendSpeedInfoItem item in this)
 					{
 						if (!dates.Contains(item.Timestamp))
@@ -57,7 +61,8 @@ namespace OpenManta.WebLib.BO
 				return _Dates;
 			}
 		}
-		private DateTime[] _Dates = null;
+
+		private DateTimeOffset[] _Dates = null;
 
 		/// <summary>
 		/// Gets the speed data for a timestamp.
@@ -66,7 +71,7 @@ namespace OpenManta.WebLib.BO
 		/// <param name="accepted">returns the accepted rate.</param>
 		/// <param name="failed">returns the failed rate.</param>
 		/// <param name="deferred">returns the deferred rate.</param>
-		public void GetDataPoints(DateTime timestamp, out long accepted, out long failed, out long deferred)
+		public void GetDataPoints(DateTimeOffset timestamp, out long accepted, out long failed, out long deferred)
 		{
 			SendSpeedInfo subItems = new SendSpeedInfo(from i in this where i.Timestamp == timestamp select i);
 			SendSpeedInfoItem item = subItems.SingleOrDefault(i => i.Status == TransactionStatus.Success);
@@ -81,7 +86,6 @@ namespace OpenManta.WebLib.BO
 			else
 				deferred = 0;
 
-
 			failed = 0;
 			foreach (SendSpeedInfoItem failedItem in subItems.Where(i => i.Status == TransactionStatus.Discarded || i.Status == TransactionStatus.Failed || i.Status == TransactionStatus.TimedOut))
 				failed += failedItem.Count;
@@ -91,12 +95,12 @@ namespace OpenManta.WebLib.BO
 	/// <summary>
 	/// Information about a sends speed.
 	/// </summary>
-	public class SendSpeedInfoItem 
+	public class SendSpeedInfoItem
 	{
 		/// <summary>
 		/// The timestamp this item represents.
 		/// </summary>
-		public DateTime Timestamp { get; set; }
+		public DateTimeOffset Timestamp { get; set; }
 
 		/// <summary>
 		/// The status this item relates to.

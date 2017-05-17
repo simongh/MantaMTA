@@ -5,7 +5,7 @@ using System.Linq;
 namespace OpenManta.Core
 {
 	/// <summary>
-	/// Represents a grouping of IP Address that can be used by the MTA for 
+	/// Represents a grouping of IP Address that can be used by the MTA for
 	/// sending of messages.
 	/// </summary>
 	public class VirtualMtaGroup : NamedEntity
@@ -18,7 +18,7 @@ namespace OpenManta.Core
 		/// <summary>
 		/// Timestamp of when this MtaIPGroup instance was created; used for caching.
 		/// </summary>
-		public DateTime CreatedTimestamp = DateTime.UtcNow;
+		public DateTimeOffset CreatedTimestamp = DateTimeOffset.UtcNow;
 
 		/// <summary>
 		/// Gets a random IP from the collection.
@@ -59,7 +59,7 @@ namespace OpenManta.Core
 					return null;
 
 				// Increment the sends count to include this one.
-				vMTA.SendsCounter.AddOrUpdate(key, currentSends + 1, new Func<string, int, int>(delegate(string k, int value) { return value + 1; }));
+				vMTA.SendsCounter.AddOrUpdate(key, currentSends + 1, new Func<string, int, int>(delegate (string k, int value) { return value + 1; }));
 
 				// Return the IP Address.
 				return vMTA;
@@ -75,4 +75,3 @@ namespace OpenManta.Core
 		}
 	}
 }
-

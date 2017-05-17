@@ -59,7 +59,7 @@ namespace OpenManta.Framework.Smtp
 					FileInfo[] files = new DirectoryInfo(_config.MTA_SMTP_LOGFOLDER).GetFiles();
 
 					// This is the date that will be used to delete files before.
-					DateTime deleteCreatedBefore = DateTime.UtcNow.AddDays(_config.DaysToKeepSmtpLogsFor * -1);
+					DateTimeOffset deleteCreatedBefore = DateTimeOffset.UtcNow.AddDays(_config.DaysToKeepSmtpLogsFor * -1);
 
 					// Loop through all the log folder files.
 					for (int i = 0; i < files.Length; i++)
@@ -128,7 +128,7 @@ namespace OpenManta.Framework.Smtp
 			lock (writeLock)
 			{
 				// Ensure logging by hour
-				if (DateTime.UtcNow.Hour != _CurrentLogHour && _Writer != null)
+				if (DateTimeOffset.UtcNow.Hour != _CurrentLogHour && _Writer != null)
 				{
 					_Writer.Flush();
 					_Writer.Close();
@@ -160,8 +160,8 @@ namespace OpenManta.Framework.Smtp
 		/// <returns></returns>
 		private string GetCurrentLogPath()
 		{
-			_CurrentLogHour = DateTime.UtcNow.Hour;
-			return Path.Combine(_config.MTA_SMTP_LOGFOLDER, DateTime.UtcNow.ToString("yyyyMMddHH") + ".txt");
+			_CurrentLogHour = DateTimeOffset.UtcNow.Hour;
+			return Path.Combine(_config.MTA_SMTP_LOGFOLDER, DateTimeOffset.UtcNow.ToString("yyyyMMddHH") + ".txt");
 		}
 
 		/// <summary>
@@ -171,7 +171,7 @@ namespace OpenManta.Framework.Smtp
 		/// <returns></returns>
 		private string GetCurrentTimestamp()
 		{
-			return DateTime.UtcNow.ToString("yyyy/MM/dd HH:mm:ss.ff");
+			return DateTimeOffset.UtcNow.ToString("yyyy/MM/dd HH:mm:ss.ff");
 		}
 	}
 }

@@ -6,10 +6,10 @@ using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using log4net;
+using Newtonsoft.Json;
 using OpenManta.Core;
 using OpenManta.Data;
-using Newtonsoft.Json;
-using log4net;
 
 namespace OpenManta.Framework
 {

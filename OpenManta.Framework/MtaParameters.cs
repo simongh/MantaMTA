@@ -36,17 +36,17 @@ namespace OpenManta.Framework
 		/// </summary>
 		public const string TIMED_OUT_IN_QUEUE_MESSAGE = "Timed out in queue.";
 
-		private static DateTime _MtaDropFolderLoadTime = DateTime.MinValue;
-		private static DateTime _MtaQueueFolderLoadTime = DateTime.MinValue;
-		private static DateTime _MtaLogFolderLoadTime = DateTime.MinValue;
-		private static DateTime _LocalDomainsLoadTime = DateTime.MinValue;
-		private static DateTime _ReturnPathDomainLoadTime = DateTime.MinValue;
-		private static DateTime _IPsToAllowRelayingLoadTime = DateTime.MinValue;
-		private static DateTime _MtaRetryIntervalLoadTime = DateTime.MinValue;
+		private static DateTimeOffset _MtaDropFolderLoadTime = DateTimeOffset.MinValue;
+		private static DateTimeOffset _MtaQueueFolderLoadTime = DateTimeOffset.MinValue;
+		private static DateTimeOffset _MtaLogFolderLoadTime = DateTimeOffset.MinValue;
+		private static DateTimeOffset _LocalDomainsLoadTime = DateTimeOffset.MinValue;
+		private static DateTimeOffset _ReturnPathDomainLoadTime = DateTimeOffset.MinValue;
+		private static DateTimeOffset _IPsToAllowRelayingLoadTime = DateTimeOffset.MinValue;
+		private static DateTimeOffset _MtaRetryIntervalLoadTime = DateTimeOffset.MinValue;
 		private static int _MtaMaxTimeInQueue = -1;
-		private static DateTime _MtaMaxTimeInQueueLoadTime = DateTime.MinValue;
+		private static DateTimeOffset _MtaMaxTimeInQueueLoadTime = DateTimeOffset.MinValue;
 		private static bool _keepBounceFiles = false;
-		private static DateTime _keepBounceFilesLoadTime = DateTime.MinValue;
+		private static DateTimeOffset _keepBounceFilesLoadTime = DateTimeOffset.MinValue;
 		private static int _DaysToKeepSmtpLogsFor = -1;
 		private static string _EventForwardingHttpPostUrl = string.Empty;
 		private static int _MtaRetryInterval = -1;
@@ -100,11 +100,11 @@ namespace OpenManta.Framework
 		{
 			get
 			{
-				if (_MtaDropFolderLoadTime < DateTime.UtcNow)
+				if (_MtaDropFolderLoadTime < DateTimeOffset.UtcNow)
 				{
 					_MtaDropFolder = _config.DropFolder;
 					Directory.CreateDirectory(_MtaDropFolder);
-					_MtaDropFolderLoadTime = DateTime.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
+					_MtaDropFolderLoadTime = DateTimeOffset.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
 				}
 
 				return _MtaDropFolder;
@@ -162,11 +162,11 @@ namespace OpenManta.Framework
 		{
 			get
 			{
-				if (_MtaQueueFolderLoadTime < DateTime.UtcNow)
+				if (_MtaQueueFolderLoadTime < DateTimeOffset.UtcNow)
 				{
 					_MtaQueueFolder = _config.QueueFolder;
 					Directory.CreateDirectory(_MtaQueueFolder);
-					_MtaQueueFolderLoadTime = DateTime.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
+					_MtaQueueFolderLoadTime = DateTimeOffset.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
 				}
 
 				return _MtaQueueFolder;
@@ -181,11 +181,11 @@ namespace OpenManta.Framework
 		{
 			get
 			{
-				if (_MtaLogFolderLoadTime < DateTime.UtcNow)
+				if (_MtaLogFolderLoadTime < DateTimeOffset.UtcNow)
 				{
 					_MtaLogFolder = _config.LogFolder;
 					Directory.CreateDirectory(_MtaLogFolder);
-					_MtaLogFolderLoadTime = DateTime.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
+					_MtaLogFolderLoadTime = DateTimeOffset.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
 				}
 
 				return _MtaLogFolder;
@@ -200,10 +200,10 @@ namespace OpenManta.Framework
 		{
 			get
 			{
-				if (_LocalDomainsLoadTime < DateTime.UtcNow)
+				if (_LocalDomainsLoadTime < DateTimeOffset.UtcNow)
 				{
 					_LocalDomains = _localDomainConfig.GetLocalDomainsArray();
-					_LocalDomainsLoadTime = DateTime.UtcNow.AddMinutes(5);
+					_LocalDomainsLoadTime = DateTimeOffset.UtcNow.AddMinutes(5);
 				}
 				return _LocalDomains;
 			}
@@ -216,10 +216,10 @@ namespace OpenManta.Framework
 		{
 			get
 			{
-				if (_ReturnPathDomainLoadTime < DateTime.UtcNow)
+				if (_ReturnPathDomainLoadTime < DateTimeOffset.UtcNow)
 				{
 					_ReturnPathDomain = _config.ReturnPathDomainId.ToString();
-					_ReturnPathDomainLoadTime = DateTime.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
+					_ReturnPathDomainLoadTime = DateTimeOffset.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
 				}
 				return _ReturnPathDomain;
 			}
@@ -232,10 +232,10 @@ namespace OpenManta.Framework
 		{
 			get
 			{
-				if (_IPsToAllowRelayingLoadTime < DateTime.UtcNow)
+				if (_IPsToAllowRelayingLoadTime < DateTimeOffset.UtcNow)
 				{
 					_IPsToAllowRelaying = _permittedIpConfig.GetRelayingPermittedIPAddresses().ToArray();
-					_IPsToAllowRelayingLoadTime = DateTime.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
+					_IPsToAllowRelayingLoadTime = DateTimeOffset.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
 				}
 				return _IPsToAllowRelaying;
 			}
@@ -248,10 +248,10 @@ namespace OpenManta.Framework
 		{
 			get
 			{
-				if (_MtaRetryIntervalLoadTime < DateTime.UtcNow)
+				if (_MtaRetryIntervalLoadTime < DateTimeOffset.UtcNow)
 				{
 					_MtaRetryInterval = _config.RetryIntervalBaseMinutes;
-					_MtaRetryIntervalLoadTime = DateTime.UtcNow.AddMinutes(5);
+					_MtaRetryIntervalLoadTime = DateTimeOffset.UtcNow.AddMinutes(5);
 				}
 
 				return _MtaRetryInterval;
@@ -265,10 +265,10 @@ namespace OpenManta.Framework
 		{
 			get
 			{
-				if (_MtaMaxTimeInQueueLoadTime < DateTime.UtcNow)
+				if (_MtaMaxTimeInQueueLoadTime < DateTimeOffset.UtcNow)
 				{
 					_MtaMaxTimeInQueue = _config.MaxTimeInQueueMinutes;
-					_MtaMaxTimeInQueueLoadTime = DateTime.UtcNow.AddMinutes(5);
+					_MtaMaxTimeInQueueLoadTime = DateTimeOffset.UtcNow.AddMinutes(5);
 				}
 
 				return _MtaMaxTimeInQueue;
@@ -288,7 +288,7 @@ namespace OpenManta.Framework
 		{
 			get
 			{
-				if (_keepBounceFilesLoadTime < DateTime.UtcNow)
+				if (_keepBounceFilesLoadTime < DateTimeOffset.UtcNow)
 				{
 					bool newFlag = _config.KeepBounceFilesFlag;
 
@@ -299,7 +299,7 @@ namespace OpenManta.Framework
 					}
 
 					_keepBounceFiles = newFlag;
-					_keepBounceFilesLoadTime = DateTime.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
+					_keepBounceFilesLoadTime = DateTimeOffset.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
 				}
 
 				return _keepBounceFiles;
@@ -349,11 +349,11 @@ namespace OpenManta.Framework
 		public const int SMTP_PORT = 25;
 
 		private int _ConnectionIdleTimeoutInterval = -1;
-		private DateTime _ConnectionIdleTimeoutIntervalLoadTime = DateTime.MinValue;
+		private DateTimeOffset _ConnectionIdleTimeoutIntervalLoadTime = DateTimeOffset.MinValue;
 		private int _ConnectionReceiveTimeoutInterval = -1;
-		private DateTime _ConnectionReceiveTimeoutIntervalLoadTime = DateTime.MinValue;
+		private DateTimeOffset _ConnectionReceiveTimeoutIntervalLoadTime = DateTimeOffset.MinValue;
 		private int _connectionSendTimeoutInterval = -1;
-		private DateTime _connectionSendTimeoutIntervalLoadTime = DateTime.MinValue;
+		private DateTimeOffset _connectionSendTimeoutIntervalLoadTime = DateTimeOffset.MinValue;
 		private readonly ICfgPara _config;
 
 		internal Client(ICfgPara config)
@@ -371,10 +371,10 @@ namespace OpenManta.Framework
 		{
 			get
 			{
-				if (_ConnectionIdleTimeoutIntervalLoadTime < DateTime.UtcNow)
+				if (_ConnectionIdleTimeoutIntervalLoadTime < DateTimeOffset.UtcNow)
 				{
 					_ConnectionIdleTimeoutInterval = _config.ClientIdleTimeout;
-					_ConnectionIdleTimeoutIntervalLoadTime = DateTime.UtcNow.AddMinutes(MtaParameters.MTA_CACHE_MINUTES);
+					_ConnectionIdleTimeoutIntervalLoadTime = DateTimeOffset.UtcNow.AddMinutes(MtaParameters.MTA_CACHE_MINUTES);
 				}
 
 				return _ConnectionIdleTimeoutInterval;
@@ -388,10 +388,10 @@ namespace OpenManta.Framework
 		{
 			get
 			{
-				if (_ConnectionReceiveTimeoutIntervalLoadTime < DateTime.UtcNow)
+				if (_ConnectionReceiveTimeoutIntervalLoadTime < DateTimeOffset.UtcNow)
 				{
 					_ConnectionReceiveTimeoutInterval = _config.ReceiveTimeout;
-					_ConnectionReceiveTimeoutIntervalLoadTime = DateTime.UtcNow.AddMinutes(MtaParameters.MTA_CACHE_MINUTES);
+					_ConnectionReceiveTimeoutIntervalLoadTime = DateTimeOffset.UtcNow.AddMinutes(MtaParameters.MTA_CACHE_MINUTES);
 				}
 
 				return _ConnectionReceiveTimeoutInterval;
@@ -405,10 +405,10 @@ namespace OpenManta.Framework
 		{
 			get
 			{
-				if (_connectionSendTimeoutIntervalLoadTime < DateTime.UtcNow)
+				if (_connectionSendTimeoutIntervalLoadTime < DateTimeOffset.UtcNow)
 				{
 					_connectionSendTimeoutInterval = _config.SendTimeout;
-					_connectionSendTimeoutIntervalLoadTime = DateTime.UtcNow.AddMinutes(MtaParameters.MTA_CACHE_MINUTES);
+					_connectionSendTimeoutIntervalLoadTime = DateTimeOffset.UtcNow.AddMinutes(MtaParameters.MTA_CACHE_MINUTES);
 				}
 
 				return _connectionSendTimeoutInterval;
@@ -422,13 +422,13 @@ namespace OpenManta.Framework
 	public class RabbitMQ
 	{
 		private bool _IsEnabled = false;
-		private DateTime _IsEnabledLoadTime = DateTime.MinValue;
+		private DateTimeOffset _IsEnabledLoadTime = DateTimeOffset.MinValue;
 		private string _Username = string.Empty;
-		private DateTime _UsernameLoadTime = DateTime.MinValue;
+		private DateTimeOffset _UsernameLoadTime = DateTimeOffset.MinValue;
 		private string _Password = string.Empty;
-		private DateTime _PasswordLoadTime = DateTime.MinValue;
+		private DateTimeOffset _PasswordLoadTime = DateTimeOffset.MinValue;
 		private string _Hostname = string.Empty;
-		private DateTime _HostnameLoadTime = DateTime.MinValue;
+		private DateTimeOffset _HostnameLoadTime = DateTimeOffset.MinValue;
 		private readonly ICfgPara _config;
 
 		internal RabbitMQ(ICfgPara config)
@@ -445,10 +445,10 @@ namespace OpenManta.Framework
 		{
 			get
 			{
-				if (_IsEnabledLoadTime < DateTime.UtcNow)
+				if (_IsEnabledLoadTime < DateTimeOffset.UtcNow)
 				{
 					_IsEnabled = _config.RabbitMqEnabled;
-					_IsEnabledLoadTime = DateTime.UtcNow.AddMinutes(MtaParameters.MTA_CACHE_MINUTES);
+					_IsEnabledLoadTime = DateTimeOffset.UtcNow.AddMinutes(MtaParameters.MTA_CACHE_MINUTES);
 				}
 
 				return _IsEnabled;
@@ -462,10 +462,10 @@ namespace OpenManta.Framework
 		{
 			get
 			{
-				if (_UsernameLoadTime < DateTime.UtcNow)
+				if (_UsernameLoadTime < DateTimeOffset.UtcNow)
 				{
 					_Username = _config.RabbitMqUsername;
-					_UsernameLoadTime = DateTime.UtcNow.AddMinutes(MtaParameters.MTA_CACHE_MINUTES);
+					_UsernameLoadTime = DateTimeOffset.UtcNow.AddMinutes(MtaParameters.MTA_CACHE_MINUTES);
 				}
 
 				return _Username;
@@ -479,10 +479,10 @@ namespace OpenManta.Framework
 		{
 			get
 			{
-				if (_PasswordLoadTime < DateTime.UtcNow)
+				if (_PasswordLoadTime < DateTimeOffset.UtcNow)
 				{
 					_Password = _config.RabbitMqPassword;
-					_UsernameLoadTime = DateTime.UtcNow.AddMinutes(MtaParameters.MTA_CACHE_MINUTES);
+					_UsernameLoadTime = DateTimeOffset.UtcNow.AddMinutes(MtaParameters.MTA_CACHE_MINUTES);
 				}
 
 				return _Password;
@@ -496,10 +496,10 @@ namespace OpenManta.Framework
 		{
 			get
 			{
-				if (_HostnameLoadTime < DateTime.UtcNow)
+				if (_HostnameLoadTime < DateTimeOffset.UtcNow)
 				{
 					_Hostname = _config.RabbitMqHostname;
-					_HostnameLoadTime = DateTime.UtcNow.AddMinutes(MtaParameters.MTA_CACHE_MINUTES);
+					_HostnameLoadTime = DateTimeOffset.UtcNow.AddMinutes(MtaParameters.MTA_CACHE_MINUTES);
 				}
 
 				return _Hostname;

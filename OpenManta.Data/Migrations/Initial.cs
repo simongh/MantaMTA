@@ -154,10 +154,12 @@ namespace OpenManta.Data.Migrations
 
 			Create.Table("BounceEvents")//man_evn_bounceEvent
 				.InSchema(SchemaName)
-				.WithIdColumn("BounceEventId")//evn_event_id
+				.WithColumn("EventId").AsInt32().PrimaryKey()//evn_event_id
 				.WithColumn("BounceCodeId").AsInt32().NotNullable()//evn_bounceCode_id
 				.WithColumn("BounceTypeId").AsInt32().NotNullable()//evn_bounceType_id
 				.WithColumn("Message").AsString().NotNullable();//evn_bounceEvent_message
+
+			Create.QuickForeignKey(SchemaName, "BounceEvents", "Events", "EventId");
 
 			Create.QuickForeignKey(SchemaName, "BounceEvents", "BounceTypes", "BounceTypeId");
 
@@ -236,7 +238,7 @@ namespace OpenManta.Data.Migrations
 				.WithColumn("IsPickupLocked").AsBoolean().NotNullable()//mta_queue_isPickupLocked
 				.WithColumn("DataPath").AsString().NotNullable()//mta_queue_dataPath
 				.WithColumn("GroupId").AsInt32().NotNullable()//ip_group_id
-				.WithColumn("SendId").AsInt32().NotNullable();//mta_send_internalId
+				.WithColumn("MtaSendId").AsInt32().NotNullable();//mta_send_internalId
 
 			Create.Table("Messages")//man_mta_msg
 				.InSchema(SchemaName)
@@ -288,7 +290,7 @@ namespace OpenManta.Data.Migrations
 				.WithDescriptionColumn()//rle_mxPattern_description
 				.WithColumn("PatternTypeId").AsInt32().NotNullable()//rle_patternType_id
 				.WithColumn("Value").AsString(250).NotNullable()//rle_mxPattern_value
-				.WithColumn("IpAddress").AsInt32().Nullable();//ip_ipAddress_id
+				.WithColumn("IpAddressId").AsInt32().Nullable();//ip_ipAddress_id
 
 			Create.QuickForeignKey(SchemaName, "MxPatterns", "PatternTypes", "PatternTypeId");
 

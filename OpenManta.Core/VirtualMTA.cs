@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 
@@ -15,10 +14,10 @@ namespace OpenManta.Core
 		/// <summary>
 		/// The .Net IP Address object for this Virtual MTA.
 		/// </summary>
-		public IPAddress IPAddress {get;set;} 
+		public IPAddress IPAddress { get; set; }
 
 		/// <summary>
-		/// If true the IP address can be used for receiving. 
+		/// If true the IP address can be used for receiving.
 		/// </summary>
 		public bool IsSmtpInbound { get; set; }
 
@@ -28,7 +27,7 @@ namespace OpenManta.Core
 		public bool IsSmtpOutbound { get; set; }
 
 		/// <summary>
-		/// Holds the information regarding how often this IP has been used. 
+		/// Holds the information regarding how often this IP has been used.
 		/// This is used for load balancing the IPs in a pool, it is never saved to the database.
 		/// string = mx record hostname (lowercase).
 		/// int = count of times used.
@@ -42,7 +41,7 @@ namespace OpenManta.Core
 		/// <returns></returns>
 		public TcpClient CreateTcpClient(int port)
 		{
-			return new TcpClient(new IPEndPoint(this.IPAddress, port));
+			return new TcpClient(new IPEndPoint(IPAddress, port));
 		}
 
 		/// <summary>
@@ -55,4 +54,3 @@ namespace OpenManta.Core
 		}
 	}
 }
-

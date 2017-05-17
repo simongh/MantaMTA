@@ -100,7 +100,7 @@ namespace OpenManta.Framework
 			bounceEvent.SendID = _sendDb.GetSend(internalSendID).ID;
 
 			// TODO: Might be good to get the DateTime found in the email.
-			bounceEvent.EventTime = DateTime.UtcNow;
+			bounceEvent.EventTime = DateTimeOffset.UtcNow;
 
 			// These properties are both set according to the SMTP code we find, if any.
 			bounceEvent.BounceInfo.BounceCode = MantaBounceCode.Unknown;
@@ -333,7 +333,7 @@ namespace OpenManta.Framework
 					EventType = MantaEventType.TimedOutInQueue,
 					EmailAddress = rcptTo,
 					SendID = _sendDb.GetSend(internalSendID).ID,
-					EventTime = DateTime.UtcNow
+					EventTime = DateTimeOffset.UtcNow
 				};
 
 				// Log to DB.
@@ -357,7 +357,7 @@ namespace OpenManta.Framework
 					SendID = _sendDb.GetSend(internalSendID).ID,
 					// It is possible that the bounce was generated a while back, but we're assuming "now" for the moment.
 					// Might be good to get the DateTime found in the email at a later point.
-					EventTime = DateTime.UtcNow,
+					EventTime = DateTimeOffset.UtcNow,
 					Message = response
 				};
 
@@ -579,7 +579,7 @@ namespace OpenManta.Framework
 										Save(new MantaAbuseEvent
 										{
 											EmailAddress = rcptTo,
-											EventTime = DateTime.UtcNow,
+											EventTime = DateTimeOffset.UtcNow,
 											EventType = MantaEventType.Abuse,
 											SendID = (snd == null ? string.Empty : snd.ID)
 										});
@@ -615,7 +615,7 @@ namespace OpenManta.Framework
 								Save(new MantaAbuseEvent
 								{
 									EmailAddress = rcptTo,
-									EventTime = DateTime.UtcNow,
+									EventTime = DateTimeOffset.UtcNow,
 									EventType = MantaEventType.Abuse,
 									SendID = (snd == null ? string.Empty : snd.ID)
 								});
@@ -641,7 +641,7 @@ namespace OpenManta.Framework
 								Save(new MantaAbuseEvent
 								{
 									EmailAddress = rcptTo,
-									EventTime = DateTime.UtcNow,
+									EventTime = DateTimeOffset.UtcNow,
 									EventType = MantaEventType.Abuse,
 									SendID = (snd == null ? string.Empty : snd.ID)
 								});

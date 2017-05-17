@@ -36,7 +36,7 @@ namespace OpenManta.Framework
 		/// <summary>
 		/// Class holds history of sends for an MxPattern
 		/// </summary>
-		private class MxPatternThrottlingSendHistory : ConcurrentDictionary<int, List<DateTime>>
+		private class MxPatternThrottlingSendHistory : ConcurrentDictionary<int, List<DateTimeOffset>>
 		{
 			/// <summary>
 			/// Holds the maximum amount of messages that should be sent to this
@@ -53,13 +53,13 @@ namespace OpenManta.Framework
 			/// Holds a timestamp of when the IntervalMinutes & IntervalMaxMessages
 			/// should next be recalculated.
 			/// </summary>
-			public DateTime IntervalValuesNeedRecalcTimestamp { get; set; }
+			public DateTimeOffset IntervalValuesNeedRecalcTimestamp { get; set; }
 
 			public MxPatternThrottlingSendHistory()
 			{
 				this.IntervalMinutes = -1;
 				this.IntervalMaxMessages = -1;
-				this.IntervalValuesNeedRecalcTimestamp = DateTime.UtcNow;
+				this.IntervalValuesNeedRecalcTimestamp = DateTimeOffset.UtcNow;
 			}
 		}
 
@@ -95,7 +95,7 @@ namespace OpenManta.Framework
 				{
 					ThrottleManager.MxPatternThrottlingSendHistory ipMxPtnHistory = ipHistory.Value;
 					// Loop through each MX Pattern within each outbound IP
-					foreach (KeyValuePair<int, List<DateTime>> mxPatternHistory in ipMxPtnHistory)
+					foreach (KeyValuePair<int, List<DateTimeOffset>> mxPatternHistory in ipMxPtnHistory)
 					{
 						// Lock the ArrayList that contains the send history.
 						lock (mxPatternHistory.Value)
@@ -106,7 +106,7 @@ namespace OpenManta.Framework
 							// Go through every log send and check that it hasn't expired.
 							for (int i = 0; i < mxPatternHistory.Value.Count; i++)
 							{
-								if (mxPatternHistory.Value[i].AddMinutes((double)ipMxPtnHistory.IntervalMinutes) < DateTime.UtcNow)
+								if (mxPatternHistory.Value[i].AddMinutes((double)ipMxPtnHistory.IntervalMinutes) < DateTimeOffset.UtcNow)
 									toRemove.Add(i);
 							}
 
@@ -153,10 +153,10 @@ namespace OpenManta.Framework
 				this._sendHistory.AddOrUpdate(ipAddress.IPAddress.ToString(), mxSndHist, (string s, ThrottleManager.MxPatternThrottlingSendHistory sh) => mxSndHist);
 			}
 			//this._sendHistory.GetOrAdd(ipAddress.IPAddress.ToString(), new ThrottleManager.MxPatternThrottlingSendHistory());
-			List<DateTime> sndHistory = mxSndHist.GetOrAdd(mxPatternID, new List<DateTime>());
+			List<DateTimeOffset> sndHistory = mxSndHist.GetOrAdd(mxPatternID, new List<DateTimeOffset>());
 
 			// Only calculate if needed.
-			if (mxSndHist.IntervalValuesNeedRecalcTimestamp <= DateTime.UtcNow)
+			if (mxSndHist.IntervalValuesNeedRecalcTimestamp <= DateTimeOffset.UtcNow)
 			{
 				int maxMessages = 0;
 				int maxMessagesIntervalMinute = 0;
@@ -168,21 +168,21 @@ namespace OpenManta.Framework
 
 				mxSndHist.IntervalMaxMessages = maxMessages;
 				mxSndHist.IntervalMinutes = maxMessagesIntervalMinute;
-				mxSndHist.IntervalValuesNeedRecalcTimestamp = DateTime.UtcNow.AddMinutes(MtaParameters.MTA_CACHE_MINUTES);
+				mxSndHist.IntervalValuesNeedRecalcTimestamp = DateTimeOffset.UtcNow.AddMinutes(MtaParameters.MTA_CACHE_MINUTES);
 			}
 
 			lock (sndHistory)
 			{
 				// Remove sends that happened over "Interval" minute(s) ago.
-				DateTime sendsAfterTimestamp = DateTime.UtcNow.AddMinutes((double)(mxSndHist.IntervalMinutes * -1));
-				sndHistory.RemoveAll((DateTime d) => d <= sendsAfterTimestamp);
+				DateTimeOffset sendsAfterTimestamp = DateTimeOffset.UtcNow.AddMinutes((double)(mxSndHist.IntervalMinutes * -1));
+				sndHistory.RemoveAll((DateTimeOffset d) => d <= sendsAfterTimestamp);
 
 				// Check for throttling
 				if (sndHistory.Count < mxSndHist.IntervalMaxMessages)
 				{
 					// Not hit throttle limit yet.
 					// Log send and return true.
-					sndHistory.Add(DateTime.UtcNow);
+					sndHistory.Add(DateTimeOffset.UtcNow);
 					return true;
 				}
 				else

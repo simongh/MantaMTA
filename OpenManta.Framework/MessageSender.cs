@@ -140,7 +140,7 @@ namespace OpenManta.Framework
 								if (!qMsg.IsHandled)
 								{
 									_logging.Warn("Message not handled " + qMsg.ID);
-									qMsg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(5);
+									qMsg.AttemptSendAfterUtc = DateTimeOffset.UtcNow.AddMinutes(5);
 									await _queueManager.Enqueue(qMsg);
 								}
 
@@ -164,7 +164,7 @@ namespace OpenManta.Framework
 								if (!qMsg.IsHandled)
 								{
 									_logging.Warn("Message not handled " + qMsg.ID);
-									qMsg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(5);
+									qMsg.AttemptSendAfterUtc = DateTimeOffset.UtcNow.AddMinutes(5);
 									await _queueManager.Enqueue(qMsg);
 								}
 
@@ -232,7 +232,7 @@ namespace OpenManta.Framework
 		private async Task SendMessageAsync(MtaQueuedMessage msg)
 		{
 			// Check that the message next attempt after has passed.
-			if (msg.AttemptSendAfterUtc > DateTime.UtcNow)
+			if (msg.AttemptSendAfterUtc > DateTimeOffset.UtcNow)
 			{
 				await _queueManager.Enqueue(msg);
 				await Task.Delay(50); // To prevent a tight loop within a Task thread we should sleep here.
@@ -262,7 +262,7 @@ namespace OpenManta.Framework
 					break;
 				// Unknown send state, requeue the message and log error. Cannot send!
 				default:
-					msg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(1);
+					msg.AttemptSendAfterUtc = DateTimeOffset.UtcNow.AddMinutes(1);
 					await _queueManager.Enqueue(msg);
 					_logging.Error("Failed to send message. Unknown SendStatus[" + snd.SendStatus + "]!");
 					return;
@@ -330,7 +330,7 @@ namespace OpenManta.Framework
 
 						default:
 							// Something weird happening with this message, get it out of the way for a bit.
-							msg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(5);
+							msg.AttemptSendAfterUtc = DateTimeOffset.UtcNow.AddMinutes(5);
 							await _queueManager.Enqueue(msg);
 							break;
 					}

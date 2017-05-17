@@ -32,15 +32,15 @@ namespace OpenManta.Data
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
-SELECT cfg_relayingPermittedIp_ip
-FROM man_cfg_relayingPermittedIp";
+SELECT IpAddress
+FROM Manta.PermittedRelayIps";
 				conn.Open();
-				ArrayList results = new ArrayList();
+				var results = new List<string>();
 				SqlDataReader reader = cmd.ExecuteReader();
 				while (reader.Read())
-					results.Add(reader.GetString("cfg_relayingPermittedIp_ip"));
+					results.Add(reader.GetString("IpAddress"));
 
-				return (string[])results.ToArray(typeof(string));
+				return results;
 			}
 		}
 
@@ -54,10 +54,10 @@ FROM man_cfg_relayingPermittedIp";
 			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"DELETE FROM man_cfg_relayingPermittedIp";
+				cmd.CommandText = @"DELETE FROM Manta.PermittedRelayIps";
 				foreach (IPAddress addr in addresses)
 				{
-					cmd.CommandText += System.Environment.NewLine + "INSERT INTO man_cfg_relayingPermittedIp(cfg_relayingPermittedIp_ip) VALUES ( '" + addr.ToString() + "' )";
+					cmd.CommandText += System.Environment.NewLine + "INSERT INTO Manta.PermittedRelayIps(IpAddress) VALUES ( '" + addr.ToString() + "' )";
 				}
 				conn.Open();
 				cmd.ExecuteNonQuery();

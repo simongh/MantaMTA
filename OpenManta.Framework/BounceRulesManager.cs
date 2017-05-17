@@ -22,7 +22,7 @@ namespace OpenManta.Framework
 		{
 			get
 			{
-				if (_bounceRules == null || _bounceRules.LoadedTimestampUtc.AddMinutes(5) < DateTime.UtcNow)
+				if (_bounceRules == null || _bounceRules.LoadedTimestampUtc.AddMinutes(5) < DateTimeOffset.UtcNow)
 				{
 					// Would be nice to write to a log that we're updating.
 					_bounceRules = _eventDb.GetBounceRules();
@@ -31,7 +31,7 @@ namespace OpenManta.Framework
 					_bounceRules = new BounceRulesCollection(_bounceRules.OrderBy(r => r.ExecutionOrder));
 
 					// Only set the LoadedTimestamp value after we're done assigning new values to _bounceRules.
-					_bounceRules.LoadedTimestampUtc = DateTime.UtcNow;
+					_bounceRules.LoadedTimestampUtc = DateTimeOffset.UtcNow;
 				}
 
 				return _bounceRules;

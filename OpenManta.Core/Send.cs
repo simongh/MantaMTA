@@ -18,12 +18,11 @@ namespace OpenManta.Core
 		/// This is used to record when this instance of this class was accessed. Used by
 		/// the SendIDManager to clean up it's internal cache.
 		/// </summary>
-		public DateTime LastAccessedTimestamp { get; set; }
+		public DateTimeOffset LastAccessedTimestamp { get; set; }
 
 		/// <summary>
 		/// Timestamp Send was created.
 		/// </summary>
-		public DateTime CreatedTimestamp { get; set; }
+		public DateTimeOffset CreatedTimestamp { get; set; }
 	}
 }
-

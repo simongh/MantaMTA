@@ -25,7 +25,7 @@ namespace OpenManta.Core
 		/// <summary>
 		/// The date and time the event was recorded.
 		/// </summary>
-		public DateTime EventTime { get; set; }
+		public DateTimeOffset EventTime { get; set; }
 
 		/// <summary>
 		/// Will be set to true when event has been forwarded.
@@ -33,4 +33,3 @@ namespace OpenManta.Core
 		public bool Forwarded { get; set; }
 	}
 }
-

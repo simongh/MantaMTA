@@ -38,8 +38,8 @@ namespace OpenManta.Data
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
 SELECT *
-FROM man_ip_group as [grp]
-WHERE [grp].ip_group_id = @groupID";
+FROM Manta.IpGroups as [grp]
+WHERE [grp].IpGroupId = @groupID";
 				cmd.Parameters.AddWithValue("@groupID", id);
 				return _dataRetrieval.GetSingleObjectFromDatabase<VirtualMtaGroup>(cmd, CreateAndFillVirtualMtaGroup);
 			}
@@ -56,7 +56,7 @@ WHERE [grp].ip_group_id = @groupID";
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
 SELECT *
-FROM man_ip_group";
+FROM Manta.IpGroups";
 				return _dataRetrieval.GetCollectionFromDatabase<VirtualMtaGroup>(cmd, CreateAndFillVirtualMtaGroup);
 			}
 		}
@@ -69,10 +69,10 @@ FROM man_ip_group";
 		private VirtualMtaGroup CreateAndFillVirtualMtaGroup(IDataRecord record)
 		{
 			VirtualMtaGroup group = new VirtualMtaGroup();
-			group.ID = record.GetInt32("ip_group_id");
-			group.Name = record.GetString("ip_group_name");
-			if (!record.IsDBNull("ip_group_description"))
-				group.Description = record.GetString("ip_group_description");
+			group.ID = record.GetInt32("IpGroupId");
+			group.Name = record.GetString("Name");
+			if (!record.IsDBNull("Description"))
+				group.Description = record.GetString("Description");
 
 			return group;
 		}
@@ -87,7 +87,7 @@ FROM man_ip_group";
 
 			StringBuilder groupMembershipInserts = new StringBuilder();
 			foreach (VirtualMTA vmta in grp.VirtualMtaCollection)
-				groupMembershipInserts.AppendFormat(@"{1}INSERT INTO man_ip_groupMembership(ip_group_id, ip_ipAddress_id)
+				groupMembershipInserts.AppendFormat(@"{1}INSERT INTO Manta.IpGroupMember(IpGroupId, IpAddressId)
 VALUES(@id,{0}){1}", vmta.ID, Environment.NewLine);
 
 			using (SqlConnection conn = _mantaDb.GetSqlConnection())
@@ -96,22 +96,22 @@ VALUES(@id,{0}){1}", vmta.ID, Environment.NewLine);
 				cmd.CommandText = @"
 BEGIN TRANSACTION
 
-IF EXISTS(SELECT 1 FROM man_ip_group WHERE ip_group_id = @id)
-	UPDATE man_ip_group
-	SET ip_group_name = @name,
-		ip_group_description = @description
-	WHERE ip_group_id = @id
+IF EXISTS(SELECT 1 FROM Manta.IpGroups WHERE IpGroupId = @id)
+	UPDATE Manta.IpGroups
+	SET Name = @name,
+		Description = @description
+	WHERE IpGroupId = @id
 ELSE
 	BEGIN
-		INSERT INTO man_ip_group(ip_group_name, ip_group_description)
+		INSERT INTO Manta.IpGroups(Name, Description)
 		VALUES(@name, @description)
 
 		SELECT @id = @@IDENTITY
 	END
 
 DELETE
-FROM man_ip_groupMembership
-WHERE ip_group_id = @id
+FROM Manta.IpGroupMembers
+WHERE IpGroupId = @id
 
 " + groupMembershipInserts.ToString() + @"
 
@@ -139,12 +139,13 @@ COMMIT TRANSACTION";
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
 DELETE
-FROM man_ip_group
-WHERE ip_group_id = @id
+FROM Manta.IpGroupMembers
+WHERE IpGroupId = @id
 
 DELETE
-FROM man_ip_groupMembership
-WHERE ip_group_id = @id";
+FROM Manta.IpGroups
+WHERE IpGroupId = @id
+";
 				cmd.Parameters.AddWithValue("@id", id);
 				conn.Open();
 				cmd.ExecuteNonQuery();

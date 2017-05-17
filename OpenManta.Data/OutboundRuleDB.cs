@@ -35,8 +35,8 @@ namespace OpenManta.Data
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
 SELECT *
-FROM man_rle_mxPattern
-ORDER BY rle_mxPattern_id DESC"; // Order descending so default -1 is always at the bottom!
+FROM Manta.MxPatterns
+ORDER BY MxPatternId DESC"; // Order descending so default -1 is always at the bottom!
 
 				return _dataRetrieval.GetCollectionFromDatabase<OutboundMxPattern>(cmd, CreateAndFillOutboundMxPattern);
 			}
@@ -53,7 +53,7 @@ ORDER BY rle_mxPattern_id DESC"; // Order descending so default -1 is always at 
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
 SELECT *
-FROM man_rle_rule";
+FROM Manta.Rules";
 
 				return _dataRetrieval.GetCollectionFromDatabase<OutboundRule>(cmd, CreateAndFillOutboundRule);
 			}
@@ -68,13 +68,13 @@ FROM man_rle_rule";
 		{
 			OutboundMxPattern mxPattern = new OutboundMxPattern();
 
-			mxPattern.Description = record.GetStringOrEmpty("rle_mxPattern_description");
-			mxPattern.ID = record.GetInt32("rle_mxPattern_id");
-			mxPattern.Name = record.GetString("rle_mxPattern_name");
-			if (!record.IsDBNull("ip_ipAddress_id"))
-				mxPattern.LimitedToOutboundIpAddressID = record.GetInt32("ip_ipAddress_id");
-			mxPattern.Type = (OutboundMxPatternType)record.GetInt32("rle_patternType_id");
-			mxPattern.Value = record.GetString("rle_mxPattern_value");
+			mxPattern.Description = record.GetStringOrEmpty("Description");
+			mxPattern.ID = record.GetInt32("MxPatternId");
+			mxPattern.Name = record.GetString("Name");
+			if (!record.IsDBNull("IpAddressId"))
+				mxPattern.LimitedToOutboundIpAddressID = record.GetInt32("IpAddressId");
+			mxPattern.Type = (OutboundMxPatternType)record.GetInt32("PatternTypeId");
+			mxPattern.Value = record.GetString("Value");
 			return mxPattern;
 		}
 
@@ -85,7 +85,7 @@ FROM man_rle_rule";
 		/// <returns>OutboundRule object.</returns>
 		private OutboundRule CreateAndFillOutboundRule(IDataRecord record)
 		{
-			OutboundRule rule = new OutboundRule(record.GetInt32("rle_mxPattern_id"), (OutboundRuleType)record.GetInt32("rle_ruleType_id"), record.GetString("rle_rule_value"));
+			OutboundRule rule = new OutboundRule(record.GetInt32("MxPatternId"), (OutboundRuleType)record.GetInt32("RuleTypeId"), record.GetString("Value"));
 
 			return rule;
 		}

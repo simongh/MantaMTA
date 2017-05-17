@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace OpenManta.Core
+﻿namespace OpenManta.Core
 {
 	public abstract class BaseEntity<T>
 	{
@@ -18,7 +16,6 @@ namespace OpenManta.Core
 	}
 
 	public abstract class NamedEntity : NamedEntity<int>
-	{		
+	{
 	}
 }
-

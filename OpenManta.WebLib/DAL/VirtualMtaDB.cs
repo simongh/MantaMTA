@@ -34,26 +34,26 @@ namespace OpenManta.WebLib.DAL
 				cmd.CommandText = @"
 --// Get the internal Send ID
 DECLARE @internalSendId int
-SELECT @internalSendId = [snd].mta_send_internalId
-FROM man_mta_send as [snd] WITH(nolock)
+SELECT @internalSendId = [snd].MtaSendId
+FROM Manta.MtaSend as [snd] WITH(nolock)
 WHERE [snd].mta_send_id = @sndID
 
-DECLARE @usedIpAddressIds table(ip_ipAddress_id int)
+DECLARE @usedIpAddressIds table(IpAddressId int)
 --// Get the IP addresses used by the send
 INSERT INTO @usedIpAddressIds
-SELECT DISTINCT(ip_ipAddress_id)
-FROM man_mta_transaction as [tran] WITH(nolock)
-JOIN man_mta_msg as [msg] with(nolock) ON [tran].mta_msg_id = [msg].mta_msg_id
-WHERE [msg].mta_send_internalId = @internalSendId
+SELECT DISTINCT(IpAddressId)
+FROM Manta.Transactions as [tran] WITH(nolock)
+JOIN Manta.MtaSend as [msg] with(nolock) ON [tran].MessageId = [msg].MessageId
+WHERE [msg].MtaSendId = @internalSendId
 
 --// Get the actual data
 SELECT [ip].*,
-	(SELECT COUNT(*) FROM man_mta_transaction as [tran] with(nolock) JOIN man_mta_msg as [msg] with(nolock) ON [tran].mta_msg_id = [msg].mta_msg_id WHERE [tran].ip_ipAddress_id = [ip].ip_ipAddress_id AND [msg].mta_send_internalId = @internalSendId AND [tran].mta_transactionStatus_id = 4) AS 'Accepted',
-	(SELECT COUNT(*) FROM man_mta_transaction as [tran] with(nolock) JOIN man_mta_msg as [msg] with(nolock) ON [tran].mta_msg_id = [msg].mta_msg_id WHERE [tran].ip_ipAddress_id = [ip].ip_ipAddress_id AND [msg].mta_send_internalId = @internalSendId AND ([tran].mta_transactionStatus_id = 2 OR [tran].mta_transactionStatus_id = 3 OR [tran].mta_transactionStatus_id = 6)) AS 'Rejected',
-	(SELECT COUNT(*) FROM man_mta_transaction as [tran] with(nolock) JOIN man_mta_msg as [msg] with(nolock) ON [tran].mta_msg_id = [msg].mta_msg_id WHERE [tran].ip_ipAddress_id = [ip].ip_ipAddress_id AND [msg].mta_send_internalId = @internalSendId AND [tran].mta_transactionStatus_id = 5) AS 'Throttled',
-	(SELECT COUNT(*) FROM man_mta_transaction as [tran] with(nolock) JOIN man_mta_msg as [msg] with(nolock) ON [tran].mta_msg_id = [msg].mta_msg_id WHERE [tran].ip_ipAddress_id = [ip].ip_ipAddress_id AND [msg].mta_send_internalId = @internalSendId AND [tran].mta_transactionStatus_id = 1) AS 'Deferred'
-FROM man_ip_ipAddress as [ip]
-WHERE [ip].ip_ipAddress_id IN (SELECT * FROM @usedIpAddressIds)";
+	(SELECT COUNT(*) FROM Manta.Transactions as [tran] with(nolock) JOIN Manta.MtaSend as [msg] with(nolock) ON [tran].MessageId = [msg].MessageId WHERE [tran].IpAddressId = [ip].IpAddressId AND [msg].MtaSendId = @internalSendId AND [tran].TransactionStatusId = 4) AS 'Accepted',
+	(SELECT COUNT(*) FROM Manta.Transactions as [tran] with(nolock) JOIN Manta.MtaSend as [msg] with(nolock) ON [tran].MessageId = [msg].MessageId WHERE [tran].IpAddressId = [ip].IpAddressId AND [msg].MtaSendId = @internalSendId AND ([tran].TransactionStatusId = 2 OR [tran].TransactionStatusId = 3 OR [tran].TransactionStatusId = 6)) AS 'Rejected',
+	(SELECT COUNT(*) FROM Manta.Transactions as [tran] with(nolock) JOIN Manta.MtaSend as [msg] with(nolock) ON [tran].MessageId = [msg].MessageId WHERE [tran].IpAddressId = [ip].IpAddressId AND [msg].MtaSendId = @internalSendId AND [tran].TransactionStatusId = 5) AS 'Throttled',
+	(SELECT COUNT(*) FROM Manta.Transactions as [tran] with(nolock) JOIN Manta.MtaSend as [msg] with(nolock) ON [tran].MessageId = [msg].MessageId WHERE [tran].IpAddressId = [ip].IpAddressId AND [msg].MtaSendId = @internalSendId AND [tran].TransactionStatusId = 1) AS 'Deferred'
+FROM Manta.IpAddresses as [ip]
+WHERE [ip].IpAddressId IN (SELECT * FROM @usedIpAddressIds)";
 				cmd.Parameters.AddWithValue("@sndID", sendID);
 				return _dataRetrieval.GetCollectionFromDatabase<VirtualMtaSendInfo>(cmd, CreateAndFillVirtualMtaSendInfo).ToArray();
 			}
@@ -70,11 +70,11 @@ WHERE [ip].ip_ipAddress_id IN (SELECT * FROM @usedIpAddressIds)";
 
 			VirtualMtaSendInfo vinfo = new VirtualMtaSendInfo();
 
-			vinfo.ID = record.GetInt32("ip_ipAddress_id");
-			vinfo.Hostname = record.GetString("ip_ipAddress_hostname");
-			vinfo.IPAddress = System.Net.IPAddress.Parse(record.GetString("ip_ipAddress_ipAddress"));
-			vinfo.IsSmtpInbound = record.GetBoolean("ip_ipAddress_isInbound");
-			vinfo.IsSmtpOutbound = record.GetBoolean("ip_ipAddress_isOutbound");
+			vinfo.ID = record.GetInt32("IpAddressId");
+			vinfo.Hostname = record.GetString("Hostname");
+			vinfo.IPAddress = System.Net.IPAddress.Parse(record.GetString("IpAddress"));
+			vinfo.IsSmtpInbound = record.GetBoolean("IsInbound");
+			vinfo.IsSmtpOutbound = record.GetBoolean("IsOutbound");
 			vinfo.Accepted = record.GetInt64("Accepted");
 			vinfo.Deferred = record.GetInt64("Deferred");
 			vinfo.Rejected = record.GetInt64("Rejected");
@@ -95,18 +95,18 @@ WHERE [ip].ip_ipAddress_id IN (SELECT * FROM @usedIpAddressIds)";
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
-IF EXISTS(SELECT 1 FROM man_ip_ipAddress WHERE ip_ipAddress_id = @id)
+IF EXISTS(SELECT 1 FROM Manta.IpAddresses WHERE IpAddressId = @id)
 	BEGIN
-		UPDATE man_ip_ipAddress
-		SET ip_ipAddress_ipAddress = @ipAddress,
-			ip_ipAddress_hostname = @hostname,
-			ip_ipAddress_isInbound = @isInbound,
-			ip_ipAddress_isOutbound = @isOutbound
-		WHERE ip_ipAddress_id = @id
+		UPDATE Manta.IpAddresses
+		SET IpAddress = @ipAddress,
+			Hostname = @hostname,
+			IsInbound = @isInbound,
+			IsOutbound = @isOutbound
+		WHERE IpAddressId = @id
 	END
 ELSE
 	BEGIN
-		INSERT INTO man_ip_ipAddress(ip_ipAddress_ipAddress, ip_ipAddress_hostname, ip_ipAddress_isInbound, ip_ipAddress_isOutbound)
+		INSERT INTO Manta.IpAddresses(IpAddress, Hostname, IsInbound, IsOutbound)
 		VALUES(@ipAddress, @hostname, @isInbound, @isOutbound)
 	END
 ";
@@ -130,8 +130,8 @@ ELSE
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
-DELETE FROM man_ip_ipAddress WHERE ip_ipAddress_id = @id
-DELETE FROM man_ip_groupMembership WHERE ip_ipAddress_id = @id";
+DELETE FROM Manta.IpAddresses WHERE IpAddressId = @id
+DELETE FROM Manta.IpGroupMembers WHERE IpAddressId = @id";
 				cmd.Parameters.AddWithValue("@id", id);
 				conn.Open();
 				cmd.ExecuteNonQuery();

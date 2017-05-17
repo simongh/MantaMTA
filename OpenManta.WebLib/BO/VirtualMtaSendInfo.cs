@@ -1,5 +1,4 @@
-﻿
-namespace OpenManta.WebLib.BO
+﻿namespace OpenManta.WebLib.BO
 {
 	/// <summary>
 	/// Holds information abount a Virtual MTA and what it has done in a send.

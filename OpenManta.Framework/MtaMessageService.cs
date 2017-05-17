@@ -94,7 +94,7 @@ namespace OpenManta.Framework
 			}
 
 			// Set next retry time and release the lock.
-			msg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(nextRetryInterval);
+			msg.AttemptSendAfterUtc = DateTimeOffset.UtcNow.AddMinutes(nextRetryInterval);
 			await Requeue(msg);
 
 			return true;
@@ -181,7 +181,7 @@ namespace OpenManta.Framework
 			await _mtaTransation.LogTransactionAsync(msg, TransactionStatus.Throttled, string.Empty, ipAddress, mxRecord);
 
 			// Set next retry time and release the lock.
-			msg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(1);
+			msg.AttemptSendAfterUtc = DateTimeOffset.UtcNow.AddMinutes(1);
 			msg.RabbitMqPriority = RabbitMqPriority.Low;
 			await Requeue(msg);
 			return true;
@@ -195,7 +195,7 @@ namespace OpenManta.Framework
 		{
 			Guard.NotNull(msg, nameof(msg));
 
-			msg.AttemptSendAfterUtc = DateTime.UtcNow.AddMinutes(1);
+			msg.AttemptSendAfterUtc = DateTimeOffset.UtcNow.AddMinutes(1);
 			await Requeue(msg);
 		}
 
@@ -211,7 +211,7 @@ namespace OpenManta.Framework
 			await _mtaTransation.LogTransactionAsync(msg, TransactionStatus.Deferred, "Service Unavailable", ipAddress, null);
 
 			// Set next retry time and release the lock.
-			msg.AttemptSendAfterUtc = DateTime.UtcNow.AddSeconds(15);
+			msg.AttemptSendAfterUtc = DateTimeOffset.UtcNow.AddSeconds(15);
 			await Requeue(msg);
 			return true;
 		}

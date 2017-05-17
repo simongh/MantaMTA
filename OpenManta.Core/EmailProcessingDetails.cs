@@ -15,7 +15,6 @@ namespace OpenManta.Core
 			this.ProcessingResult = EmailProcessingResult.NotYetSet;
 		}
 
-
 		/// <summary>
 		/// Compares two EmailProcessingDetails objects to see if they are equal.
 		/// </summary>
@@ -25,7 +24,6 @@ namespace OpenManta.Core
 		{
 			if (!(obj is EmailProcessingDetails))
 				return false;
-
 
 			EmailProcessingDetails otherObj = obj as EmailProcessingDetails;
 
@@ -50,7 +48,6 @@ namespace OpenManta.Core
 			);
 		}
 
-
 		/// <summary>
 		/// Overridden ToString() so that we can more easily see what values are being held when debugging.
 		/// </summary>
@@ -69,14 +66,17 @@ namespace OpenManta.Core
 		/// with its content.
 		/// </summary>
 		public EmailProcessingResult ProcessingResult { get; set; }
+
 		/// <summary>
 		/// Indicates the type of information that positively identified the email as a bounce.
 		/// </summary>
 		public BounceIdentifier BounceIdentifier { get; set; }
+
 		/// <summary>
 		/// If the .BounceIdentifier property is set to BounceRule, then this will be the RuleID of the matching Bounce Rule.
 		/// </summary>
 		public int MatchingBounceRuleID { get; set; }
+
 		/// <summary>
 		/// The value in the email that was used to identify the bounce.
 		/// When .BounceIdentifier is BounceRule, this will be the Crtieria value of that Rule,
@@ -85,4 +85,3 @@ namespace OpenManta.Core
 		public string MatchingValue { get; set; }
 	}
 }
-

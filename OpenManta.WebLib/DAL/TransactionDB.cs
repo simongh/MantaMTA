@@ -34,16 +34,16 @@ namespace OpenManta.WebLib.DAL
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
 DECLARE @internalSendID int
-SELECT @internalSendID = mta_send_internalId
-FROM man_mta_send
-WHERE mta_send_id = @sndID
+SELECT @internalSendID = MtaSendId
+FROM Manta.MtaSend
+WHERE SendId = @sndID
 
-SELECT COUNT(*) AS 'Count', [tran].mta_transactionStatus_id, CONVERT(smalldatetime, [tran].mta_transaction_timestamp) as 'mta_transaction_timestamp'
-FROM man_mta_transaction as [tran] with(nolock)
-JOIN man_mta_msg AS [msg] with(nolock) ON [tran].mta_msg_id = [msg].mta_msg_id
-WHERE [msg].mta_send_internalId = @internalSendID
-GROUP BY [tran].mta_transactionStatus_id, CONVERT(smalldatetime, [tran].mta_transaction_timestamp)
-ORDER BY CONVERT(smalldatetime, [tran].mta_transaction_timestamp)";
+SELECT COUNT(*) AS 'Count', [tran].TransactionStatusId, CONVERT(smalldatetime, [tran].CreatedAt) as 'CreatedAt'
+FROM Manta.Transactions as [tran] with(nolock)
+JOIN Manta.Messages AS [msg] with(nolock) ON [tran].MessageId = [msg].MessageId
+WHERE [msg].MtaSendId = @internalSendID
+GROUP BY [tran].TransactionStatusId, CONVERT(smalldatetime, [tran].CreatedAt)
+ORDER BY CONVERT(smalldatetime, [tran].CreatedAt)";
 				cmd.Parameters.AddWithValue("@sndID", sendID);
 				return new SendSpeedInfo(_dataRetrieval.GetCollectionFromDatabase<SendSpeedInfoItem>(cmd, CreateAndFillSendSpeedInfoItemFromRecord));
 			}
@@ -59,11 +59,11 @@ ORDER BY CONVERT(smalldatetime, [tran].mta_transaction_timestamp)";
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
-SELECT COUNT(*) AS 'Count', [tran].mta_transactionStatus_id, CONVERT(smalldatetime, [tran].mta_transaction_timestamp) as 'mta_transaction_timestamp'
-FROM man_mta_transaction as [tran] WITH (nolock)
-WHERE [tran].mta_transaction_timestamp >= DATEADD(HOUR, -1, GETUTCDATE())
-GROUP BY [tran].mta_transactionStatus_id, CONVERT(smalldatetime, [tran].mta_transaction_timestamp)
-ORDER BY CONVERT(smalldatetime, [tran].mta_transaction_timestamp)";
+SELECT COUNT(*) AS 'Count', [tran].TransactionStatusId, CONVERT(smalldatetime, [tran].CreatedAt) as 'CreatedAt'
+FROM Manta.Transactions as [tran] WITH (nolock)
+WHERE [tran].CreatedAt >= DATEADD(HOUR, -1, GETUTCDATE())
+GROUP BY [tran].TransactionStatusId, CONVERT(smalldatetime, [tran].CreatedAt)
+ORDER BY CONVERT(smalldatetime, [tran].CreatedAt)";
 				return new SendSpeedInfo(_dataRetrieval.GetCollectionFromDatabase<SendSpeedInfoItem>(cmd, CreateAndFillSendSpeedInfoItemFromRecord));
 			}
 		}
@@ -78,8 +78,8 @@ ORDER BY CONVERT(smalldatetime, [tran].mta_transaction_timestamp)";
 			SendSpeedInfoItem item = new SendSpeedInfoItem
 			{
 				Count = record.GetInt64("Count"),
-				Status = (TransactionStatus)record.GetInt64("mta_transactionStatus_id"),
-				Timestamp = record.GetDateTime("mta_transaction_timestamp")
+				Status = (TransactionStatus)record.GetInt64("TransactionStatusId"),
+				Timestamp = record.GetDateTime("CreatedAt")
 			};
 			return item;
 		}
@@ -99,25 +99,25 @@ ORDER BY CONVERT(smalldatetime, [tran].mta_transaction_timestamp)";
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = (hasSendID ? @"
 declare @internalSendID int
-SELECT @internalSendID = mta_send_internalId
-FROM man_mta_send WITH(nolock)
-WHERE mta_send_id = @sndID
+SELECT @internalSendID = MtaSendId
+FROM Manta.MtaSend WITH(nolock)
+WHERE MtaSendId = @sndID
 " : string.Empty) + @"
 SELECT [sorted].*
 FROM (
-		SELECT ROW_NUMBER() OVER (ORDER BY count(*) DESC, mta_transaction_serverHostname) as 'Row',
-			   mta_transactionStatus_id,
-			   mta_transaction_serverResponse,
-			   mta_transaction_serverHostname as 'mta_transaction_serverHostname',
-			   [ip].ip_ipAddress_hostname,
-			   [ip].ip_ipAddress_ipAddress, COUNT(*) as 'Count',
-			   MAX(mta_transaction_timestamp) as 'LastOccurred'
-		FROM man_mta_transaction as [tran] with(nolock)
-		JOIN man_mta_msg as [msg] with(nolock) ON [tran].mta_msg_id = [msg].mta_msg_id
-		JOIN man_ip_ipAddress as [ip] ON [tran].ip_ipAddress_id = [ip].ip_ipAddress_id
-		WHERE mta_transactionStatus_id IN (1, 2, 3, 6) --// Todo: Make this enum!
-		" + (hasSendID ? "AND [msg].mta_send_internalId = @internalSendID " : string.Empty) + @"
-		GROUP BY mta_transactionStatus_id, mta_transaction_serverResponse, mta_transaction_serverHostname,[ip].ip_ipAddress_hostname, [ip].ip_ipAddress_ipAddress
+		SELECT ROW_NUMBER() OVER (ORDER BY count(*) DESC, ServerHostname) as 'Row',
+			   TransactionStatusId,
+			   ServerResponse,
+			   ServerHostname as 'ServerHostname',
+			   [ip].Hostname,
+			   [ip].IpAddress, COUNT(*) as 'Count',
+			   MAX(CreatedAt) as 'LastOccurred'
+		FROM Manta.Transactions as [tran] with(nolock)
+		JOIN Manta.Messages as [msg] with(nolock) ON [tran].MessageId = [msg].MessageId
+		JOIN Manta.IpAddresses as [ip] ON [tran].IpAddressId = [ip].IpAddressId
+		WHERE TransactionStatusId IN (1, 2, 3, 6) --// Todo: Make this enum!
+		" + (hasSendID ? "AND [msg].MtaSendId = @internalSendID " : string.Empty) + @"
+		GROUP BY TransactionStatusId, ServerResponse, ServerHostname,[ip].Hostname, [ip].IpAddress
 	 ) as [sorted]
 WHERE [Row] >= " + (((pageNum * pageSize) - pageSize) + 1) + " AND [Row] <= " + (pageNum * pageSize);
 				if (hasSendID)
@@ -141,25 +141,25 @@ WHERE [Row] >= " + (((pageNum * pageSize) - pageSize) + 1) + " AND [Row] <= " + 
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = (hasSendID ? @"
 declare @internalSendID int
-SELECT @internalSendID = mta_send_internalId
-FROM man_mta_send WITH(nolock)
-WHERE mta_send_id = @sndID
+SELECT @internalSendID = MtaSendId
+FROM Manta.MtaSend WITH(nolock)
+WHERE SendId = @sndID
 " : string.Empty) + @"
 SELECT [sorted].*
 FROM (
-		SELECT ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC, mta_transaction_serverHostname) as 'Row',
-			   mta_transactionStatus_id,
-			   mta_transaction_serverResponse,
-			   mta_transaction_serverHostname as 'mta_transaction_serverHostname',
-			   [ip].ip_ipAddress_hostname,
-			   [ip].ip_ipAddress_ipAddress, COUNT(*) as 'Count',
-			   MAX(mta_transaction_timestamp) as 'LastOccurred'
-		FROM man_mta_transaction as [tran] WITH(nolock)
-		JOIN man_mta_msg as [msg] WITH(nolock) ON [tran].mta_msg_id = [msg].mta_msg_id
-		JOIN man_ip_ipAddress as [ip] ON [tran].ip_ipAddress_id = [ip].ip_ipAddress_id
-		WHERE mta_transactionStatus_id IN (2, 3, 6) --// Todo: Make this enum!
-		" + (hasSendID ? "AND [msg].mta_send_internalId = @internalSendID " : string.Empty) + @"
-		GROUP BY mta_transactionStatus_id, mta_transaction_serverResponse, mta_transaction_serverHostname,[ip].ip_ipAddress_hostname, [ip].ip_ipAddress_ipAddress
+		SELECT ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC, ServerHostname) as 'Row',
+			   TransactionStatusId,
+			   ServerResponse,
+			   ServerHostname',
+			   [ip].Hostname,
+			   [ip].IpAddress, COUNT(*) as 'Count',
+			   MAX(CreatedAt) as 'LastOccurred'
+		FROM Manta.Transactions as [tran] WITH(nolock)
+		JOIN Manta.Messages as [msg] WITH(nolock) ON [tran].MessageId = [msg].MessageId
+		JOIN Manta.IpAddresses as [ip] ON [tran].IpAddressId = [ip].IpAddressId
+		WHERE TransactionStatusId IN (2, 3, 6) --// Todo: Make this enum!
+		" + (hasSendID ? "AND [msg].MtaSendId = @internalSendID " : string.Empty) + @"
+		GROUP BY TransactionStatusId, ServerResponse,ServerHostname,[ip].Hostname, [ip].IpAddress
 	 ) as [sorted]
 WHERE [Row] >= " + (((pageNum * pageSize) - pageSize) + 1) + " AND [Row] <= " + (pageNum * pageSize);
 				if (hasSendID)
@@ -183,25 +183,25 @@ WHERE [Row] >= " + (((pageNum * pageSize) - pageSize) + 1) + " AND [Row] <= " + 
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = (hasSendID ? @"
 declare @internalSendID int
-SELECT @internalSendID = mta_send_internalId
-FROM man_mta_send
-WHERE mta_send_id = @sndID
+SELECT @internalSendID = MtaSendId
+FROM Manta.MtaSend
+WHERE SendId = @sndID
 " : string.Empty) + @"
 SELECT [sorted].*
 FROM (
-		SELECT ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC, mta_transaction_serverHostname) as 'Row',
-			   mta_transactionStatus_id,
-			   mta_transaction_serverResponse,
-			   mta_transaction_serverHostname as 'mta_transaction_serverHostname',
-			   [ip].ip_ipAddress_hostname,
-			   [ip].ip_ipAddress_ipAddress, COUNT(*) as 'Count',
-			   MAX(mta_transaction_timestamp) as 'LastOccurred'
-		FROM man_mta_transaction as [tran] WITH(nolock)
-		JOIN man_mta_msg as [msg] WITH(nolock) ON [tran].mta_msg_id = [msg].mta_msg_id
-		JOIN man_ip_ipAddress as [ip] ON [tran].ip_ipAddress_id = [ip].ip_ipAddress_id
-		WHERE mta_transactionStatus_id IN (1) --// Todo: Make this enum!
-		" + (hasSendID ? "AND [msg].mta_send_internalId = @internalSendID " : string.Empty) + @"
-		GROUP BY mta_transactionStatus_id, mta_transaction_serverResponse, mta_transaction_serverHostname,[ip].ip_ipAddress_hostname, [ip].ip_ipAddress_ipAddress
+		SELECT ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC, ServerHostname) as 'Row',
+			   TransactionStatusId,
+			   ServerResponse,
+			   ServerHostname,
+			   [ip].Hostname,
+			   [ip].IpAddress, COUNT(*) as 'Count',
+			   MAX(CreatedAt) as 'LastOccurred'
+		FROM Manta.Transactions as [tran] WITH(nolock)
+		JOIN Manta.Messages as [msg] WITH(nolock) ON [tran].MessageId = [msg].MessageId
+		JOIN Manta.IpAddresses as [ip] ON [tran].IpAddressId = [ip].IpAddressId
+		WHERE TransactionStatusId IN (1) --// Todo: Make this enum!
+		" + (hasSendID ? "AND [msg].MtaSendId = @internalSendID " : string.Empty) + @"
+		GROUP BY TransactionStatusId, ServerResponse, ServerHostname,[ip].Hostname, [ip].IpAddress
 	 ) as [sorted]
 WHERE [Row] >= " + (((pageNum * pageSize) - pageSize) + 1) + " AND [Row] <= " + (pageNum * pageSize);
 				if (hasSendID)
@@ -221,20 +221,20 @@ WHERE [Row] >= " + (((pageNum * pageSize) - pageSize) + 1) + " AND [Row] <= " + 
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
-SELECT TOP " + count + @" ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC, mta_transaction_serverHostname) as 'Row',
-			   mta_transactionStatus_id,
-			   mta_transaction_serverResponse,
-			   mta_transaction_serverHostname as 'mta_transaction_serverHostname',
-			   [ip].ip_ipAddress_hostname,
-			   [ip].ip_ipAddress_ipAddress, COUNT(*) as 'Count',
-			   MAX(mta_transaction_timestamp) as 'LastOccurred'
-FROM man_mta_transaction as [tran] WITH (nolock)
-JOIN man_mta_msg as [msg] WITH(nolock) ON [tran].mta_msg_id = [msg].mta_msg_id
-JOIN man_ip_ipAddress as [ip] ON [tran].ip_ipAddress_id = [ip].ip_ipAddress_id
-WHERE [tran].mta_transaction_timestamp >= DATEADD(HOUR, -1, GETUTCDATE())
-AND mta_transactionStatus_id IN (1, 2, 3, 6)
-AND mta_transaction_serverHostname NOT LIKE ''
-GROUP BY mta_transactionStatus_id, mta_transaction_serverResponse, mta_transaction_serverHostname,[ip].ip_ipAddress_hostname, [ip].ip_ipAddress_ipAddress
+SELECT TOP " + count + @" ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC, ServerHostname) as 'Row',
+			   TransactionStatusId,
+			   ServerResponse,
+			   ServerHostname,
+			   [ip].Hostname,
+			   [ip].IpAddress, COUNT(*) as 'Count',
+			   MAX(CreatedAt) as 'LastOccurred'
+FROM Manta.Transactions as [tran] WITH (nolock)
+JOIN Manta.Messages as [msg] WITH(nolock) ON [tran].MessageId = [msg].MessageId
+JOIN Manta.IpAddresses as [ip] ON [tran].IpAddressId = [ip].IpAddressId
+WHERE [tran].CreatedAt >= DATEADD(HOUR, -1, GETUTCDATE())
+AND TransactionStatusId IN (1, 2, 3, 6)
+AND ServerHostname NOT LIKE ''
+GROUP BY TransactionStatusId, ServerResponse, ServerHostname,[ip].Hostname, [ip].IpAddress
 ORDER BY COUNT(*) DESC";
 				return _dataRetrieval.GetCollectionFromDatabase<BounceInfo>(cmd, CreateAndFillBounceInfo).ToArray();
 			}
@@ -253,19 +253,19 @@ ORDER BY COUNT(*) DESC";
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = (hasSendID ? @"
 declare @internalSendID int
-SELECT @internalSendID = mta_send_internalId
-FROM man_mta_send
-WHERE mta_send_id = @sndID
+SELECT @internalSendID = MtaSendId
+FROM Manta.MtaSend
+WHERE SendId = @sndID
 " : string.Empty) + @"
 SELECT COUNT(*)
 FROM(
 SELECT 1 as 'Col'
-		FROM man_mta_transaction as [tran]
-		JOIN man_mta_msg as [msg] ON [tran].mta_msg_id = [msg].mta_msg_id
-		JOIN man_ip_ipAddress as [ip] ON [tran].ip_ipAddress_id = [ip].ip_ipAddress_id
-		WHERE mta_transactionStatus_id IN (1, 2, 3, 6) --// Todo: Make this enum!
-		" + (hasSendID ? "AND [msg].mta_send_internalId = @internalSendID" : string.Empty) + @"
-	GROUP BY mta_transactionStatus_id, mta_transaction_serverResponse, mta_transaction_serverHostname,[ip].ip_ipAddress_hostname, [ip].ip_ipAddress_ipAddress
+		FROM Manta.Transactions as [tran]
+		JOIN Manta.Messages as [msg] ON [tran].MessageId = [msg].MessageId
+		JOIN Manta.IpAddresses as [ip] ON [tran].IpAddressId = [ip].IpAddressId
+		WHERE TransactionStatusId IN (1, 2, 3, 6) --// Todo: Make this enum!
+		" + (hasSendID ? "AND [msg].MtaSendId = @internalSendID" : string.Empty) + @"
+	GROUP BY TransactionStatusId, ServerResponse, ServerHostname,[ip].Hostname, [ip].IpAddress
 	) as [sorted]";
 				if (hasSendID)
 					cmd.Parameters.AddWithValue("@sndID", sendID);
@@ -287,19 +287,19 @@ SELECT 1 as 'Col'
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = (hasSendID ? @"
 declare @internalSendID int
-SELECT @internalSendID = mta_send_internalId
-FROM man_mta_send WITH(nolock)
-WHERE mta_send_id = @sndID
+SELECT @internalSendID = MtaSendId
+FROM Manta.MtaSend WITH(nolock)
+WHERE SendId = @sndID
 " : string.Empty) + @"
 SELECT COUNT(*)
 FROM(
 SELECT 1 as 'Col'
-		FROM man_mta_transaction as [tran] WITH(nolock)
-		JOIN man_mta_msg as [msg] WITH(nolock) ON [tran].mta_msg_id = [msg].mta_msg_id
-		JOIN man_ip_ipAddress as [ip] ON [tran].ip_ipAddress_id = [ip].ip_ipAddress_id
-		WHERE mta_transactionStatus_id IN (1) --// Todo: Make this enum!
-		" + (hasSendID ? "AND [msg].mta_send_internalId = @internalSendID" : string.Empty) + @"
-	GROUP BY mta_transactionStatus_id, mta_transaction_serverResponse, mta_transaction_serverHostname,[ip].ip_ipAddress_hostname, [ip].ip_ipAddress_ipAddress
+		FROM Manta.Transactions as [tran] WITH(nolock)
+		JOIN Manta.Messages as [msg] WITH(nolock) ON [tran].MessageId = [msg].MessageId
+		JOIN Manta.IpAddresses as [ip] ON [tran].IpAddressId = [ip].IpAddressId
+		WHERE TransactionStatusId IN (1) --// Todo: Make this enum!
+		" + (hasSendID ? "AND [msg].MtaSendId = @internalSendID" : string.Empty) + @"
+	GROUP BY TransactionStatusId, ServerResponse, ServerHostname,[ip].Hostname, [ip].IpAddress
 	) as [sorted]";
 				if (hasSendID)
 					cmd.Parameters.AddWithValue("@sndID", sendID);
@@ -321,19 +321,19 @@ SELECT 1 as 'Col'
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = (hasSendID ? @"
 declare @internalSendID int
-SELECT @internalSendID = mta_send_internalId
-FROM man_mta_send WITH(nolock)
-WHERE mta_send_id = @sndID
+SELECT @internalSendID = MtaSendId
+FROM Manta.MtaSend WITH(nolock)
+WHERE SendId = @sndID
 " : string.Empty) + @"
 SELECT COUNT(*)
 FROM(
 SELECT 1 as 'Col'
-		FROM man_mta_transaction as [tran] WITH(nolock)
-		JOIN man_mta_msg as [msg] WITH(nolock) ON [tran].mta_msg_id = [msg].mta_msg_id
-		JOIN man_ip_ipAddress as [ip] ON [tran].ip_ipAddress_id = [ip].ip_ipAddress_id
-		WHERE mta_transactionStatus_id IN (2, 3, 6) --// Todo: Make this enum!
-		" + (hasSendID ? "AND [msg].mta_send_internalId = @internalSendID" : string.Empty) + @"
-	GROUP BY mta_transactionStatus_id, mta_transaction_serverResponse, mta_transaction_serverHostname,[ip].ip_ipAddress_hostname, [ip].ip_ipAddress_ipAddress
+		FROM Manta.Transactions as [tran] WITH(nolock)
+		JOIN Manta.Messages as [msg] WITH(nolock) ON [tran].MessageId = [msg].MessageId
+		JOIN Manta.IpAddresses as [ip] ON [tran].IpAddressId = [ip].IpAddressId
+		WHERE TransactionStatusId IN (2, 3, 6) --// Todo: Make this enum!
+		" + (hasSendID ? "AND [msg].MtaSendId = @internalSendID" : string.Empty) + @"
+	GROUP BY TransactionStatusId, ServerResponse, ServerHostname,[ip].Hostname, [ip].IpAddress
 	) as [sorted]";
 				if (hasSendID)
 					cmd.Parameters.AddWithValue("@sndID", sendID);
@@ -357,12 +357,12 @@ declare @deferred bigint
 declare @rejected bigint
 
 SELECT @deferred = COUNT(*)
-FROM man_mta_transaction WITH(nolock)
-WHERE mta_transactionStatus_id = 1
+FROM Manta.Transactions WITH(nolock)
+WHERE TransactionStatusId = 1
 
 SELECT @rejected = COUNT(*)
-FROM man_mta_transaction WITH(nolock)
-WHERE mta_transactionStatus_id IN (2, 3, 6)
+FROM Manta.Transactions WITH(nolock)
+WHERE TransactionStatusId IN (2, 3, 6)
 
 SELECT @deferred as 'Deferred', @rejected as 'Rejected'";
 				conn.Open();
@@ -383,11 +383,11 @@ SELECT @deferred as 'Deferred', @rejected as 'Rejected'";
 		{
 			BounceInfo bounceInfo = new BounceInfo();
 			bounceInfo.Count = record.GetInt64("Count");
-			bounceInfo.LocalHostname = record.GetString("ip_ipAddress_hostname");
-			bounceInfo.LocalIpAddress = record.GetString("ip_ipAddress_ipAddress");
-			bounceInfo.Message = record.GetString("mta_transaction_serverResponse");
-			bounceInfo.RemoteHostname = record.GetStringOrEmpty("mta_transaction_serverHostname");
-			bounceInfo.TransactionStatus = (TransactionStatus)record.GetInt64("mta_transactionStatus_id");
+			bounceInfo.LocalHostname = record.GetString("Hostname");
+			bounceInfo.LocalIpAddress = record.GetString("IpAddress");
+			bounceInfo.Message = record.GetString("ServerResponse");
+			bounceInfo.RemoteHostname = record.GetStringOrEmpty("ServerHostname");
+			bounceInfo.TransactionStatus = (TransactionStatus)record.GetInt64("TransactionStatusId");
 			bounceInfo.LastOccurred = record.GetDateTime("LastOccurred");
 			return bounceInfo;
 		}
@@ -401,10 +401,10 @@ SELECT @deferred as 'Deferred', @rejected as 'Rejected'";
 			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"SELECT [tran].mta_transactionStatus_id, COUNT(*) AS 'Count'
-FROM man_mta_transaction as [tran] WITH(nolock)
-WHERE [tran].mta_transaction_timestamp >= DATEADD(HOUR, -1, GETUTCDATE())
-GROUP BY [tran].mta_transactionStatus_id";
+				cmd.CommandText = @"SELECT [tran].TransactionStatusId, COUNT(*) AS 'Count'
+FROM Manta.Transactions as [tran] WITH(nolock)
+WHERE [tran].CreatedAt >= DATEADD(HOUR, -1, GETUTCDATE())
+GROUP BY [tran].TransactionStatusId";
 				return new SendTransactionSummaryCollection(_dataRetrieval.GetCollectionFromDatabase<SendTransactionSummary>(cmd, CreateAndFillTransactionSummary));
 			}
 		}
@@ -419,7 +419,7 @@ GROUP BY [tran].mta_transactionStatus_id";
 			return new SendTransactionSummary
 			{
 				Count = record.GetInt64("Count"),
-				Status = (TransactionStatus)record.GetInt64("mta_transactionStatus_id")
+				Status = (TransactionStatus)record.GetInt64("TransactionStatusId")
 			};
 		}
 	}

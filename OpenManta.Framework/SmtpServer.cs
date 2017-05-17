@@ -421,7 +421,7 @@ namespace OpenManta.Framework
 							smtpStream.RemoteAddress.ToString(),
 							serverHostname,
 							smtpStream.LocalAddress.ToString(),
-							DateTime.UtcNow.ToString("ddd, dd MMM yyyy HH':'mm':'ss -0000 (UTC)")));
+							DateTimeOffset.UtcNow.ToString("ddd, dd MMM yyyy HH':'mm':'ss -0000 (UTC)")));
 
 						// Complete the transaction,either saving to local mailbox or queueing for relay.
 						SmtpServerTransactionAsyncResult result = await mailTransaction.SaveAsync();

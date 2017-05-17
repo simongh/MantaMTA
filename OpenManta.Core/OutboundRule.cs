@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace OpenManta.Core
+﻿namespace OpenManta.Core
 {
 	/// <summary>
 	/// Holds a rule for outbound clients.
@@ -24,10 +22,9 @@ namespace OpenManta.Core
 
 		public OutboundRule(int outbounbMxPatternID, OutboundRuleType type, string value)
 		{
-			this.OutboundMxPatternID = outbounbMxPatternID;
-			this.Type = type;
-			this.Value = value;
+			OutboundMxPatternID = outbounbMxPatternID;
+			Type = type;
+			Value = value;
 		}
 	}
 }
-

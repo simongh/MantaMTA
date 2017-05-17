@@ -35,7 +35,7 @@ namespace OpenManta.Data
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
 SELECT *
-FROM man_ip_ipAddress";
+FROM Manta.IpAddresses";
 				return _dataRetrieval.GetCollectionFromDatabase(cmd, CreateAndFillVirtualMtaFromRecord);
 			}
 		}
@@ -51,8 +51,8 @@ FROM man_ip_ipAddress";
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
 SELECT *
-FROM man_ip_ipAddress
-WHERE ip_ipAddress_id = @id";
+FROM Manta.IpAddresses
+WHERE IpAddressId = @id";
 				cmd.Parameters.AddWithValue("@id", id);
 				return _dataRetrieval.GetSingleObjectFromDatabase(cmd, CreateAndFillVirtualMtaFromRecord);
 			}
@@ -69,8 +69,8 @@ WHERE ip_ipAddress_id = @id";
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"SELECT *
-FROM man_ip_ipAddress as [ip]
-WHERE [ip].ip_ipAddress_id IN (SELECT [grp].ip_ipAddress_id FROM man_ip_groupMembership as [grp] WHERE [grp].ip_group_id = @groupID) ";
+FROM Manta.IpAddresses as [ip]
+WHERE [ip].IpAddressId IN (SELECT [grp].IpAddressId FROM Manta.IpGroupMembers as [grp] WHERE [grp].IpGroupId = @groupID) ";
 				cmd.Parameters.AddWithValue("@groupID", groupID);
 				return _dataRetrieval.GetCollectionFromDatabase(cmd, CreateAndFillVirtualMtaFromRecord);
 			}
@@ -84,11 +84,11 @@ WHERE [ip].ip_ipAddress_id IN (SELECT [grp].ip_ipAddress_id FROM man_ip_groupMem
 		private VirtualMTA CreateAndFillVirtualMtaFromRecord(IDataRecord record)
 		{
 			VirtualMTA vmta = new VirtualMTA();
-			vmta.ID = record.GetInt32("ip_ipAddress_id");
-			vmta.Hostname = record.GetString("ip_ipAddress_hostname");
-			vmta.IPAddress = System.Net.IPAddress.Parse(record.GetString("ip_ipAddress_ipAddress"));
-			vmta.IsSmtpInbound = record.GetBoolean("ip_ipAddress_isInbound");
-			vmta.IsSmtpOutbound = record.GetBoolean("ip_ipAddress_isOutbound");
+			vmta.ID = record.GetInt32("IpAddressId");
+			vmta.Hostname = record.GetString("Hostname");
+			vmta.IPAddress = System.Net.IPAddress.Parse(record.GetString("IpAddress"));
+			vmta.IsSmtpInbound = record.GetBoolean("IsInbound");
+			vmta.IsSmtpOutbound = record.GetBoolean("IsOutbound");
 			return vmta;
 		}
 	}

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace OpenManta.Core
+﻿namespace OpenManta.Core
 {
 	/// <summary>
 	/// Holds an outbound MX pattern, this is used to match against
@@ -27,9 +25,8 @@ namespace OpenManta.Core
 		public OutboundMxPattern()
 		{
 			// Default to Regex match all.
-			this.Type = OutboundMxPatternType.Regex;
-			this.Value = ".";
+			Type = OutboundMxPatternType.Regex;
+			Value = ".";
 		}
 	}
 }
-

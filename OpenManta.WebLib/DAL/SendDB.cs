@@ -52,7 +52,7 @@ WHERE s.mta_sendStatus_id in (" + string.Join(",", Array.ConvertAll<SendStatus, 
 			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"SELECT COUNT(*) FROM man_mta_send";
+				cmd.CommandText = @"SELECT COUNT(*) FROM Manta.MtaSend";
 				conn.Open();
 				return Convert.ToInt64(cmd.ExecuteScalar());
 			}
@@ -74,21 +74,21 @@ WHERE s.mta_sendStatus_id in (" + string.Join(",", Array.ConvertAll<SendStatus, 
 
 INSERT INTO @sends
 SELECT [sends].RowNumber, [sends].mta_send_internalId
-FROM (SELECT (ROW_NUMBER() OVER(ORDER BY mta_send_createdTimestamp DESC)) as RowNumber, man_mta_send.mta_send_internalId
-FROM man_mta_send with(nolock)) [sends]
+FROM (SELECT (ROW_NUMBER() OVER(ORDER BY CreatedAt DESC)) as RowNumber, MtaSendId
+FROM Manta.MtaSend with(nolock)) [sends]
 WHERE [sends].RowNumber >= " + ((pageNum * pageSize) - pageSize + 1) + " AND [sends].RowNumber <= " + (pageSize * pageNum) + @"
 
 SELECT [send].*,
-	mta_send_messages AS 'Messages',
-	mta_send_accepted AS 'Accepted',
-	mta_send_rejected AS 'Rejected',
-	([send].mta_send_messages - (mta_send_accepted + mta_send_rejected)) AS 'Waiting',
-	(SELECT COUNT(*) FROM man_mta_transaction as [tran] with(nolock) JOIN man_mta_msg as [msg] ON [tran].mta_msg_id = [msg].mta_msg_id WHERE [msg].mta_send_internalId = [send].mta_send_internalId AND [tran].mta_transactionStatus_id = 5) AS 'Throttled',
-	(SELECT COUNT(*) FROM man_mta_transaction as [tran] with(nolock) JOIN man_mta_msg as [msg] ON [tran].mta_msg_id = [msg].mta_msg_id WHERE [msg].mta_send_internalId = [send].mta_send_internalId AND [tran].mta_transactionStatus_id = 1) AS 'Deferred',
-	(SELECT MAX(mta_transaction_timestamp) FROM man_mta_transaction as [tran] with(nolock) JOIN  man_mta_msg as [msg] ON [tran].mta_msg_id = [msg].mta_msg_id WHERE [msg].mta_send_internalId = [send].mta_send_internalId) AS 'LastTransactionTimestamp'
-FROM man_mta_send as [send] with(nolock)
-WHERE [send].mta_send_internalId in (SELECT [s].mta_send_internalId FROM @sends as [s])
-ORDER BY [send].mta_send_createdTimestamp DESC";
+	Messages,
+	Accepted,
+	Rejected,
+	([send].Messages - (Accepted + Rejected)) AS 'Waiting',
+	(SELECT COUNT(*) FROM Manta.Transactions as [tran] with(nolock) JOIN Manta.Messages as [msg] ON [tran].MessageId = [msg].MessageId WHERE [msg].MtaSendId = [send].MtaSendId AND [tran].TransactionStatusId = 5) AS 'Throttled',
+	(SELECT COUNT(*) FROM Manta.Transactions as [tran] with(nolock) JOIN Manta.Messages as [msg] ON [tran].MessageId = [msg].MessageId WHERE [msg].MtaSendId = [send].MtaSendId AND [tran].TransactionStatusId = 1) AS 'Deferred',
+	(SELECT MAX(CreatedAt) FROM Manta.Transactions as [tran] with(nolock) JOIN  Manta.Messages as [msg] ON [tran].MessageId = [msg].MessageId WHERE [msg].MtaSendId = [send].MtaSendId) AS 'LastTransactionTimestamp'
+FROM Manta.MtaSend as [send] with(nolock)
+WHERE [send].MtaSendId in (SELECT [s].MtaSendId FROM @sends as [s])
+ORDER BY [send].CreatedAt DESC";
 				cmd.CommandTimeout = 90; // Query can take a while to run due to the size of the Transactions table.
 				return new SendInfoCollection(_dataRetrieval.GetCollectionFromDatabase<SendInfo>(cmd, CreateAndFillSendInfo));
 			}
@@ -105,16 +105,16 @@ ORDER BY [send].mta_send_createdTimestamp DESC";
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
 SELECT [send].*,
-	mta_send_messages AS 'Messages',
-	mta_send_accepted AS 'Accepted',
-	mta_send_rejected AS 'Rejected',
-	([send].mta_send_messages - (mta_send_accepted + mta_send_rejected)) AS 'Waiting',
-	(SELECT COUNT(*) FROM man_mta_transaction as [tran] JOIN man_mta_msg as [msg] ON [tran].mta_msg_id = [msg].mta_msg_id WHERE [msg].mta_send_internalId = [send].mta_send_internalId AND [tran].mta_transactionStatus_id = 5) AS 'Throttled',
-	(SELECT COUNT(*) FROM man_mta_transaction as [tran] JOIN man_mta_msg as [msg] ON [tran].mta_msg_id = [msg].mta_msg_id WHERE [msg].mta_send_internalId = [send].mta_send_internalId AND [tran].mta_transactionStatus_id = 1) AS 'Deferred',
-	(SELECT MAX(mta_transaction_timestamp) FROM man_mta_transaction as [tran] JOIN  man_mta_msg as [msg] ON [tran].mta_msg_id = [msg].mta_msg_id WHERE [msg].mta_send_internalId = [send].mta_send_internalId) AS 'LastTransactionTimestamp'
-FROM man_mta_send as [send]
-WHERE ([send].mta_send_messages - (mta_send_accepted + mta_send_rejected)) > 0
-ORDER BY [send].mta_send_createdTimestamp DESC";
+	Messages,
+	Accepted,
+	Rejected,
+	([send].Messages - (Accepted + Rejected)) AS 'Waiting',
+	(SELECT COUNT(*) FROM Manta.Transactions as [tran] JOIN Manta.Messages as [msg] ON [tran].MessageId = [msg].MessageId WHERE [msg].MtaSendId = [send].MtaSendId AND [tran]TransactionStatusId = 5) AS 'Throttled',
+	(SELECT COUNT(*) FROM Manta.Transactions as [tran] JOIN Manta.Messages as [msg] ON [tran].MessageId = [msg].MessageId WHERE [msg].MtaSendId = [send].MtaSendId AND [tran]TransactionStatusId = 1) AS 'Deferred',
+	(SELECT MAX(CreatedAt) FROM Manta.Transactions as [tran] JOIN  Manta.Messages as [msg] ON [tran].MessageId = [msg].MessageId WHERE [msg].MtaSendId = [send].MtaSendId) AS 'LastTransactionTimestamp'
+FROM Manta.MtaSend as [send]
+WHERE ([send].Messages - (Accepted + Rejected)) > 0
+ORDER BY [send].CreatedAt DESC";
 				cmd.CommandTimeout = 90; // Query can take a while to run due to the size of the Transactions table.
 				return new SendInfoCollection(_dataRetrieval.GetCollectionFromDatabase<SendInfo>(cmd, CreateAndFillSendInfo));
 			}
@@ -131,15 +131,15 @@ ORDER BY [send].mta_send_createdTimestamp DESC";
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"SELECT [snd].*,
-	mta_send_messages AS 'Messages',
-	mta_send_accepted AS 'Accepted',
-	mta_send_rejected AS 'Rejected',
-	([snd].mta_send_messages - (mta_send_accepted + mta_send_rejected)) AS 'Waiting',
-	(SELECT COUNT(*) FROM man_mta_transaction as [tran] with(nolock) JOIN man_mta_msg as [msg] with(nolock) ON [tran].mta_msg_id = [msg].mta_msg_id WHERE [msg].mta_send_internalId = [snd].mta_send_internalId AND [tran].mta_transactionStatus_id = 5) AS 'Throttled',
-	(SELECT COUNT(*) FROM man_mta_transaction as [tran] with(nolock) JOIN man_mta_msg as [msg] with(nolock) ON [tran].mta_msg_id = [msg].mta_msg_id WHERE [msg].mta_send_internalId = [snd].mta_send_internalId AND [tran].mta_transactionStatus_id = 1) AS 'Deferred',
-	(SELECT MAX(mta_transaction_timestamp) FROM man_mta_transaction as [tran] with(nolock) JOIN  man_mta_msg as [msg] with(nolock) ON [tran].mta_msg_id = [msg].mta_msg_id WHERE [msg].mta_send_internalId = [snd].mta_send_internalId) AS 'LastTransactionTimestamp'
-FROM man_mta_send as [snd] with(nolock)
-WHERE [snd].mta_send_id = @sndID";
+	Messages,
+	Accepted,
+	Rejected,
+	([snd].Messages - (Accepted + Rejected)) AS 'Waiting',
+	(SELECT COUNT(*) FROM Manta.Transactions as [tran] with(nolock) JOIN Manta.Messages as [msg] with(nolock) ON [tran].MessageId = [msg].MessageId WHERE [msg].MtaSendId = [snd].MtaSendId AND [tran].TransactionStatusId = 5) AS 'Throttled',
+	(SELECT COUNT(*) FROM Manta.Transactions as [tran] with(nolock) JOIN Manta.Messages as [msg] with(nolock) ON [tran].MessageId = [msg].MessageId WHERE [msg].MtaSendId = [snd].MtaSendId AND [tran].TransactionStatusId = 1) AS 'Deferred',
+	(SELECT MAX(CreatedAt) FROM Manta.Transactions as [tran] with(nolock) JOIN  Manta.Messages as [msg] with(nolock) ON [tran].MessageId = [msg].MessageId WHERE [msg].MtaSendId = [snd].MtaSendId) AS 'LastTransactionTimestamp'
+FROM Manta.MtaSend as [snd] with(nolock)
+WHERE [snd].SendId = @sndID";
 				cmd.Parameters.AddWithValue("@sndID", sendID);
 				return _dataRetrieval.GetSingleObjectFromDatabase<SendInfo>(cmd, CreateAndFillSendInfo);
 			}
@@ -156,8 +156,8 @@ WHERE [snd].mta_send_id = @sndID";
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"SELECT *
-FROM man_mta_sendMeta
-WHERE mta_send_internalId = @sndID";
+FROM Manta.SendMetadata
+WHERE MtaSendId = @sndID";
 				cmd.Parameters.AddWithValue("@sndID", internalSendID);
 				return new SendMetadataCollection(_dataRetrieval.GetCollectionFromDatabase<SendMetadata>(cmd, CreateAndFillSendMetadata));
 			}
@@ -172,11 +172,11 @@ WHERE mta_send_internalId = @sndID";
 		{
 			SendInfo sInfo = new SendInfo
 			{
-				ID = record.GetString("mta_send_id"),
-				InternalID = record.GetInt32("mta_send_internalId"),
-				SendStatus = (SendStatus)record.GetInt64("mta_sendStatus_id"),
-				LastAccessedTimestamp = DateTime.UtcNow,
-				CreatedTimestamp = record.GetDateTime("mta_send_createdTimestamp"),
+				ID = record.GetString("SendId"),
+				InternalID = record.GetInt32("MtaSendId"),
+				SendStatus = (SendStatus)record.GetInt64("SendStatusId"),
+				LastAccessedTimestamp = DateTimeOffset.UtcNow,
+				CreatedTimestamp = record.GetDateTime("CreatedAt"),
 				Accepted = record.GetInt64("Accepted"),
 				Deferred = record.GetInt64("Deferred"),
 				Rejected = record.GetInt64("Rejected"),
@@ -203,8 +203,8 @@ WHERE mta_send_internalId = @sndID";
 		{
 			return new SendMetadata
 			{
-				Name = record.GetStringOrEmpty("mta_sendMeta_name"),
-				Value = record.GetStringOrEmpty("mta_sendMeta_value")
+				Name = record.GetStringOrEmpty("Name"),
+				Value = record.GetStringOrEmpty("Value")
 			};
 		}
 
@@ -214,18 +214,18 @@ WHERE mta_send_internalId = @sndID";
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"IF EXISTS(SELECT 1
-FROM man_mta_sendMeta
-WHERE mta_send_internalId = @sndID
-AND mta_sendMeta_name = @name)
+FROM Manta.SendMetadata
+WHERE MtaSendId = @sndID
+AND Name = @name)
 	BEGIN
-		UPDATE man_mta_sendMeta
-		SET mta_sendMeta_value = @value
-		WHERE mta_send_internalId = @sndID
-		AND mta_sendMeta_name = @name
+		UPDATE Manta.SendMetadata
+		SET Value = @value
+		WHERE MtaSendId = @sndID
+		AND Name = @name
 	END
 ELSE
 	BEGIN
-		INSERT INTO man_mta_sendMeta(mta_send_internalId, mta_sendMeta_name, mta_sendMeta_value)
+		INSERT INTO Manta.SendMetadata(MtaSendId, Name, Value)
 		VALUES(@sndID, @name, @value)
 	END";
 				cmd.Parameters.AddWithValue("@sndID", internalSendID);

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading.Tasks;
 
 namespace OpenManta.Core
 {
@@ -9,24 +8,24 @@ namespace OpenManta.Core
 	public class MtaQueuedMessage : MtaMessage
 	{
 		/// <summary>
-        /// Timestamp of the earliest the first/next attempt to send the message should be made.
-        /// </summary>
-        public DateTime AttemptSendAfterUtc { get; set; }
+		/// Timestamp of the earliest the first/next attempt to send the message should be made.
+		/// </summary>
+		public DateTimeOffset AttemptSendAfterUtc { get; set; }
 
-        /// <summary>
-        /// Number of times that this message has been queued.
-        /// </summary>
-        public int DeferredCount { get; set; }
+		/// <summary>
+		/// Number of times that this message has been queued.
+		/// </summary>
+		public int DeferredCount { get; set; }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        public bool IsHandled { get; set; }
+		/// <summary>
+		///
+		/// </summary>
+		public bool IsHandled { get; set; }
 
 		/// <summary>
 		/// Timestamp of when the message was originally queued.
 		/// </summary>
-		public DateTime QueuedTimestampUtc { get; set; }
+		public DateTimeOffset QueuedTimestampUtc { get; set; }
 
 		/// <summary>
 		/// Create a new MtaOutboundMessage from the InboundMessage.
@@ -42,8 +41,8 @@ namespace OpenManta.Core
 				MailFrom = inbound.MailFrom,
 				Message = inbound.Message,
 				ID = inbound.ID,
-				AttemptSendAfterUtc = DateTime.UtcNow,
-				QueuedTimestampUtc = DateTime.UtcNow,
+				AttemptSendAfterUtc = DateTimeOffset.UtcNow,
+				QueuedTimestampUtc = DateTimeOffset.UtcNow,
 				RcptTo = inbound.RcptTo,
 				VirtualMTAGroupID = inbound.VirtualMTAGroupID,
 				IsHandled = false,

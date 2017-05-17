@@ -119,7 +119,7 @@ namespace OpenManta.Framework
 						using (SqlConnection conn = _mantaDb.GetSqlConnection())
 						{
 							SqlBulkCopy bulk = new SqlBulkCopy(conn);
-							bulk.DestinationTableName = "man_mta_msg_staging";
+							bulk.DestinationTableName = "Manta.MessagesStaging";
 							foreach (DataColumn c in dt.Columns)
 								bulk.ColumnMappings.Add(c.ColumnName, c.ColumnName);
 
@@ -128,14 +128,14 @@ namespace OpenManta.Framework
 							SqlCommand cmd = conn.CreateCommand();
 							cmd.CommandText = @"
 BEGIN TRANSACTION
-MERGE man_mta_msg AS target
-    USING (SELECT * FROM man_mta_msg_staging) AS source
-    ON (target.[mta_msg_id] = source.[mta_msg_id])
+MERGE Manta.Messages AS target
+    USING (SELECT * FROM Manta.MessagesStaging) AS source
+    ON (target.[MessageId] = source.[MessageId])
 	WHEN NOT MATCHED THEN
-		INSERT ([mta_msg_id], [mta_send_internalId], [mta_msg_rcptTo], [mta_msg_mailFrom])
-		VALUES (source.[mta_msg_id], source.[mta_send_internalId], source.[mta_msg_rcptTo],  source.[mta_msg_mailFrom]);
+		INSERT ([MessageId], [MtaSendId], [RecipientTo], [MailFrom])
+		VALUES (source.[MessageId], source.[MtaSendId], source.[RecipientTo],  source.[MailFrom]);
 
-DELETE FROM [man_mta_msg_staging]
+DELETE FROM [Manta.MessagesStaging]
 COMMIT TRANSACTION";
 							cmd.ExecuteNonQuery();
 						}

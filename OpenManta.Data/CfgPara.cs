@@ -31,7 +31,7 @@ namespace OpenManta.Data
 		{
 			get
 			{
-				string[] results = GetColumnValue("cfg_para_listenPorts").ToString().Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+				string[] results = GetColumnValue("listenPorts").ToString().Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
 				ArrayList toReturn = new ArrayList();
 				for (int i = 0; i < results.Length; i++)
 					toReturn.Add(Int32.Parse(results[i]));
@@ -46,7 +46,7 @@ namespace OpenManta.Data
 		/// <returns></returns>
 		public string DropFolder
 		{
-			get { return GetColumnValue("cfg_para_dropFolder").ToString(); }
+			get { return GetColumnValue("dropFolder").ToString(); }
 		}
 
 		/// <summary>
@@ -55,7 +55,7 @@ namespace OpenManta.Data
 		/// <returns></returns>
 		public string QueueFolder
 		{
-			get { return GetColumnValue("cfg_para_queueFolder").ToString(); }
+			get { return GetColumnValue("queueFolder").ToString(); }
 		}
 
 		/// <summary>
@@ -64,7 +64,7 @@ namespace OpenManta.Data
 		/// <returns></returns>
 		public string LogFolder
 		{
-			get { return GetColumnValue("cfg_para_logFolder").ToString(); }
+			get { return GetColumnValue("logFolder").ToString(); }
 		}
 
 		// <summary>
@@ -73,8 +73,8 @@ namespace OpenManta.Data
 		// <returns></returns>
 		public int RetryIntervalBaseMinutes
 		{
-			get { return (int)GetColumnValue("cfg_para_retryIntervalMinutes"); }
-			set { SetColumnValue("cfg_para_retryIntervalMinutes", value); }
+			get { return (int)GetColumnValue("retryIntervalMinutes"); }
+			set { SetColumnValue("retryIntervalMinutes", value); }
 		}
 
 		/// <summary>
@@ -83,8 +83,8 @@ namespace OpenManta.Data
 		/// <returns></returns>
 		public int MaxTimeInQueueMinutes
 		{
-			get { return (int)GetColumnValue("cfg_para_maxTimeInQueueMinutes"); }
-			set { SetColumnValue("cfg_para_maxTimeInQueueMinutes", value); }
+			get { return (int)GetColumnValue("maxTimeInQueueMinutes"); }
+			set { SetColumnValue("maxTimeInQueueMinutes", value); }
 		}
 
 		/// <summary>
@@ -96,12 +96,12 @@ namespace OpenManta.Data
 			get
 			{
 				if (_DefaultVirtualMtaGroupID == null)
-					_DefaultVirtualMtaGroupID = (int)GetColumnValue("cfg_para_defaultIpGroupId");
+					_DefaultVirtualMtaGroupID = (int)GetColumnValue("defaultIpGroupId");
 				return _DefaultVirtualMtaGroupID.Value;
 			}
 			set
 			{
-				SetColumnValue("cfg_para_defaultIpGroupId", value);
+				SetColumnValue("defaultIpGroupId", value);
 			}
 		}
 
@@ -110,8 +110,8 @@ namespace OpenManta.Data
 		/// </summary>
 		public int ClientIdleTimeout
 		{
-			get { return (int)GetColumnValue("cfg_para_clientIdleTimeout"); }
-			set { SetColumnValue("cfg_para_clientIdleTimeout", value); }
+			get { return (int)GetColumnValue("clientIdleTimeout"); }
+			set { SetColumnValue("clientIdleTimeout", value); }
 		}
 
 		/// <summary>
@@ -119,8 +119,8 @@ namespace OpenManta.Data
 		/// </summary>
 		public int DaysToKeepSmtpLogsFor
 		{
-			get { return (int)GetColumnValue("cfg_para_maxDaysToKeepSmtpLogs"); }
-			set { SetColumnValue("cfg_para_maxDaysToKeepSmtpLogs", value); }
+			get { return (int)GetColumnValue("maxDaysToKeepSmtpLogs"); }
+			set { SetColumnValue("maxDaysToKeepSmtpLogs", value); }
 		}
 
 		/// <summary>
@@ -128,8 +128,8 @@ namespace OpenManta.Data
 		/// </summary>
 		public int ReceiveTimeout
 		{
-			get { return (int)GetColumnValue("cfg_para_receiveTimeout"); }
-			set { SetColumnValue("cfg_para_receiveTimeout", value); }
+			get { return (int)GetColumnValue("receiveTimeout"); }
+			set { SetColumnValue("receiveTimeout", value); }
 		}
 
 		/// <summary>
@@ -143,14 +143,14 @@ namespace OpenManta.Data
 				{
 					SqlCommand cmd = conn.CreateCommand();
 					cmd.CommandText = @"
-SELECT [dmn].cfg_localDomain_domain
-FROM man_cfg_localDomain as [dmn]
-WHERE [dmn].cfg_localDomain_id = (SELECT TOP 1 [para].cfg_para_returnPathDomain_id FROM man_cfg_para as [para])";
+SELECT [dmn].domain
+FROM Manta.LocalDomains as [dmn]
+WHERE [dmn].LocalDomainId = (SELECT Value FROM Manta.Settings as [para] WHERE Name = 'returnPathDomain_id')";
 					conn.Open();
 					return (int)cmd.ExecuteScalar();
 				}
 			}
-			set { SetColumnValue("cfg_para_returnPathDomain_id", value); }
+			set { SetColumnValue("returnPathDomain_id", value); }
 		}
 
 		/// <summary>
@@ -158,8 +158,8 @@ WHERE [dmn].cfg_localDomain_id = (SELECT TOP 1 [para].cfg_para_returnPathDomain_
 		/// </summary>
 		public int SendTimeout
 		{
-			get { return (int)GetColumnValue("cfg_para_sendTimeout"); }
-			set { SetColumnValue("cfg_para_sendTimeout", value); }
+			get { return (int)GetColumnValue("sendTimeout"); }
+			set { SetColumnValue("sendTimeout", value); }
 		}
 
 		/// <summary>
@@ -167,8 +167,8 @@ WHERE [dmn].cfg_localDomain_id = (SELECT TOP 1 [para].cfg_para_returnPathDomain_
 		/// </summary>
 		public string EventForwardingHttpPostUrl
 		{
-			get { return GetColumnValue("cfg_para_eventForwardingHttpPostUrl").ToString(); }
-			set { SetColumnValue("cfg_para_eventForwardingHttpPostUrl", value); }
+			get { return GetColumnValue("eventForwardingHttpPostUrl").ToString(); }
+			set { SetColumnValue("eventForwardingHttpPostUrl", value); }
 		}
 
 		/// <summary>
@@ -177,7 +177,7 @@ WHERE [dmn].cfg_localDomain_id = (SELECT TOP 1 [para].cfg_para_returnPathDomain_
 		/// </summary>
 		public bool KeepBounceFilesFlag
 		{
-			get { return (bool)GetColumnValue("cfg_para_keepBounceFilesFlag"); }
+			get { return (bool)GetColumnValue("keepBounceFilesFlag"); }
 		}
 
 		/// <summary>
@@ -191,8 +191,10 @@ WHERE [dmn].cfg_localDomain_id = (SELECT TOP 1 [para].cfg_para_returnPathDomain_
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
-SELECT " + colName + @"
-FROM man_cfg_para";
+SELECT Value FROM Manta.Settings WHERE Name=@name";
+
+				cmd.Parameters.AddWithValue("@name", colName);
+
 				conn.Open();
 				return cmd.ExecuteScalar();
 			}
@@ -209,10 +211,13 @@ FROM man_cfg_para";
 			{
 				SqlCommand cmd = conn.CreateCommand();
 				cmd.CommandText = @"
-UPDATE man_cfg_para
-SET " + colName + @" = @value";
+UPDATE Manta.Settings
+SET value = @value
+WHERE Name = @name
+";
 				conn.Open();
 				cmd.Parameters.AddWithValue("@value", value);
+				cmd.Parameters.AddWithValue("@name", colName);
 				cmd.ExecuteNonQuery();
 			}
 		}
@@ -223,7 +228,7 @@ SET " + colName + @" = @value";
 		/// <returns>True if MantaMTA should use RabbitMQ.</returns>
 		public bool RabbitMqEnabled
 		{
-			get { return Convert.ToBoolean(GetColumnValue("cfg_para_rabbitMqEnabled")); }
+			get { return Convert.ToBoolean(GetColumnValue("rabbitMqEnabled")); }
 		}
 
 		/// <summary>
@@ -232,7 +237,7 @@ SET " + colName + @" = @value";
 		/// <returns>RabbitMQ username.</returns>
 		public string RabbitMqUsername
 		{
-			get { return GetColumnValue("cfg_para_rabbitMqUsername").ToString(); }
+			get { return GetColumnValue("rabbitMqUsername").ToString(); }
 		}
 
 		/// <summary>
@@ -241,7 +246,7 @@ SET " + colName + @" = @value";
 		/// <returns>RabbitMQ password.</returns>
 		public string RabbitMqPassword
 		{
-			get { return GetColumnValue("cfg_para_rabbitMqPassword").ToString(); }
+			get { return GetColumnValue("rabbitMqPassword").ToString(); }
 		}
 
 		/// <summary>
@@ -250,7 +255,7 @@ SET " + colName + @" = @value";
 		/// <returns>RabbitMQ hostname.</returns>
 		public string RabbitMqHostname
 		{
-			get { return GetColumnValue("cfg_para_rabbitMqHostname").ToString(); }
+			get { return GetColumnValue("rabbitMqHostname").ToString(); }
 		}
 	}
 }

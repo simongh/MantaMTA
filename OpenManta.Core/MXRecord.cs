@@ -22,7 +22,7 @@ namespace OpenManta.Core
 		/// <summary>
 		/// The date/time that this record was got.
 		/// </summary>
-		private DateTime LookupTimestamp { get; set; }
+		private DateTimeOffset LookupTimestamp { get; set; }
 
 		/// <summary>
 		/// Return true if Time To Live has passed. RIP.
@@ -32,7 +32,7 @@ namespace OpenManta.Core
 			get
 			{
 				// If the TTL added to the lookup date is over specified date time then return true.
-				return (LookupTimestamp.AddSeconds(this.TTL) < DateTime.UtcNow);
+				return (LookupTimestamp.AddSeconds(this.TTL) < DateTimeOffset.UtcNow);
 			}
 		}
 
@@ -43,12 +43,11 @@ namespace OpenManta.Core
 
 		public MXRecord(string host, int preference, uint ttl, MxRecordSrc mxRecordSrc)
 		{
-			this.Host = host;
-			this.Preference = preference;
-			this.TTL = ttl;
-			this.LookupTimestamp = DateTime.UtcNow;
-			this.MxRecordSrc = mxRecordSrc;
+			Host = host;
+			Preference = preference;
+			TTL = ttl;
+			LookupTimestamp = DateTime.UtcNow;
+			MxRecordSrc = mxRecordSrc;
 		}
 	}
 }
-
