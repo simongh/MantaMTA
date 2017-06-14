@@ -13,15 +13,11 @@ namespace OpenManta.Data
 
 	internal class SendDB : ISendDB
 	{
-		private readonly IDataRetrieval _dataRetrieval;
 		private readonly IMantaDB _mantaDb;
 
-		public SendDB(IDataRetrieval dataRetrieval, IMantaDB mantaDb)
+		public SendDB(IMantaDB mantaDb)
 		{
-			Guard.NotNull(dataRetrieval, nameof(dataRetrieval));
 			Guard.NotNull(mantaDb, nameof(mantaDb));
-
-			_dataRetrieval = dataRetrieval;
 			_mantaDb = mantaDb;
 		}
 
@@ -33,10 +29,7 @@ namespace OpenManta.Data
 		/// <returns></returns>
 		public async Task<Send> CreateAndGetInternalSendIDAsync(string sendID)
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"
+			return await _mantaDb.GetSingleObjectFromDatabaseAsync<Send>(@"
 BEGIN TRANSACTION
 
 MERGE Manta.MtaSend WITH (HOLDLOCK) AS target
@@ -50,11 +43,11 @@ COMMIT TRANSACTION
 
 SELECT *
 FROM Manta.MtaSend WITH(nolock)
-WHERE SendId = @sndID";
+WHERE SendId = @sndID", CreateAndFillSendFromRecord, cmd =>
+			{
 				cmd.Parameters.AddWithValue("@sndID", sendID);
 				cmd.Parameters.AddWithValue("@activeStatusID", (int)SendStatus.Active);
-				return await _dataRetrieval.GetSingleObjectFromDatabaseAsync(cmd, CreateAndFillSendFromRecord).ConfigureAwait(false);
-			}
+			}).ConfigureAwait(false);
 		}
 
 		/// <summary>
@@ -91,16 +84,10 @@ WHERE SendId = @sndID";
 		/// <returns>The specified Send or NULL if none with the ID exist.</returns>
 		public async Task<Send> GetSendAsync(int internalSendID)
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"
+			return await _mantaDb.GetSingleObjectFromDatabaseAsync(@"
 SELECT *
 FROM Manta.MtaSend WITH(NOLOCK)
-WHERE MtaSendId = @internalSndID";
-				cmd.Parameters.AddWithValue("@internalSndID", internalSendID);
-				return await _dataRetrieval.GetSingleObjectFromDatabaseAsync<Send>(cmd, CreateAndFillSendFromRecord);
-			}
+WHERE MtaSendId = @internalSndID", CreateAndFillSendFromRecord, cmd => cmd.Parameters.AddWithValue("@internalSndID", internalSendID)).ConfigureAwait(false);
 		}
 
 		/// <summary>

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Threading.Tasks;
 using OpenManta.Core;
 
@@ -17,15 +18,12 @@ namespace OpenManta.Data
 	/// </summary>
 	internal class EventDB : IEventDB
 	{
-		private readonly IDataRetrieval _dataRetrieval;
 		private readonly IMantaDB _mantaDb;
 
-		public EventDB(IDataRetrieval dataRetrieval, IMantaDB mantaDb)
+		public EventDB(IMantaDB mantaDb)
 		{
-			Guard.NotNull(dataRetrieval, nameof(dataRetrieval));
 			Guard.NotNull(mantaDb, nameof(mantaDb));
 
-			_dataRetrieval = dataRetrieval;
 			_mantaDb = mantaDb;
 		}
 
@@ -35,15 +33,11 @@ namespace OpenManta.Data
 		/// <returns>A BounceRulesCollection of all the Rules.</returns>
 		public BounceRulesCollection GetBounceRules()
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"
+			var results = _mantaDb.GetCollectionFromDatabase<BounceRule>(@"
 SELECT *
 FROM Manta.BounceRules
-ORDER BY ExecutionOrder ASC";
-				return new BounceRulesCollection(_dataRetrieval.GetCollectionFromDatabase<BounceRule>(cmd, CreateAndFillBounceRuleFromRecord));
-			}
+ORDER BY ExecutionOrder ASC", CreateAndFillBounceRuleFromRecord);
+			return new BounceRulesCollection(results);
 		}
 
 		/// <summary>
@@ -74,16 +68,11 @@ ORDER BY ExecutionOrder ASC";
 		/// <returns>The event from the database of NULL if one wasn't found with the ID</returns>
 		public MantaEvent GetEvent(int ID)
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"SELECT [evt].*, [bnc].BounceCodeId, [bnc].Message, [bnc].BounceTypeId
+			return _mantaDb.GetSingleObjectFromDatabase<MantaEvent>(@"
+SELECT [evt].*, [bnc].BounceCodeId, [bnc].Message, [bnc].BounceTypeId
 FROM Manta.Events AS [evt]
 LEFT JOIN Manta.BounceEvents AS [bnc] ON [evt].EventId = [bnc].EventId
-WHERE [evt].EventId = @eventId";
-				cmd.Parameters.AddWithValue("@eventId", ID);
-				return _dataRetrieval.GetSingleObjectFromDatabase<MantaEvent>(cmd, CreateAndFillMantaEventFromRecord);
-			}
+WHERE [evt].EventId = @eventId", CreateAndFillMantaEventFromRecord, cmd => cmd.Parameters.AddWithValue("@eventId", ID));
 		}
 
 		/// <summary>
@@ -92,14 +81,10 @@ WHERE [evt].EventId = @eventId";
 		/// <returns>Collection of MantaEvent objects.</returns>
 		public IList<MantaEvent> GetEvents()
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"SELECT [evt].*, [bnc].BounceCodeId, [bnc].Message, [bnc].BounceTypeId
+			return _mantaDb.GetCollectionFromDatabase<MantaEvent>(@"
+SELECT [evt].*, [bnc].BounceCodeId, [bnc].Message, [bnc].BounceTypeId
 FROM Manta.Events AS [evt]
-LEFT JOIN Manta.BounceEvents AS [bnc] ON [evt].EventId = [bnc].EventId";
-				return _dataRetrieval.GetCollectionFromDatabase<MantaEvent>(cmd, CreateAndFillMantaEventFromRecord);
-			}
+LEFT JOIN Manta.BounceEvents AS [bnc] ON [evt].EventId = [bnc].EventId", CreateAndFillMantaEventFromRecord).ToList();
 		}
 
 		/// <summary>
@@ -107,17 +92,12 @@ LEFT JOIN Manta.BounceEvents AS [bnc] ON [evt].EventId = [bnc].EventId";
 		/// </summary>
 		public IList<MantaEvent> GetEventsForForwarding(int maxEventsToGet)
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"
-SELECT TOP " + maxEventsToGet + @" [evt].*, [bnc].BounceCodeId, [bnc].Message, [bnc].BounceTypeId
+			return _mantaDb.GetCollectionFromDatabase<MantaEvent>($@"
+SELECT TOP {maxEventsToGet} [evt].*, [bnc].BounceCodeId, [bnc].Message, [bnc].BounceTypeId
 FROM Manta.Events AS [evt]
 LEFT JOIN Manta.BounceEvents AS [bnc] ON [evt].EventId = [bnc].EventId
 WHERE IsForwarded = 0
-ORDER BY EventId ASC";
-				return _dataRetrieval.GetCollectionFromDatabase<MantaEvent>(cmd, CreateAndFillMantaEventFromRecord);
-			}
+ORDER BY EventId ASC", CreateAndFillMantaEventFromRecord).ToList();
 		}
 
 		/// <summary>

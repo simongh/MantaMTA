@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 using OpenManta.Core;
 
 namespace OpenManta.Data
@@ -13,15 +14,12 @@ namespace OpenManta.Data
 
 	internal class CfgLocalDomains : ICfgLocalDomains
 	{
-		private readonly IDataRetrieval _dataRetrieval;
 		private readonly IMantaDB _mantaDb;
 
-		public CfgLocalDomains(IDataRetrieval dataRetrieval, IMantaDB mantaDb)
+		public CfgLocalDomains(IMantaDB mantaDb)
 		{
-			Guard.NotNull(dataRetrieval, nameof(dataRetrieval));
 			Guard.NotNull(mantaDb, nameof(mantaDb));
 
-			_dataRetrieval = dataRetrieval;
 			_mantaDb = mantaDb;
 		}
 
@@ -32,14 +30,9 @@ namespace OpenManta.Data
 		/// <returns></returns>
 		public IList<LocalDomain> GetLocalDomainsArray()
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"
+			return _mantaDb.GetCollectionFromDatabase<LocalDomain>(@"
 SELECT *
-FROM Manta.LocalDomains";
-				return _dataRetrieval.GetCollectionFromDatabase<LocalDomain>(cmd, CreateAndFillLocalDomainFromRecord);
-			}
+FROM Manta.LocalDomains", CreateAndFillLocalDomainFromRecord).ToList();
 		}
 
 		/// <summary>

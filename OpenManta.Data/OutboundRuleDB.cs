@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 using OpenManta.Core;
 
 namespace OpenManta.Data
@@ -12,15 +13,12 @@ namespace OpenManta.Data
 
 	internal class OutboundRuleDB : IOutboundRuleDB
 	{
-		private readonly IDataRetrieval _dataRetrieval;
 		private readonly IMantaDB _mantaDb;
 
-		public OutboundRuleDB(IDataRetrieval dataRetrieval, IMantaDB mantaDb)
+		public OutboundRuleDB(IMantaDB mantaDb)
 		{
-			Guard.NotNull(dataRetrieval, nameof(dataRetrieval));
 			Guard.NotNull(mantaDb, nameof(mantaDb));
 
-			_dataRetrieval = dataRetrieval;
 			_mantaDb = mantaDb;
 		}
 
@@ -30,16 +28,10 @@ namespace OpenManta.Data
 		/// <returns></returns>
 		public IList<OutboundMxPattern> GetOutboundRulePatterns()
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"
+			return _mantaDb.GetCollectionFromDatabase<OutboundMxPattern>(@"
 SELECT *
 FROM Manta.MxPatterns
-ORDER BY MxPatternId DESC"; // Order descending so default -1 is always at the bottom!
-
-				return _dataRetrieval.GetCollectionFromDatabase<OutboundMxPattern>(cmd, CreateAndFillOutboundMxPattern);
-			}
+ORDER BY MxPatternId DESC", CreateAndFillOutboundMxPattern).ToList();
 		}
 
 		/// <summary>
@@ -48,15 +40,9 @@ ORDER BY MxPatternId DESC"; // Order descending so default -1 is always at the b
 		/// <returns></returns>
 		public IList<OutboundRule> GetOutboundRules()
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"
+			return _mantaDb.GetCollectionFromDatabase<OutboundRule>(@"
 SELECT *
-FROM Manta.Rules";
-
-				return _dataRetrieval.GetCollectionFromDatabase<OutboundRule>(cmd, CreateAndFillOutboundRule);
-			}
+FROM Manta.Rules", CreateAndFillOutboundRule).ToList();
 		}
 
 		/// <summary>
