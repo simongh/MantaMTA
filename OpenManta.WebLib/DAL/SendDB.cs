@@ -64,10 +64,10 @@ WHERE s.mta_sendStatus_id in (" + string.Join(",", Array.ConvertAll<SendStatus, 
 		public SendInfoCollection GetSends(int pageSize, int pageNum)
 		{
 			var results = _mantaDb.GetCollectionFromDatabase(@"
-DECLARE @sends table (RowNum int, mta_send_internalId int)
+DECLARE @sends table (RowNum int, MtaSendId int)
 
 INSERT INTO @sends
-SELECT [sends].RowNumber, [sends].mta_send_internalId
+SELECT [sends].RowNumber, [sends].MtaSendId
 FROM (SELECT (ROW_NUMBER() OVER(ORDER BY CreatedAt DESC)) as RowNumber, MtaSendId
 FROM Manta.MtaSend with(nolock)) [sends]
 WHERE [sends].RowNumber >= " + ((pageNum * pageSize) - pageSize + 1) + " AND [sends].RowNumber <= " + (pageSize * pageNum) + @"
@@ -102,8 +102,8 @@ SELECT [send].*,
 	Accepted,
 	Rejected,
 	([send].Messages - (Accepted + Rejected)) AS 'Waiting',
-	(SELECT COUNT(*) FROM Manta.Transactions as [tran] JOIN Manta.Messages as [msg] ON [tran].MessageId = [msg].MessageId WHERE [msg].MtaSendId = [send].MtaSendId AND [tran]TransactionStatusId = 5) AS 'Throttled',
-	(SELECT COUNT(*) FROM Manta.Transactions as [tran] JOIN Manta.Messages as [msg] ON [tran].MessageId = [msg].MessageId WHERE [msg].MtaSendId = [send].MtaSendId AND [tran]TransactionStatusId = 1) AS 'Deferred',
+	(SELECT COUNT(*) FROM Manta.Transactions as [tran] JOIN Manta.Messages as [msg] ON [tran].MessageId = [msg].MessageId WHERE [msg].MtaSendId = [send].MtaSendId AND [tran].TransactionStatusId = 5) AS 'Throttled',
+	(SELECT COUNT(*) FROM Manta.Transactions as [tran] JOIN Manta.Messages as [msg] ON [tran].MessageId = [msg].MessageId WHERE [msg].MtaSendId = [send].MtaSendId AND [tran].TransactionStatusId = 1) AS 'Deferred',
 	(SELECT MAX(CreatedAt) FROM Manta.Transactions as [tran] JOIN  Manta.Messages as [msg] ON [tran].MessageId = [msg].MessageId WHERE [msg].MtaSendId = [send].MtaSendId) AS 'LastTransactionTimestamp'
 FROM Manta.MtaSend as [send]
 WHERE ([send].Messages - (Accepted + Rejected)) > 0

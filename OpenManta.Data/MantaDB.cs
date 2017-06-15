@@ -30,13 +30,13 @@ namespace OpenManta.Data
 		/// <returns>Sql connection</returns>
 		public SqlConnection GetSqlConnection()
 		{
-			return new SqlConnection(ConfigurationManager.ConnectionStrings["SqlServer"].ConnectionString);
+			return new SqlConnection(ConfigurationManager.ConnectionStrings["Manta"].ConnectionString);
 		}
 
 		public SqlCommand GetCommand()
 		{
 			var cmd = new SqlCommand();
-			cmd.Connection = new SqlConnection(ConfigurationManager.ConnectionStrings["Manta"].ConnectionString);
+			cmd.Connection = GetSqlConnection();
 
 			return cmd;
 		}

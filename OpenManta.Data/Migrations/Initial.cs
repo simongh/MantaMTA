@@ -152,19 +152,6 @@ namespace OpenManta.Data.Migrations
 
 			Create.QuickForeignKey(SchemaName, "BounceRules", "BounceCodes", "BounceCodeId");
 
-			Create.Table("BounceEvents")//man_evn_bounceEvent
-				.InSchema(SchemaName)
-				.WithColumn("EventId").AsInt32().PrimaryKey()//evn_event_id
-				.WithColumn("BounceCodeId").AsInt32().NotNullable()//evn_bounceCode_id
-				.WithColumn("BounceTypeId").AsInt32().NotNullable()//evn_bounceType_id
-				.WithColumn("Message").AsString().NotNullable();//evn_bounceEvent_message
-
-			Create.QuickForeignKey(SchemaName, "BounceEvents", "Events", "EventId");
-
-			Create.QuickForeignKey(SchemaName, "BounceEvents", "BounceTypes", "BounceTypeId");
-
-			Create.QuickForeignKey(SchemaName, "BounceEvents", "BounceCodes", "BounceCodeId");
-
 			Create.Table("EventTypes")//man_evn_type
 				.InSchema(SchemaName)
 				.WithLookupId("EventTypeId")//evn_type_id
@@ -181,6 +168,19 @@ namespace OpenManta.Data.Migrations
 				.WithColumn("IsForwarded").AsBoolean().NotNullable().WithDefaultValue(0);//evn_event_forwarded
 
 			Create.QuickForeignKey(SchemaName, "Events", "EventTypes", "EventTypeId");
+
+			Create.Table("BounceEvents")//man_evn_bounceEvent
+				.InSchema(SchemaName)
+				.WithColumn("EventId").AsInt32().PrimaryKey()//evn_event_id
+				.WithColumn("BounceCodeId").AsInt32().NotNullable()//evn_bounceCode_id
+				.WithColumn("BounceTypeId").AsInt32().NotNullable()//evn_bounceType_id
+				.WithColumn("Message").AsString().NotNullable();//evn_bounceEvent_message
+
+			Create.QuickForeignKey(SchemaName, "BounceEvents", "Events", "EventId");
+
+			Create.QuickForeignKey(SchemaName, "BounceEvents", "BounceTypes", "BounceTypeId");
+
+			Create.QuickForeignKey(SchemaName, "BounceEvents", "BounceCodes", "BounceCodeId");
 
 			Create.Table("IpGroups")//man_ip_group
 				.InSchema(SchemaName)

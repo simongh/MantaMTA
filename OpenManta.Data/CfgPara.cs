@@ -73,7 +73,7 @@ namespace OpenManta.Data
 		// <returns></returns>
 		public int RetryIntervalBaseMinutes
 		{
-			get { return (int)GetColumnValue("retryIntervalMinutes"); }
+			get { return int.Parse(GetColumnValue("retryIntervalMinutes")); }
 			set { SetColumnValue("retryIntervalMinutes", value); }
 		}
 
@@ -83,7 +83,7 @@ namespace OpenManta.Data
 		/// <returns></returns>
 		public int MaxTimeInQueueMinutes
 		{
-			get { return (int)GetColumnValue("maxTimeInQueueMinutes"); }
+			get { return int.Parse(GetColumnValue("maxTimeInQueueMinutes")); }
 			set { SetColumnValue("maxTimeInQueueMinutes", value); }
 		}
 
@@ -96,7 +96,7 @@ namespace OpenManta.Data
 			get
 			{
 				if (_DefaultVirtualMtaGroupID == null)
-					_DefaultVirtualMtaGroupID = (int)GetColumnValue("defaultIpGroupId");
+					_DefaultVirtualMtaGroupID = int.Parse(GetColumnValue("defaultIpGroupId"));
 				return _DefaultVirtualMtaGroupID.Value;
 			}
 			set
@@ -110,7 +110,7 @@ namespace OpenManta.Data
 		/// </summary>
 		public int ClientIdleTimeout
 		{
-			get { return (int)GetColumnValue("clientIdleTimeout"); }
+			get { return int.Parse(GetColumnValue("clientIdleTimeout")); }
 			set { SetColumnValue("clientIdleTimeout", value); }
 		}
 
@@ -119,7 +119,7 @@ namespace OpenManta.Data
 		/// </summary>
 		public int DaysToKeepSmtpLogsFor
 		{
-			get { return (int)GetColumnValue("maxDaysToKeepSmtpLogs"); }
+			get { return int.Parse(GetColumnValue("maxDaysToKeepSmtpLogs")); }
 			set { SetColumnValue("maxDaysToKeepSmtpLogs", value); }
 		}
 
@@ -128,7 +128,7 @@ namespace OpenManta.Data
 		/// </summary>
 		public int ReceiveTimeout
 		{
-			get { return (int)GetColumnValue("receiveTimeout"); }
+			get { return int.Parse(GetColumnValue("receiveTimeout")); }
 			set { SetColumnValue("receiveTimeout", value); }
 		}
 
@@ -137,19 +137,20 @@ namespace OpenManta.Data
 		/// </summary>
 		public int ReturnPathDomainId
 		{
-			get
-			{
-				using (SqlConnection conn = _mantaDb.GetSqlConnection())
-				{
-					SqlCommand cmd = conn.CreateCommand();
-					cmd.CommandText = @"
-SELECT [dmn].domain
-FROM Manta.LocalDomains as [dmn]
-WHERE [dmn].LocalDomainId = (SELECT Value FROM Manta.Settings as [para] WHERE Name = 'returnPathDomain_id')";
-					conn.Open();
-					return (int)cmd.ExecuteScalar();
-				}
-			}
+			//			get
+			//			{
+			//				using (SqlConnection conn = _mantaDb.GetSqlConnection())
+			//				{
+			//					SqlCommand cmd = conn.CreateCommand();
+			//					cmd.CommandText = @"
+			//SELECT [dmn].domain
+			//FROM Manta.LocalDomains as [dmn]
+			//WHERE [dmn].LocalDomainId = (SELECT Value FROM Manta.Settings as [para] WHERE Name = 'returnPathDomain_id')";
+			//					conn.Open();
+			//					return (string)cmd.ExecuteScalar();
+			//				}
+			//			}
+			get { return int.Parse(GetColumnValue("returnPathDomain_id")); }
 			set { SetColumnValue("returnPathDomain_id", value); }
 		}
 
@@ -158,7 +159,7 @@ WHERE [dmn].LocalDomainId = (SELECT Value FROM Manta.Settings as [para] WHERE Na
 		/// </summary>
 		public int SendTimeout
 		{
-			get { return (int)GetColumnValue("sendTimeout"); }
+			get { return int.Parse(GetColumnValue("sendTimeout")); }
 			set { SetColumnValue("sendTimeout", value); }
 		}
 
@@ -177,7 +178,7 @@ WHERE [dmn].LocalDomainId = (SELECT Value FROM Manta.Settings as [para] WHERE Na
 		/// </summary>
 		public bool KeepBounceFilesFlag
 		{
-			get { return (bool)GetColumnValue("keepBounceFilesFlag"); }
+			get { return bool.Parse(GetColumnValue("keepBounceFilesFlag")); }
 		}
 
 		/// <summary>
@@ -185,7 +186,7 @@ WHERE [dmn].LocalDomainId = (SELECT Value FROM Manta.Settings as [para] WHERE Na
 		/// </summary>
 		/// <param name="colName"></param>
 		/// <returns></returns>
-		private object GetColumnValue(string colName)
+		private string GetColumnValue(string colName)
 		{
 			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
@@ -196,7 +197,7 @@ SELECT Value FROM Manta.Settings WHERE Name=@name";
 				cmd.Parameters.AddWithValue("@name", colName);
 
 				conn.Open();
-				return cmd.ExecuteScalar();
+				return (string)cmd.ExecuteScalar();
 			}
 		}
 

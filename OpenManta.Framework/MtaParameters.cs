@@ -218,7 +218,7 @@ namespace OpenManta.Framework
 			{
 				if (_ReturnPathDomainLoadTime < DateTimeOffset.UtcNow)
 				{
-					_ReturnPathDomain = _config.ReturnPathDomainId.ToString();
+					_ReturnPathDomain = _LocalDomains.Single(d => d.ID == _config.ReturnPathDomainId).Hostname;
 					_ReturnPathDomainLoadTime = DateTimeOffset.UtcNow.AddMinutes(MTA_CACHE_MINUTES);
 				}
 				return _ReturnPathDomain;
