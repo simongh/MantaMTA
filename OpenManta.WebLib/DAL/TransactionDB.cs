@@ -10,15 +10,12 @@ namespace OpenManta.WebLib.DAL
 {
 	internal class TransactionDB : ITransactionDB
 	{
-		private readonly IDataRetrieval _dataRetrieval;
 		private readonly IMantaDB _mantaDb;
 
-		public TransactionDB(IDataRetrieval dataRetrieval, IMantaDB mantaDb)
+		public TransactionDB(IMantaDB mantaDb)
 		{
-			Guard.NotNull(dataRetrieval, nameof(dataRetrieval));
 			Guard.NotNull(mantaDb, nameof(mantaDb));
 
-			_dataRetrieval = dataRetrieval;
 			_mantaDb = mantaDb;
 		}
 
@@ -29,10 +26,7 @@ namespace OpenManta.WebLib.DAL
 		/// <returns>SendSpeedInfo</returns>
 		public SendSpeedInfo GetSendSpeedInfo(string sendID)
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"
+			var results = _mantaDb.GetCollectionFromDatabase(@"
 DECLARE @internalSendID int
 SELECT @internalSendID = MtaSendId
 FROM Manta.MtaSend
@@ -43,10 +37,9 @@ FROM Manta.Transactions as [tran] with(nolock)
 JOIN Manta.Messages AS [msg] with(nolock) ON [tran].MessageId = [msg].MessageId
 WHERE [msg].MtaSendId = @internalSendID
 GROUP BY [tran].TransactionStatusId, CONVERT(smalldatetime, [tran].CreatedAt)
-ORDER BY CONVERT(smalldatetime, [tran].CreatedAt)";
-				cmd.Parameters.AddWithValue("@sndID", sendID);
-				return new SendSpeedInfo(_dataRetrieval.GetCollectionFromDatabase<SendSpeedInfoItem>(cmd, CreateAndFillSendSpeedInfoItemFromRecord));
-			}
+ORDER BY CONVERT(smalldatetime, [tran].CreatedAt)", CreateAndFillSendSpeedInfoItemFromRecord, cmd => cmd.Parameters.AddWithValue("@sndID", sendID));
+
+			return new SendSpeedInfo(results);
 		}
 
 		/// <summary>
@@ -55,17 +48,14 @@ ORDER BY CONVERT(smalldatetime, [tran].CreatedAt)";
 		/// <returns>SendSpeedInfo</returns>
 		public SendSpeedInfo GetLastHourSendSpeedInfo()
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"
+			var results = _mantaDb.GetCollectionFromDatabase(@"
 SELECT COUNT(*) AS 'Count', [tran].TransactionStatusId, CONVERT(smalldatetime, [tran].CreatedAt) as 'CreatedAt'
 FROM Manta.Transactions as [tran] WITH (nolock)
 WHERE [tran].CreatedAt >= DATEADD(HOUR, -1, GETUTCDATE())
 GROUP BY [tran].TransactionStatusId, CONVERT(smalldatetime, [tran].CreatedAt)
-ORDER BY CONVERT(smalldatetime, [tran].CreatedAt)";
-				return new SendSpeedInfo(_dataRetrieval.GetCollectionFromDatabase<SendSpeedInfoItem>(cmd, CreateAndFillSendSpeedInfoItemFromRecord));
-			}
+ORDER BY CONVERT(smalldatetime, [tran].CreatedAt)", CreateAndFillSendSpeedInfoItemFromRecord);
+
+			return new SendSpeedInfo(results);
 		}
 
 		/// <summary>
@@ -84,6 +74,11 @@ ORDER BY CONVERT(smalldatetime, [tran].CreatedAt)";
 			return item;
 		}
 
+		private string GetSkip(string fieldName, int pageNumber, int pageSize)
+		{
+			return $"{fieldName} >= {((pageNumber * pageSize) - pageSize) + 1} AND {fieldName} <= {pageNumber * pageSize}";
+		}
+
 		/// <summary>
 		/// Gets a data page about bounces from the transactions table for a send.
 		/// </summary>
@@ -94,10 +89,8 @@ ORDER BY CONVERT(smalldatetime, [tran].CreatedAt)";
 		public IEnumerable<BounceInfo> GetBounceInfo(string sendID, int pageNum, int pageSize)
 		{
 			bool hasSendID = !string.IsNullOrWhiteSpace(sendID);
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = (hasSendID ? @"
+
+			return _mantaDb.GetCollectionFromDatabase((hasSendID ? @"
 declare @internalSendID int
 SELECT @internalSendID = MtaSendId
 FROM Manta.MtaSend WITH(nolock)
@@ -119,11 +112,11 @@ FROM (
 		" + (hasSendID ? "AND [msg].MtaSendId = @internalSendID " : string.Empty) + @"
 		GROUP BY TransactionStatusId, ServerResponse, ServerHostname,[ip].Hostname, [ip].IpAddress
 	 ) as [sorted]
-WHERE [Row] >= " + (((pageNum * pageSize) - pageSize) + 1) + " AND [Row] <= " + (pageNum * pageSize);
-				if (hasSendID)
-					cmd.Parameters.AddWithValue("@sndID", sendID);
-				return _dataRetrieval.GetCollectionFromDatabase<BounceInfo>(cmd, CreateAndFillBounceInfo).ToArray();
-			}
+WHERE " + GetSkip("[Row]", pageNum, pageSize), CreateAndFillBounceInfo, cmd =>
+			 {
+				 if (hasSendID)
+					 cmd.Parameters.AddWithValue("@sndID", sendID);
+			 });
 		}
 
 		/// <summary>
@@ -136,10 +129,8 @@ WHERE [Row] >= " + (((pageNum * pageSize) - pageSize) + 1) + " AND [Row] <= " + 
 		public IEnumerable<BounceInfo> GetFailedInfo(string sendID, int pageNum, int pageSize)
 		{
 			bool hasSendID = !string.IsNullOrWhiteSpace(sendID);
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = (hasSendID ? @"
+
+			return _mantaDb.GetCollectionFromDatabase((hasSendID ? @"
 declare @internalSendID int
 SELECT @internalSendID = MtaSendId
 FROM Manta.MtaSend WITH(nolock)
@@ -161,11 +152,11 @@ FROM (
 		" + (hasSendID ? "AND [msg].MtaSendId = @internalSendID " : string.Empty) + @"
 		GROUP BY TransactionStatusId, ServerResponse,ServerHostname,[ip].Hostname, [ip].IpAddress
 	 ) as [sorted]
-WHERE [Row] >= " + (((pageNum * pageSize) - pageSize) + 1) + " AND [Row] <= " + (pageNum * pageSize);
-				if (hasSendID)
-					cmd.Parameters.AddWithValue("@sndID", sendID);
-				return _dataRetrieval.GetCollectionFromDatabase<BounceInfo>(cmd, CreateAndFillBounceInfo).ToArray();
-			}
+WHERE " + GetSkip("[Row]", pageNum, pageSize), CreateAndFillBounceInfo, cmd =>
+			  {
+				  if (hasSendID)
+					  cmd.Parameters.AddWithValue("@sndID", sendID);
+			  });
 		}
 
 		/// <summary>
@@ -178,10 +169,8 @@ WHERE [Row] >= " + (((pageNum * pageSize) - pageSize) + 1) + " AND [Row] <= " + 
 		public IEnumerable<BounceInfo> GetDeferralInfo(string sendID, int pageNum, int pageSize)
 		{
 			bool hasSendID = !string.IsNullOrWhiteSpace(sendID);
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = (hasSendID ? @"
+
+			return _mantaDb.GetCollectionFromDatabase((hasSendID ? @"
 declare @internalSendID int
 SELECT @internalSendID = MtaSendId
 FROM Manta.MtaSend
@@ -203,11 +192,11 @@ FROM (
 		" + (hasSendID ? "AND [msg].MtaSendId = @internalSendID " : string.Empty) + @"
 		GROUP BY TransactionStatusId, ServerResponse, ServerHostname,[ip].Hostname, [ip].IpAddress
 	 ) as [sorted]
-WHERE [Row] >= " + (((pageNum * pageSize) - pageSize) + 1) + " AND [Row] <= " + (pageNum * pageSize);
-				if (hasSendID)
-					cmd.Parameters.AddWithValue("@sndID", sendID);
-				return _dataRetrieval.GetCollectionFromDatabase<BounceInfo>(cmd, CreateAndFillBounceInfo).ToArray();
-			}
+WHERE " + GetSkip("[Row]", pageNum, pageSize), CreateAndFillBounceInfo, cmd =>
+			   {
+				   if (hasSendID)
+					   cmd.Parameters.AddWithValue("@sndID", sendID);
+			   });
 		}
 
 		/// <summary>
@@ -217,11 +206,8 @@ WHERE [Row] >= " + (((pageNum * pageSize) - pageSize) + 1) + " AND [Row] <= " + 
 		/// <returns>Information about the bounces</returns>
 		public IEnumerable<BounceInfo> GetLastHourBounceInfo(int count)
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"
-SELECT TOP " + count + @" ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC, ServerHostname) as 'Row',
+			return _mantaDb.GetCollectionFromDatabase($@"
+SELECT TOP {count} ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC, ServerHostname) as 'Row',
 			   TransactionStatusId,
 			   ServerResponse,
 			   ServerHostname,
@@ -235,9 +221,7 @@ WHERE [tran].CreatedAt >= DATEADD(HOUR, -1, GETUTCDATE())
 AND TransactionStatusId IN (1, 2, 3, 6)
 AND ServerHostname NOT LIKE ''
 GROUP BY TransactionStatusId, ServerResponse, ServerHostname,[ip].Hostname, [ip].IpAddress
-ORDER BY COUNT(*) DESC";
-				return _dataRetrieval.GetCollectionFromDatabase<BounceInfo>(cmd, CreateAndFillBounceInfo).ToArray();
-			}
+ORDER BY COUNT(*) DESC", CreateAndFillBounceInfo);
 		}
 
 		/// <summary>
@@ -398,15 +382,13 @@ SELECT @deferred as 'Deferred', @rejected as 'Rejected'";
 		/// <returns>Transaction Summary</returns>
 		public SendTransactionSummaryCollection GetLastHourTransactionSummary()
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"SELECT [tran].TransactionStatusId, COUNT(*) AS 'Count'
+			var results = _mantaDb.GetCollectionFromDatabase(@"
+SELECT [tran].TransactionStatusId, COUNT(*) AS 'Count'
 FROM Manta.Transactions as [tran] WITH(nolock)
 WHERE [tran].CreatedAt >= DATEADD(HOUR, -1, GETUTCDATE())
-GROUP BY [tran].TransactionStatusId";
-				return new SendTransactionSummaryCollection(_dataRetrieval.GetCollectionFromDatabase<SendTransactionSummary>(cmd, CreateAndFillTransactionSummary));
-			}
+GROUP BY [tran].TransactionStatusId", CreateAndFillTransactionSummary);
+
+			return new SendTransactionSummaryCollection(results);
 		}
 
 		/// <summary>

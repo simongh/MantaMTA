@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 using OpenManta.Core;
 
 namespace OpenManta.Data
@@ -12,15 +13,12 @@ namespace OpenManta.Data
 
 	internal class VirtualMtaDB : IVirtualMtaDB
 	{
-		private readonly IDataRetrieval _dataRetrieval;
 		private readonly IMantaDB _mantaDb;
 
-		public VirtualMtaDB(IDataRetrieval dataRetrieval, IMantaDB mantaDb)
+		public VirtualMtaDB(IMantaDB mantaDb)
 		{
-			Guard.NotNull(dataRetrieval, nameof(dataRetrieval));
 			Guard.NotNull(mantaDb, nameof(mantaDb));
 
-			_dataRetrieval = dataRetrieval;
 			_mantaDb = mantaDb;
 		}
 
@@ -30,14 +28,9 @@ namespace OpenManta.Data
 		/// <returns></returns>
 		public IList<VirtualMTA> GetVirtualMtas()
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"
+			return _mantaDb.GetCollectionFromDatabase(@"
 SELECT *
-FROM Manta.IpAddresses";
-				return _dataRetrieval.GetCollectionFromDatabase(cmd, CreateAndFillVirtualMtaFromRecord);
-			}
+FROM Manta.IpAddresses", CreateAndFillVirtualMtaFromRecord).ToList();
 		}
 
 		/// <summary>
@@ -46,16 +39,10 @@ FROM Manta.IpAddresses";
 		/// <returns></returns>
 		public VirtualMTA GetVirtualMta(int id)
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"
+			return _mantaDb.GetSingleObjectFromDatabase(@"
 SELECT *
 FROM Manta.IpAddresses
-WHERE IpAddressId = @id";
-				cmd.Parameters.AddWithValue("@id", id);
-				return _dataRetrieval.GetSingleObjectFromDatabase(cmd, CreateAndFillVirtualMtaFromRecord);
-			}
+WHERE IpAddressId = @id", CreateAndFillVirtualMtaFromRecord, cmd => cmd.Parameters.AddWithValue("@id", id));
 		}
 
 		/// <summary>
@@ -65,15 +52,10 @@ WHERE IpAddressId = @id";
 		/// <returns></returns>
 		public IList<VirtualMTA> GetVirtualMtasInVirtualMtaGroup(int groupID)
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"SELECT *
+			return _mantaDb.GetCollectionFromDatabase(@"
+SELECT *
 FROM Manta.IpAddresses as [ip]
-WHERE [ip].IpAddressId IN (SELECT [grp].IpAddressId FROM Manta.IpGroupMembers as [grp] WHERE [grp].IpGroupId = @groupID) ";
-				cmd.Parameters.AddWithValue("@groupID", groupID);
-				return _dataRetrieval.GetCollectionFromDatabase(cmd, CreateAndFillVirtualMtaFromRecord);
-			}
+WHERE [ip].IpAddressId IN (SELECT [grp].IpAddressId FROM Manta.IpGroupMembers as [grp] WHERE [grp].IpGroupId = @groupID)", CreateAndFillVirtualMtaFromRecord, cmd => cmd.Parameters.AddWithValue("@groupID", groupID)).ToList();
 		}
 
 		/// <summary>

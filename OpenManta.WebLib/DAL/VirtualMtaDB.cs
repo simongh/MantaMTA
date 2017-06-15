@@ -9,15 +9,12 @@ namespace OpenManta.WebLib.DAL
 {
 	internal class VirtualMtaDB : IVirtualMtaDB
 	{
-		private readonly IDataRetrieval _dataRetrieval;
 		private readonly IMantaDB _mantaDb;
 
-		public VirtualMtaDB(IDataRetrieval dataRetrieval, IMantaDB mantaDb)
+		public VirtualMtaDB(IMantaDB mantaDb)
 		{
-			Guard.NotNull(dataRetrieval, nameof(dataRetrieval));
 			Guard.NotNull(mantaDb, nameof(mantaDb));
 
-			_dataRetrieval = dataRetrieval;
 			_mantaDb = mantaDb;
 		}
 
@@ -28,10 +25,7 @@ namespace OpenManta.WebLib.DAL
 		/// <returns>Information about the usage of each VirtualMTA in the send.</returns>
 		public IEnumerable<VirtualMtaSendInfo> GetSendVirtualMTAStats(string sendID)
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"
+			return _mantaDb.GetCollectionFromDatabase(@"
 --// Get the internal Send ID
 DECLARE @internalSendId int
 SELECT @internalSendId = [snd].MtaSendId
@@ -53,10 +47,7 @@ SELECT [ip].*,
 	(SELECT COUNT(*) FROM Manta.Transactions as [tran] with(nolock) JOIN Manta.MtaSend as [msg] with(nolock) ON [tran].MessageId = [msg].MessageId WHERE [tran].IpAddressId = [ip].IpAddressId AND [msg].MtaSendId = @internalSendId AND [tran].TransactionStatusId = 5) AS 'Throttled',
 	(SELECT COUNT(*) FROM Manta.Transactions as [tran] with(nolock) JOIN Manta.MtaSend as [msg] with(nolock) ON [tran].MessageId = [msg].MessageId WHERE [tran].IpAddressId = [ip].IpAddressId AND [msg].MtaSendId = @internalSendId AND [tran].TransactionStatusId = 1) AS 'Deferred'
 FROM Manta.IpAddresses as [ip]
-WHERE [ip].IpAddressId IN (SELECT * FROM @usedIpAddressIds)";
-				cmd.Parameters.AddWithValue("@sndID", sendID);
-				return _dataRetrieval.GetCollectionFromDatabase<VirtualMtaSendInfo>(cmd, CreateAndFillVirtualMtaSendInfo).ToArray();
-			}
+WHERE [ip].IpAddressId IN (SELECT * FROM @usedIpAddressIds)", CreateAndFillVirtualMtaSendInfo, cmd => cmd.Parameters.AddWithValue("@sndID", sendID));
 		}
 
 		/// <summary>

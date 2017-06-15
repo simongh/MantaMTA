@@ -10,15 +10,12 @@ namespace OpenManta.WebLib.DAL
 {
 	internal class SendDB : ISendDB
 	{
-		private readonly IDataRetrieval _dataRetrieval;
 		private readonly IMantaDB _mantaDb;
 
-		public SendDB(IDataRetrieval dataRetrieval, IMantaDB mantaDb)
+		public SendDB(IMantaDB mantaDb)
 		{
-			Guard.NotNull(dataRetrieval, nameof(dataRetrieval));
 			Guard.NotNull(mantaDb, nameof(mantaDb));
 
-			_dataRetrieval = dataRetrieval;
 			_mantaDb = mantaDb;
 		}
 
@@ -66,11 +63,8 @@ WHERE s.mta_sendStatus_id in (" + string.Join(",", Array.ConvertAll<SendStatus, 
 		/// <returns>SendInfoCollection of the data page.</returns>
 		public SendInfoCollection GetSends(int pageSize, int pageNum)
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"DECLARE @sends table (RowNum int,
-					  mta_send_internalId int)
+			var results = _mantaDb.GetCollectionFromDatabase(@"
+DECLARE @sends table (RowNum int, mta_send_internalId int)
 
 INSERT INTO @sends
 SELECT [sends].RowNumber, [sends].mta_send_internalId
@@ -88,10 +82,12 @@ SELECT [send].*,
 	(SELECT MAX(CreatedAt) FROM Manta.Transactions as [tran] with(nolock) JOIN  Manta.Messages as [msg] ON [tran].MessageId = [msg].MessageId WHERE [msg].MtaSendId = [send].MtaSendId) AS 'LastTransactionTimestamp'
 FROM Manta.MtaSend as [send] with(nolock)
 WHERE [send].MtaSendId in (SELECT [s].MtaSendId FROM @sends as [s])
-ORDER BY [send].CreatedAt DESC";
-				cmd.CommandTimeout = 90; // Query can take a while to run due to the size of the Transactions table.
-				return new SendInfoCollection(_dataRetrieval.GetCollectionFromDatabase<SendInfo>(cmd, CreateAndFillSendInfo));
-			}
+ORDER BY [send].CreatedAt DESC", CreateAndFillSendInfo, cmd =>
+			{
+				cmd.CommandTimeout = 90;
+			});
+
+			return new SendInfoCollection(results);
 		}
 
 		/// <summary>
@@ -100,10 +96,7 @@ ORDER BY [send].CreatedAt DESC";
 		/// <returns>SendInfoCollection of all relevent sends.</returns>
 		public SendInfoCollection GetSendsInProgress()
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"
+			var results = _mantaDb.GetCollectionFromDatabase(@"
 SELECT [send].*,
 	Messages,
 	Accepted,
@@ -114,10 +107,12 @@ SELECT [send].*,
 	(SELECT MAX(CreatedAt) FROM Manta.Transactions as [tran] JOIN  Manta.Messages as [msg] ON [tran].MessageId = [msg].MessageId WHERE [msg].MtaSendId = [send].MtaSendId) AS 'LastTransactionTimestamp'
 FROM Manta.MtaSend as [send]
 WHERE ([send].Messages - (Accepted + Rejected)) > 0
-ORDER BY [send].CreatedAt DESC";
-				cmd.CommandTimeout = 90; // Query can take a while to run due to the size of the Transactions table.
-				return new SendInfoCollection(_dataRetrieval.GetCollectionFromDatabase<SendInfo>(cmd, CreateAndFillSendInfo));
-			}
+ORDER BY [send].CreatedAt DESC", CreateAndFillSendInfo, cmd =>
+			{
+				cmd.CommandTimeout = 90;
+			});
+
+			return new SendInfoCollection(results);
 		}
 
 		/// <summary>
@@ -127,10 +122,8 @@ ORDER BY [send].CreatedAt DESC";
 		/// <returns></returns>
 		public SendInfo GetSend(string sendID)
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"SELECT [snd].*,
+			return _mantaDb.GetSingleObjectFromDatabase(@"
+SELECT [snd].*,
 	Messages,
 	Accepted,
 	Rejected,
@@ -139,10 +132,7 @@ ORDER BY [send].CreatedAt DESC";
 	(SELECT COUNT(*) FROM Manta.Transactions as [tran] with(nolock) JOIN Manta.Messages as [msg] with(nolock) ON [tran].MessageId = [msg].MessageId WHERE [msg].MtaSendId = [snd].MtaSendId AND [tran].TransactionStatusId = 1) AS 'Deferred',
 	(SELECT MAX(CreatedAt) FROM Manta.Transactions as [tran] with(nolock) JOIN  Manta.Messages as [msg] with(nolock) ON [tran].MessageId = [msg].MessageId WHERE [msg].MtaSendId = [snd].MtaSendId) AS 'LastTransactionTimestamp'
 FROM Manta.MtaSend as [snd] with(nolock)
-WHERE [snd].SendId = @sndID";
-				cmd.Parameters.AddWithValue("@sndID", sendID);
-				return _dataRetrieval.GetSingleObjectFromDatabase<SendInfo>(cmd, CreateAndFillSendInfo);
-			}
+WHERE [snd].SendId = @sndID", CreateAndFillSendInfo, cmd => cmd.Parameters.AddWithValue("@sndID", sendID));
 		}
 
 		/// <summary>
@@ -152,15 +142,12 @@ WHERE [snd].SendId = @sndID";
 		/// <returns></returns>
 		public SendMetadataCollection GetSendMetaData(int internalSendID)
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"SELECT *
+			var results = _mantaDb.GetCollectionFromDatabase(@"
+SELECT *
 FROM Manta.SendMetadata
-WHERE MtaSendId = @sndID";
-				cmd.Parameters.AddWithValue("@sndID", internalSendID);
-				return new SendMetadataCollection(_dataRetrieval.GetCollectionFromDatabase<SendMetadata>(cmd, CreateAndFillSendMetadata));
-			}
+WHERE MtaSendId = @sndID", CreateAndFillSendMetadata, cmd => cmd.Parameters.AddWithValue("@sndID", internalSendID));
+
+			return new SendMetadataCollection(results);
 		}
 
 		/// <summary>

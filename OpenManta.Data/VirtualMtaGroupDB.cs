@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Text;
 using OpenManta.Core;
 
@@ -14,15 +15,12 @@ namespace OpenManta.Data
 
 	internal class VirtualMtaGroupDB : IVirtualMtaGroupDB
 	{
-		private readonly IDataRetrieval _dataRetrieval;
 		private readonly IMantaDB _mantaDb;
 
-		public VirtualMtaGroupDB(IDataRetrieval dataRetrieval, IMantaDB mantaDb)
+		public VirtualMtaGroupDB(IMantaDB mantaDb)
 		{
-			Guard.NotNull(dataRetrieval, nameof(dataRetrieval));
 			Guard.NotNull(mantaDb, nameof(mantaDb));
 
-			_dataRetrieval = dataRetrieval;
 			_mantaDb = mantaDb;
 		}
 
@@ -33,16 +31,10 @@ namespace OpenManta.Data
 		/// <returns></returns>
 		public VirtualMtaGroup GetVirtualMtaGroup(int id)
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"
+			return _mantaDb.GetSingleObjectFromDatabase(@"
 SELECT *
 FROM Manta.IpGroups as [grp]
-WHERE [grp].IpGroupId = @groupID";
-				cmd.Parameters.AddWithValue("@groupID", id);
-				return _dataRetrieval.GetSingleObjectFromDatabase<VirtualMtaGroup>(cmd, CreateAndFillVirtualMtaGroup);
-			}
+WHERE [grp].IpGroupId = @groupID", CreateAndFillVirtualMtaGroup, cmd => cmd.Parameters.AddWithValue("@groupID", id));
 		}
 
 		/// <summary>
@@ -51,14 +43,9 @@ WHERE [grp].IpGroupId = @groupID";
 		/// <returns></returns>
 		public IList<VirtualMtaGroup> GetVirtualMtaGroups()
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"
+			return _mantaDb.GetCollectionFromDatabase(@"
 SELECT *
-FROM Manta.IpGroups";
-				return _dataRetrieval.GetCollectionFromDatabase<VirtualMtaGroup>(cmd, CreateAndFillVirtualMtaGroup);
-			}
+FROM Manta.IpGroups", CreateAndFillVirtualMtaGroup).ToList();
 		}
 
 		/// <summary>

@@ -7,15 +7,12 @@ namespace OpenManta.WebLib.DAL
 {
 	internal class VirtualMtaTransactionDB : IVirtualMtaTransactionDB
 	{
-		private readonly IDataRetrieval _dataRetrieval;
 		private readonly IMantaDB _mantaDb;
 
-		public VirtualMtaTransactionDB(IDataRetrieval dataRetrieval, IMantaDB mantaDb)
+		public VirtualMtaTransactionDB(IMantaDB mantaDb)
 		{
-			Guard.NotNull(dataRetrieval, nameof(dataRetrieval));
 			Guard.NotNull(mantaDb, nameof(mantaDb));
 
-			_dataRetrieval = dataRetrieval;
 			_mantaDb = mantaDb;
 		}
 
@@ -26,16 +23,13 @@ namespace OpenManta.WebLib.DAL
 		/// <returns></returns>
 		public SendTransactionSummaryCollection GetSendSummaryForIpAddress(int ipAddressId)
 		{
-			using (SqlConnection conn = _mantaDb.GetSqlConnection())
-			{
-				SqlCommand cmd = conn.CreateCommand();
-				cmd.CommandText = @"SELECT TransactionStatusId, COUNT(*) AS 'Count'
+			var results = _mantaDb.GetCollectionFromDatabase(@"
+SELECT TransactionStatusId, COUNT(*) AS 'Count'
 FROM Manta.Transactions
 WHERE IpAddressId = @ipAddressId
-GROUP BY TransactionStatusId";
-				cmd.Parameters.AddWithValue("@ipAddressId", ipAddressId);
-				return new SendTransactionSummaryCollection(_dataRetrieval.GetCollectionFromDatabase<SendTransactionSummary>(cmd, CreateAndFillSendTransactionSummaryFromRecord));
-			}
+GROUP BY TransactionStatusId", CreateAndFillSendTransactionSummaryFromRecord, cmd => cmd.Parameters.AddWithValue("@ipAddressId", ipAddressId));
+
+			return new SendTransactionSummaryCollection(results);
 		}
 
 		/// <summary>
