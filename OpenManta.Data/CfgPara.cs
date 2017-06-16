@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Runtime.Caching;
 using OpenManta.Core;
 
 namespace OpenManta.Data
@@ -13,6 +14,7 @@ namespace OpenManta.Data
 
 	internal class CfgPara : ICfgPara
 	{
+		private readonly MemoryCache _cache;
 		private readonly IMantaDB _mantaDb;
 		private int? _DefaultVirtualMtaGroupID = null;
 
@@ -21,6 +23,7 @@ namespace OpenManta.Data
 			Guard.NotNull(mantaDb, nameof(mantaDb));
 
 			_mantaDb = mantaDb;
+			_cache = MemoryCache.Default;
 		}
 
 		/// <summary>
@@ -188,6 +191,9 @@ namespace OpenManta.Data
 		/// <returns></returns>
 		private string GetColumnValue(string colName)
 		{
+			if (_cache.Contains($"config_{colName}"))
+				return (string)_cache[$"config_{colName}"];
+
 			using (SqlConnection conn = _mantaDb.GetSqlConnection())
 			{
 				SqlCommand cmd = conn.CreateCommand();
@@ -197,7 +203,9 @@ SELECT Value FROM Manta.Settings WHERE Name=@name";
 				cmd.Parameters.AddWithValue("@name", colName);
 
 				conn.Open();
-				return (string)cmd.ExecuteScalar();
+
+				var result = (string)cmd.ExecuteScalar();
+				return (string)_cache.AddOrGetExisting($"config_{colName}", result, DateTimeOffset.UtcNow.AddMinutes(15));
 			}
 		}
 
@@ -220,6 +228,8 @@ WHERE Name = @name
 				cmd.Parameters.AddWithValue("@value", value);
 				cmd.Parameters.AddWithValue("@name", colName);
 				cmd.ExecuteNonQuery();
+
+				_cache.Add($"config_{colName}", value.ToString(), DateTimeOffset.UtcNow.AddMinutes(15));
 			}
 		}
 

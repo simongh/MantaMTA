@@ -53,7 +53,7 @@ namespace WebInterface
 		{
 			context.Response.ContentType = "text/plain";
 
-			string[] relayingIPs = _helper.Config.IPsToAllowRelaying;
+			var relayingIPs = _helper.Config.IPsToAllowRelaying;
 			if (!relayingIPs.Contains(context.Request.UserHostAddress))
 			{
 				context.Response.Write("Forbidden");

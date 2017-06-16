@@ -7,16 +7,16 @@ namespace OpenManta.Framework
 	public interface IMtaParameters
 	{
 		IEnumerable<int> ServerListeningPorts { get; }
-		string MTA_DROPFOLDER { get; }
+		string DropFolder { get; }
 		string AbuseDropFolder { get; }
 		string BounceDropFolder { get; }
 		string FeedbackLoopDropFolder { get; }
 		string PostmasterDropFolder { get; }
-		string MTA_QUEUEFOLDER { get; }
-		string MTA_SMTP_LOGFOLDER { get; }
+		string QueueFolder { get; }
+		string LogFolder { get; }
 		IList<LocalDomain> LocalDomains { get; }
 		string ReturnPathDomain { get; }
-		string[] IPsToAllowRelaying { get; }
+		IEnumerable<string> IPsToAllowRelaying { get; }
 		int MtaRetryInterval { get; }
 		int MtaMaxTimeInQueue { get; }
 		bool KeepBounceFiles { get; }

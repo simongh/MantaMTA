@@ -41,8 +41,10 @@
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Data" />
     <Reference Include="System.Configuration" />
+    <Reference Include="System.Runtime.Caching" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CacheExtensions.cs" />
     <Compile Include="DataModule.cs" />
     <Compile Include="ICfgLocalDomains.cs" />
     <Compile Include="ICfgPara.cs" />

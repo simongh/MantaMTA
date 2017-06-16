@@ -56,7 +56,7 @@ namespace OpenManta.Framework.Smtp
 				try
 				{
 					// Get the files in the log folder
-					FileInfo[] files = new DirectoryInfo(_config.MTA_SMTP_LOGFOLDER).GetFiles();
+					FileInfo[] files = new DirectoryInfo(_config.LogFolder).GetFiles();
 
 					// This is the date that will be used to delete files before.
 					DateTimeOffset deleteCreatedBefore = DateTimeOffset.UtcNow.AddDays(_config.DaysToKeepSmtpLogsFor * -1);
@@ -161,7 +161,7 @@ namespace OpenManta.Framework.Smtp
 		private string GetCurrentLogPath()
 		{
 			_CurrentLogHour = DateTimeOffset.UtcNow.Hour;
-			return Path.Combine(_config.MTA_SMTP_LOGFOLDER, DateTimeOffset.UtcNow.ToString("yyyyMMddHH") + ".txt");
+			return Path.Combine(_config.LogFolder, DateTimeOffset.UtcNow.ToString("yyyyMMddHH") + ".txt");
 		}
 
 		/// <summary>

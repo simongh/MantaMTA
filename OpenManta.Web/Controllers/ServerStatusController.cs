@@ -22,9 +22,9 @@ namespace WebInterface.Controllers
 		{
 			var result = new ServerStatusModel();
 
-			result.QueueDir = new ServerStatusDirectoryInfo(_config.MTA_QUEUEFOLDER);
-			result.LogDir = new ServerStatusDirectoryInfo(_config.MTA_SMTP_LOGFOLDER);
-			result.DropDir = new ServerStatusDirectoryInfo(_config.MTA_DROPFOLDER);
+			result.QueueDir = new ServerStatusDirectoryInfo(_config.QueueFolder);
+			result.LogDir = new ServerStatusDirectoryInfo(_config.LogFolder);
+			result.DropDir = new ServerStatusDirectoryInfo(_config.DropFolder);
 
 			return View(result);
 		}
