@@ -232,7 +232,7 @@ namespace OpenManta.Framework
 
 			#region Get message priority
 
-			var msgPriority = RabbitMqPriority.Low;
+			var msgPriority = MessagePriority.Low;
 			var priorityHeader = headers.GetFirstOrDefault(MessageHeaderNames.Priority);
 			if (priorityHeader != null)
 			{
@@ -240,8 +240,8 @@ namespace OpenManta.Framework
 				if (int.TryParse(priorityHeader.Value, out outVal))
 				{
 					if (outVal >= 0)
-						msgPriority = outVal < 3 ? (RabbitMqPriority)(byte)outVal
-												 : RabbitMqPriority.High;
+						msgPriority = outVal < 3 ? (MessagePriority)(byte)outVal
+												 : MessagePriority.High;
 				}
 			}
 

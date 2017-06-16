@@ -15,7 +15,7 @@ namespace OpenManta.Core
 		/// <summary>
 		/// Priority of this message in RabbitMQ.
 		/// </summary>
-		public RabbitMqPriority RabbitMqPriority { get; set; }
+		public MessagePriority RabbitMqPriority { get; set; }
 
 		/// <summary>
 		/// The VirtualMTA group that the message should be sent through.

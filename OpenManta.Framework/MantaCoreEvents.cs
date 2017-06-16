@@ -1,8 +1,7 @@
-﻿using OpenManta.Framework.RabbitMq;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using OpenManta.Core;
 using log4net;
+using OpenManta.Core;
 
 namespace OpenManta.Framework
 {
@@ -14,15 +13,18 @@ namespace OpenManta.Framework
 		private List<IStopRequired> _StopRequiredTasks;
 
 		private readonly ILog _logging;
-		private readonly IRabbitMqManager _manager;
 
-		public MantaCoreEvents(ILog logging, IRabbitMqManager manager)
+		//private readonly IRabbitMqManager _manager;
+		private readonly Queues.IManager _queue;
+
+		public MantaCoreEvents(ILog logging, Queues.IManager queue)
 		{
 			Guard.NotNull(logging, nameof(logging));
-			Guard.NotNull(manager, nameof(manager));
+			Guard.NotNull(queue, nameof(queue));
 
 			_logging = logging;
-			_manager = manager;
+			//_manager = manager;
+			_queue = queue;
 			_StopRequiredTasks = new List<IStopRequired>();
 		}
 
@@ -50,7 +52,8 @@ namespace OpenManta.Framework
 			});
 
 			// Close the RabbitMQ connection when were done.
-			_manager.Close();
+			//_manager.Close();
+			_queue.Close();
 
 			_logging.Debug("InvokeMantaCoreStopping Finished.");
 		}

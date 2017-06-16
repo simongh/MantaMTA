@@ -14,10 +14,8 @@ namespace OpenManta.Framework.RabbitMq
 
 		PublishChannel GetPublishChannel(RabbitMqQueue queue, bool noConfirm);
 
-		bool Publish(byte[] message, RabbitMqQueue queue, bool noConfirm, RabbitMqPriority priority);
+		bool Publish(byte[] message, RabbitMqQueue queue, bool noConfirm, MessagePriority priority);
 
-		Task<bool> Publish(object obj, RabbitMqQueue queue, bool confirm = true, RabbitMqPriority priority = RabbitMqPriority.Low);
-
-		void Close();
+		Task<bool> Publish(object obj, RabbitMqQueue queue, bool confirm = true, MessagePriority priority = MessagePriority.Low);
 	}
 }

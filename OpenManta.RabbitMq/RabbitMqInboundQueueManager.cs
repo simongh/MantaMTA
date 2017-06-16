@@ -6,7 +6,7 @@ using RabbitMQ.Client.Events;
 
 namespace OpenManta.Framework.RabbitMq
 {
-	internal class RabbitMqInboundQueueManager : IRabbitMqInboundQueueManager
+	internal class RabbitMqInboundQueueManager : Queues.IInboundQueueManager
 	{
 		private readonly IRabbitMqManager _manager;
 
@@ -17,6 +17,11 @@ namespace OpenManta.Framework.RabbitMq
 			_manager = manager;
 		}
 
+		public void Ack(ulong deliveryTag, bool multiple)
+		{
+			_manager.Ack(RabbitMqQueue.Inbound, deliveryTag, multiple);
+		}
+
 		/// <summary>
 		/// Dequeues a collection of inbound messages from RabbitMQ.
 		/// </summary>
@@ -24,7 +29,7 @@ namespace OpenManta.Framework.RabbitMq
 		/// <returns>The dequeue messages.</returns>
 		public async Task<IList<MtaMessage>> Dequeue(int maxItems)
 		{
-			IList<BasicDeliverEventArgs> items = _manager.Dequeue(RabbitMqManager.RabbitMqQueue.Inbound, maxItems, 1 * 1000);
+			IList<BasicDeliverEventArgs> items = _manager.Dequeue(RabbitMqQueue.Inbound, maxItems, 1 * 1000);
 			IList<MtaMessage> messages = new List<MtaMessage>();
 			if (items.Count == 0)
 				return messages;
@@ -50,7 +55,7 @@ namespace OpenManta.Framework.RabbitMq
 		/// <param name="message">The Email.</param>
 		/// <param name="priority">Priority of message.</param>
 		/// <returns>True if the Email has been enqueued in RabbitMQ.</returns>
-		public async Task<bool> Enqueue(Guid messageID, int ipGroupID, int internalSendID, string mailFrom, string[] rcptTo, string message, RabbitMqPriority priority)
+		public async Task<bool> Enqueue(Guid messageID, int ipGroupID, int internalSendID, string mailFrom, string[] rcptTo, string message, MessagePriority priority)
 		{
 			// Create the thing we are going to queue in RabbitMQ.
 			var recordToSave = new MtaMessage
@@ -64,7 +69,7 @@ namespace OpenManta.Framework.RabbitMq
 				RabbitMqPriority = priority
 			};
 
-			return await _manager.Publish(MtaQueuedMessage.CreateNew(recordToSave), RabbitMqManager.RabbitMqQueue.InboundStaging, true, priority);
+			return await _manager.Publish(MtaQueuedMessage.CreateNew(recordToSave), RabbitMqQueue.InboundStaging, true, priority);
 		}
 	}
 }

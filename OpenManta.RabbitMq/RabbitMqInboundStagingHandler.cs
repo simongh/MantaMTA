@@ -5,7 +5,7 @@ using RabbitMQ.Client.Events;
 
 namespace OpenManta.Framework.RabbitMq
 {
-	internal class RabbitMqInboundStagingHandler : IRabbitMqInboundStagingHandler, IStopRequired
+	internal class RabbitMqInboundStagingHandler : Queues.IStagingHandler, IStopRequired
 	{
 		private const int STAGING_DEQUEUE_TASKS = 25;
 		public int _StartedThreads = 0;
@@ -40,7 +40,7 @@ namespace OpenManta.Framework.RabbitMq
 		{
 			while (!IsStopping)
 			{
-				BasicDeliverEventArgs ea = _manager.Dequeue(RabbitMqManager.RabbitMqQueue.InboundStaging, 1, 100).FirstOrDefault();
+				BasicDeliverEventArgs ea = _manager.Dequeue(RabbitMqQueue.InboundStaging, 1, 100).FirstOrDefault();
 				if (ea == null)
 				{
 					//await Task.Delay(1000);
@@ -58,9 +58,9 @@ namespace OpenManta.Framework.RabbitMq
 					VirtualMTAGroupID = qmsg.VirtualMTAGroupID
 				};
 
-				_manager.Publish(msg, RabbitMqManager.RabbitMqQueue.Inbound, true, qmsg.RabbitMqPriority).Wait();
-				_manager.Publish(qmsg, RabbitMqManager.RabbitMqQueue.OutboundWaiting, true, qmsg.RabbitMqPriority).Wait();
-				_manager.Ack(RabbitMqManager.RabbitMqQueue.InboundStaging, ea.DeliveryTag, false);
+				_manager.Publish(msg, RabbitMqQueue.Inbound, true, qmsg.RabbitMqPriority).Wait();
+				_manager.Publish(qmsg, RabbitMqQueue.OutboundWaiting, true, qmsg.RabbitMqPriority).Wait();
+				_manager.Ack(RabbitMqQueue.InboundStaging, ea.DeliveryTag, false);
 			}
 		}
 	}

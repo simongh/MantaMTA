@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using OpenManta.Core;
 using OpenManta.Data;
-using OpenManta.Framework.RabbitMq;
+using OpenManta.Framework.Queues;
 
 namespace OpenManta.Framework
 {
@@ -11,9 +11,9 @@ namespace OpenManta.Framework
 		private readonly IEventsManager _eventsManager;
 		private readonly IMtaTransaction _mtaTransation;
 		private readonly IMtaParameters _config;
-		private readonly IRabbitMqOutboundQueueManager _queueManager;
+		private readonly IOutboundQueueManager _queueManager;
 
-		public MtaMessageHelper(IEventsManager eventsManager, IMtaTransaction mtaTransaction, IMtaParameters config, RabbitMq.IRabbitMqOutboundQueueManager queueManager)
+		public MtaMessageHelper(IEventsManager eventsManager, IMtaTransaction mtaTransaction, IMtaParameters config, IOutboundQueueManager queueManager)
 		{
 			Guard.NotNull(eventsManager, nameof(eventsManager));
 			Guard.NotNull(mtaTransaction, nameof(mtaTransaction));
@@ -182,7 +182,7 @@ namespace OpenManta.Framework
 
 			// Set next retry time and release the lock.
 			msg.AttemptSendAfterUtc = DateTimeOffset.UtcNow.AddMinutes(1);
-			msg.RabbitMqPriority = RabbitMqPriority.Low;
+			msg.RabbitMqPriority = MessagePriority.Low;
 			await Requeue(msg);
 			return true;
 		}

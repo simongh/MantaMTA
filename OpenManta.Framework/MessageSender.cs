@@ -2,14 +2,14 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Linq;
 using System.Net.Mail;
 using System.Threading;
 using System.Threading.Tasks;
-using OpenManta.Core;
-using OpenManta.Framework.Smtp;
-using OpenManta.Framework.RabbitMq;
 using log4net;
-using System.Linq;
+using OpenManta.Core;
+using OpenManta.Framework.Queues;
+using OpenManta.Framework.Smtp;
 
 namespace OpenManta.Framework
 {
@@ -56,9 +56,9 @@ namespace OpenManta.Framework
 		private readonly IVirtualMtaManager _virtualMtaManager;
 		private readonly IMantaSmtpClientPoolCollection _clientPools;
 		private readonly IMtaParameters _config;
-		private readonly IRabbitMqOutboundQueueManager _queueManager;
+		private readonly IOutboundQueueManager _queueManager;
 
-		public MessageSender(Data.IMtaTransaction mtaTransaction, IMantaCoreEvents coreEvents, ILog logging, IDnsManager dnsManager, IMtaMessageHelper messageHelper, IVirtualMtaManager virtualMtaManager, IMantaSmtpClientPoolCollection clientPools, IMtaParameters config, IRabbitMqOutboundQueueManager queueManager)
+		public MessageSender(Data.IMtaTransaction mtaTransaction, IMantaCoreEvents coreEvents, ILog logging, IDnsManager dnsManager, IMtaMessageHelper messageHelper, IVirtualMtaManager virtualMtaManager, IMantaSmtpClientPoolCollection clientPools, IMtaParameters config, IOutboundQueueManager queueManager)
 		{
 			Guard.NotNull(mtaTransaction, nameof(mtaTransaction));
 			Guard.NotNull(coreEvents, nameof(coreEvents));

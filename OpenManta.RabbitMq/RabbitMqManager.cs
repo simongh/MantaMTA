@@ -8,7 +8,7 @@ using OpenManta.Core;
 
 namespace OpenManta.Framework.RabbitMq
 {
-	internal class RabbitMqManager : IRabbitMqManager
+	internal class RabbitMqManager : IRabbitMqManager, Queues.IManager
 	{
 		/// <summary>
 		/// Name of the Exchange in RabbitMQ to route dead letters from the wait* queues back in to the waiting queue.
@@ -162,7 +162,7 @@ namespace OpenManta.Framework.RabbitMq
 		/// <param name="message">Message to queue.</param>
 		/// <param name="queue">Queue to place message in.</param>
 		/// <param name="priority">Priority of message.</param>
-		public bool Publish(byte[] message, RabbitMqQueue queue, bool noConfirm, RabbitMqPriority priority)
+		public bool Publish(byte[] message, RabbitMqQueue queue, bool noConfirm, MessagePriority priority)
 		{
 			var pChannel = GetPublishChannel(queue, noConfirm);
 			lock (pChannel.Lock)
@@ -184,7 +184,7 @@ namespace OpenManta.Framework.RabbitMq
 		/// <param name="message">Message to queue.</param>
 		/// <param name="queue">Queue to place message in.</param>
 		/// <param name="priority">Priority of message.</param>
-		public async Task<bool> Publish(object obj, RabbitMqQueue queue, bool confirm = true, RabbitMqPriority priority = RabbitMqPriority.Low)
+		public async Task<bool> Publish(object obj, RabbitMqQueue queue, bool confirm = true, MessagePriority priority = MessagePriority.Low)
 		{
 			byte[] bytes = await Serialisation.Serialise(obj);
 			return Publish(bytes, queue, !confirm, priority);
@@ -344,39 +344,39 @@ namespace OpenManta.Framework.RabbitMq
 		{
 			LocalhostConnection.Close();
 		}
+	}
+
+	/// <summary>
+	/// Specifies the Queue in RabbitMQ.
+	/// </summary>
+	public enum RabbitMqQueue
+	{
+		/// <summary>
+		/// The Inbound Queue is a queue of messages that have been received and will be relayed.
+		/// </summary>
+		Inbound = 0,
 
 		/// <summary>
-		/// Specifies the Queue in RabbitMQ.
+		/// The Outbound Queue is a queue of messages that have been queued for relaying.
 		/// </summary>
-		public enum RabbitMqQueue
-		{
-			/// <summary>
-			/// The Inbound Queue is a queue of messages that have been received and will be relayed.
-			/// </summary>
-			Inbound = 0,
+		OutboundWaiting = 1,
 
-			/// <summary>
-			/// The Outbound Queue is a queue of messages that have been queued for relaying.
-			/// </summary>
-			OutboundWaiting = 1,
+		/// <summary>
+		/// Outbound wait queue, messages live here for one second before routing to OutboundWaiting.
+		/// </summary>
+		OutboundWait1 = 2,
 
-			/// <summary>
-			/// Outbound wait queue, messages live here for one second before routing to OutboundWaiting.
-			/// </summary>
-			OutboundWait1 = 2,
+		/// <summary>
+		/// Outbound wait queue, messages live here for one minute before routing to OutboundWaiting.
+		/// </summary>
+		OutboundWait60 = 3,
 
-			/// <summary>
-			/// Outbound wait queue, messages live here for one minute before routing to OutboundWaiting.
-			/// </summary>
-			OutboundWait60 = 3,
+		/// <summary>
+		/// Outbound wait queue, messages live here for five minutes before routing to OutboundWaiting.
+		/// </summary>
+		OutboundWait300 = 4,
 
-			/// <summary>
-			/// Outbound wait queue, messages live here for five minutes before routing to OutboundWaiting.
-			/// </summary>
-			OutboundWait300 = 4,
-
-			OutboundWait10 = 5,
-			InboundStaging = 6
-		}
+		OutboundWait10 = 5,
+		InboundStaging = 6
 	}
 }

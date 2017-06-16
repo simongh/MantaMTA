@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26403.7
+VisualStudioVersion = 15.0.26430.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenManta.Data", "OpenManta.Data\OpenManta.Data.csproj", "{91B948F6-C85D-4846-9356-F54EB66AE280}"
 EndProject
@@ -26,6 +26,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenManta.Core.Tests", "OpenManta.Core.Tests\OpenManta.Core.Tests.csproj", "{E69938D2-E8ED-49FB-A1B0-6B099B0B8FA2}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenManta.Framework.Tests", "OpenManta.Framework.Tests\OpenManta.Framework.Tests.csproj", "{B3DE0CB7-FBB4-4719-9F5D-FDC48A89C703}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenManta.RabbitMq", "OpenManta.RabbitMq\OpenManta.RabbitMq.csproj", "{82812A28-FD7F-435D-ADF6-BA1B47F595BF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -77,6 +79,10 @@ Global
 		{B3DE0CB7-FBB4-4719-9F5D-FDC48A89C703}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B3DE0CB7-FBB4-4719-9F5D-FDC48A89C703}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B3DE0CB7-FBB4-4719-9F5D-FDC48A89C703}.Release|Any CPU.Build.0 = Release|Any CPU
+		{82812A28-FD7F-435D-ADF6-BA1B47F595BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{82812A28-FD7F-435D-ADF6-BA1B47F595BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{82812A28-FD7F-435D-ADF6-BA1B47F595BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{82812A28-FD7F-435D-ADF6-BA1B47F595BF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

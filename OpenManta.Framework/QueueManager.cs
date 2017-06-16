@@ -1,14 +1,14 @@
-﻿using OpenManta.Core;
-using OpenManta.Data;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Linq;
 using log4net;
-using OpenManta.Framework.RabbitMq;
+using OpenManta.Core;
+using OpenManta.Data;
+using OpenManta.Framework.Queues;
 
 namespace OpenManta.Framework
 {
@@ -26,21 +26,18 @@ namespace OpenManta.Framework
 
 		private readonly ILog _logging;
 		private readonly IMantaDB _mantaDb;
-		private readonly IRabbitMqInboundQueueManager _inboundQueue;
-		private readonly IRabbitMqManager _manager;
+		private readonly IInboundQueueManager _inboundQueue;
 
-		public QueueManager(IMantaCoreEvents coreEvents, ILog logging, IMantaDB mantaDb, RabbitMq.IRabbitMqInboundQueueManager inboundQueue, RabbitMq.IRabbitMqManager manager)
+		public QueueManager(IMantaCoreEvents coreEvents, ILog logging, IMantaDB mantaDb, IInboundQueueManager inboundQueue)
 		{
 			Guard.NotNull(coreEvents, nameof(coreEvents));
 			Guard.NotNull(logging, nameof(logging));
 			Guard.NotNull(mantaDb, nameof(mantaDb));
 			Guard.NotNull(inboundQueue, nameof(inboundQueue));
-			Guard.NotNull(manager, nameof(manager));
 
 			_logging = logging;
 			_mantaDb = mantaDb;
 			_inboundQueue = inboundQueue;
-			_manager = manager;
 
 			coreEvents.RegisterStopRequiredInstance(this);
 		}
@@ -56,7 +53,7 @@ namespace OpenManta.Framework
 		/// <param name="message">The Email.</param>
 		/// <param name="priority">Priority of message.</param>
 		/// <returns>True if the Message has been queued, false if not.</returns>
-		public async Task<bool> Enqueue(Guid messageID, int ipGroupID, int internalSendID, string mailFrom, string[] rcptTo, string message, RabbitMqPriority priority)
+		public async Task<bool> Enqueue(Guid messageID, int ipGroupID, int internalSendID, string mailFrom, string[] rcptTo, string message, MessagePriority priority)
 		{
 			return await _inboundQueue.Enqueue(messageID, ipGroupID, internalSendID, mailFrom, rcptTo, message, priority);
 		}
@@ -140,7 +137,7 @@ COMMIT TRANSACTION";
 							cmd.ExecuteNonQuery();
 						}
 
-						_manager.Ack(RabbitMqManager.RabbitMqQueue.Inbound, recordsToImportToSql.Max(r => r.RabbitMqDeliveryTag), true);
+						_inboundQueue.Ack(recordsToImportToSql.Max(r => r.RabbitMqDeliveryTag), true);
 					}
 					catch (Exception ex)
 					{

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace OpenManta.Framework.RabbitMq
 {
-	internal class RabbitMqOutboundQueueManager : IRabbitMqOutboundQueueManager
+	internal class RabbitMqOutboundQueueManager : Queues.IOutboundQueueManager
 	{
 		private readonly IRabbitMqManager _manager;
 
@@ -27,7 +27,7 @@ namespace OpenManta.Framework.RabbitMq
 			BasicDeliverEventArgs ea = null;
 			try
 			{
-				ea = _manager.Dequeue(RabbitMqManager.RabbitMqQueue.OutboundWaiting, 1, 100).FirstOrDefault();
+				ea = _manager.Dequeue(RabbitMqQueue.OutboundWaiting, 1, 100).FirstOrDefault();
 			}
 			catch (Exception)
 			{
@@ -53,7 +53,7 @@ namespace OpenManta.Framework.RabbitMq
 				Enqueue(MtaQueuedMessage.CreateNew(message)).GetAwaiter().GetResult();
 			});
 
-			_manager.Ack(RabbitMqManager.RabbitMqQueue.Inbound, inboundMessages.Max(m => m.RabbitMqDeliveryTag), true);
+			_manager.Ack(RabbitMqQueue.Inbound, inboundMessages.Max(m => m.RabbitMqDeliveryTag), true);
 		}
 
 		/// <summary>
@@ -64,20 +64,20 @@ namespace OpenManta.Framework.RabbitMq
 		{
 			Guard.NotNull(msg, nameof(msg));
 
-			RabbitMqManager.RabbitMqQueue queue = RabbitMqManager.RabbitMqQueue.OutboundWaiting;
+			RabbitMqQueue queue = RabbitMqQueue.OutboundWaiting;
 
 			int secondsUntilNextAttempt = (int)Math.Ceiling((msg.AttemptSendAfterUtc - DateTimeOffset.UtcNow).TotalSeconds);
 
 			if (secondsUntilNextAttempt > 0)
 			{
 				if (secondsUntilNextAttempt < 10)
-					queue = RabbitMqManager.RabbitMqQueue.OutboundWait1;
+					queue = RabbitMqQueue.OutboundWait1;
 				else if (secondsUntilNextAttempt < 60)
-					queue = RabbitMqManager.RabbitMqQueue.OutboundWait10;
+					queue = RabbitMqQueue.OutboundWait10;
 				else if (secondsUntilNextAttempt < 300)
-					queue = RabbitMqManager.RabbitMqQueue.OutboundWait60;
+					queue = RabbitMqQueue.OutboundWait60;
 				else
-					queue = RabbitMqManager.RabbitMqQueue.OutboundWait300;
+					queue = RabbitMqQueue.OutboundWait300;
 			}
 
 			var published = await _manager.Publish(msg, queue, priority: msg.RabbitMqPriority);
@@ -96,7 +96,7 @@ namespace OpenManta.Framework.RabbitMq
 		{
 			Guard.NotNull(msg, nameof(msg));
 
-			_manager.Ack(RabbitMqManager.RabbitMqQueue.OutboundWaiting, msg.RabbitMqDeliveryTag, false);
+			_manager.Ack(RabbitMqQueue.OutboundWaiting, msg.RabbitMqDeliveryTag, false);
 		}
 	}
 }

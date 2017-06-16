@@ -2,9 +2,9 @@
 using System.Threading.Tasks;
 using OpenManta.Core;
 
-namespace OpenManta.Framework.RabbitMq
+namespace OpenManta.Framework.Queues
 {
-	internal interface IRabbitMqOutboundQueueManager
+	public interface IOutboundQueueManager
 	{
 		Task<MtaQueuedMessage> Dequeue();
 

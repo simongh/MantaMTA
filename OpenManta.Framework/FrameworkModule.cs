@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace OpenManta.Framework
+﻿namespace OpenManta.Framework
 {
 	public class FrameworkModule : Ninject.Modules.NinjectModule
 	{
@@ -35,10 +29,14 @@ namespace OpenManta.Framework
 			Bind<Smtp.ISmtpStreamHandler>().To<Smtp.SmtpStreamHandler>();
 			Bind<Smtp.ISmtpTransactionLogger>().To<Smtp.SmtpTransactionLogger>().InSingletonScope();
 
-			Bind<RabbitMq.IRabbitMqInboundQueueManager>().To<RabbitMq.RabbitMqInboundQueueManager>();
-			Bind<RabbitMq.IRabbitMqInboundStagingHandler>().To<RabbitMq.RabbitMqInboundStagingHandler>();
-			Bind<RabbitMq.IRabbitMqManager>().To<RabbitMq.RabbitMqManager>();
-			Bind<RabbitMq.IRabbitMqOutboundQueueManager>().To<RabbitMq.RabbitMqOutboundQueueManager>();
+			Bind<Queues.IInboundQueueManager>().To<Queues.InMemoryInboundQueueManager>();
+			Bind<Queues.IStagingHandler>().To<Queues.InMemoryStagingHandler>();
+			Bind<Queues.IManager>().To<Queues.InMemoryManager>();
+			Bind<Queues.IOutboundQueueManager>().To<Queues.InMemoryOutboundQueueManager>();
+			//Bind<RabbitMq.IRabbitMqInboundQueueManager>().To<RabbitMq.RabbitMqInboundQueueManager>();
+			//Bind<RabbitMq.IRabbitMqInboundStagingHandler>().To<RabbitMq.RabbitMqInboundStagingHandler>();
+			//Bind<RabbitMq.IRabbitMqManager>().To<RabbitMq.RabbitMqManager>();
+			//Bind<RabbitMq.IRabbitMqOutboundQueueManager>().To<RabbitMq.RabbitMqOutboundQueueManager>();
 
 			Bind<Smtp.IOutboundClientFactory>().To<Smtp.SmtpFactory>();
 			Bind<Smtp.ISmtpServerFactory>().To<Smtp.SmtpFactory>();

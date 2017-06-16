@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using log4net;
 using OpenManta.Core;
 using OpenManta.Framework;
-using OpenManta.Framework.RabbitMq;
+using OpenManta.Framework.Queues;
 
 namespace OpenManta.Service
 {
@@ -13,7 +13,7 @@ namespace OpenManta.Service
 		private readonly IList<ISmtpServer> SmtpServers;
 
 		private readonly ILog _logging;
-		private readonly IRabbitMqInboundStagingHandler _handler;
+		private readonly IStagingHandler _handler;
 		private readonly IQueueManager _queues;
 		private readonly IVirtualMtaManager _virtualMtas;
 		private readonly IMtaParameters _config;
@@ -22,7 +22,7 @@ namespace OpenManta.Service
 		private readonly IMantaCoreEvents _coreEvents;
 		private readonly IEventsFileHandler _eventHandler;
 
-		public OpenMantaService(ILog logging, IRabbitMqInboundStagingHandler handler, IQueueManager queues, IVirtualMtaManager virtualMtas, IMtaParameters config, ISmtpServerFactory factory, IMessageSender sender, IMantaCoreEvents coreEvents, IEventsFileHandler eventHandler)
+		public OpenMantaService(ILog logging, IStagingHandler handler, IQueueManager queues, IVirtualMtaManager virtualMtas, IMtaParameters config, ISmtpServerFactory factory, IMessageSender sender, IMantaCoreEvents coreEvents, IEventsFileHandler eventHandler)
 		{
 			Guard.NotNull(logging, nameof(logging));
 			Guard.NotNull(handler, nameof(handler));
