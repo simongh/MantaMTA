@@ -14,12 +14,15 @@ namespace OpenManta.Framework
 		private const string RCPT_TO_AT_REPLACEMENT = "=";
 
 		private readonly IMtaParameters _config;
+		private readonly IMtaMessageDB _messageDb;
 
-		public ReturnPathManager(IMtaParameters config)
+		public ReturnPathManager(IMtaParameters config, IMtaMessageDB messageDb)
 		{
 			Guard.NotNull(config, nameof(config));
+			Guard.NotNull(messageDb, nameof(messageDb));
 
 			_config = config;
+			_messageDb = messageDb;
 		}
 
 		/// <summary>
@@ -84,7 +87,7 @@ namespace OpenManta.Framework
 		/// <returns>The generated return path or string.empty if no message with ID found.</returns>
 		public async Task<string> GetReturnPathFromMessageIDAsync(Guid messageID)
 		{
-			return await MtaMessageDBFactory.Instance.GetMailFrom(messageID).ConfigureAwait(false);
+			return await _messageDb.GetMailFrom(messageID).ConfigureAwait(false);
 		}
 
 		/// <summary>

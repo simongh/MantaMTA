@@ -3,10 +3,10 @@ using OpenManta.Core;
 
 namespace OpenManta.Data
 {
-	public static class FeedbackLoopEmailAddressDBFactory
-	{
-		public static IFeedbackLoopEmailAddressDB Instance { get; internal set; }
-	}
+	//public static class FeedbackLoopEmailAddressDBFactory
+	//{
+	//	public static IFeedbackLoopEmailAddressDB Instance { get; internal set; }
+	//}
 
 	internal class FeedbackLoopEmailAddressDB : IFeedbackLoopEmailAddressDB
 	{

@@ -7,10 +7,10 @@ using OpenManta.Core;
 
 namespace OpenManta.Data
 {
-	public static class CfgParaFactory
-	{
-		public static ICfgPara Instance { get; internal set; }
-	}
+	//public static class CfgParaFactory
+	//{
+	//	public static ICfgPara Instance { get; internal set; }
+	//}
 
 	internal class CfgPara : ICfgPara
 	{
@@ -205,7 +205,9 @@ SELECT Value FROM Manta.Settings WHERE Name=@name";
 				conn.Open();
 
 				var result = (string)cmd.ExecuteScalar();
-				return (string)_cache.AddOrGetExisting($"config_{colName}", result, DateTimeOffset.UtcNow.AddMinutes(15));
+				_cache.AddOrGetExisting($"config_{colName}", result, DateTimeOffset.UtcNow.AddMinutes(15));
+
+				return result;
 			}
 		}
 

@@ -1,16 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Data;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
 
 namespace OpenManta.Data
 {
-	public static class MantaDbFactory
-	{
-		public static IMantaDB Instance { get; internal set; }
-	}
+	//public static class MantaDbFactory
+	//{
+	//	public static IMantaDB Instance { get; internal set; }
+	//}
 
 	/// <summary>
 	/// Functions to help with database stuff.

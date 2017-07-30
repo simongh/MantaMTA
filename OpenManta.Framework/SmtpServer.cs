@@ -1,6 +1,4 @@
-﻿using OpenManta.Core;
-using OpenManta.Data;
-using System;
+﻿using System;
 using System.Linq;
 using System.Net;
 using System.Net.Mail;
@@ -8,6 +6,8 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using log4net;
+using OpenManta.Core;
+using OpenManta.Data;
 using OpenManta.Framework.Smtp;
 
 namespace OpenManta.Framework
@@ -26,16 +26,19 @@ namespace OpenManta.Framework
 		private readonly ILog _logging;
 		private readonly ISmtpServerFactory _handlerFactory;
 		private readonly IMtaParameters _config;
+		private readonly IFeedbackLoopEmailAddressDB _feedbackDb;
 
-		public SmtpServer(ILog logging, Smtp.ISmtpServerFactory handlerFactory, IMtaParameters config)
+		public SmtpServer(ILog logging, Smtp.ISmtpServerFactory handlerFactory, IMtaParameters config, IFeedbackLoopEmailAddressDB feedbackDb)
 		{
 			Guard.NotNull(logging, nameof(logging));
 			Guard.NotNull(handlerFactory, nameof(handlerFactory));
 			Guard.NotNull(config, nameof(config));
+			Guard.NotNull(feedbackDb, nameof(feedbackDb));
 
 			_logging = logging;
 			_handlerFactory = handlerFactory;
 			_config = config;
+			_feedbackDb = feedbackDb;
 		}
 
 		/// <summary>
@@ -358,7 +361,7 @@ namespace OpenManta.Framework
 							if (!rcptTo.User.Equals("abuse", StringComparison.OrdinalIgnoreCase) &&
 								!rcptTo.User.Equals("postmaster", StringComparison.OrdinalIgnoreCase) &&
 								!rcptTo.User.StartsWith("return-", StringComparison.OrdinalIgnoreCase) &&
-								!FeedbackLoopEmailAddressDBFactory.Instance.IsFeedbackLoopEmailAddress(rcptTo.Address))
+								!_feedbackDb.IsFeedbackLoopEmailAddress(rcptTo.Address))
 							{
 								await smtpStream.WriteLineAsync("550 Unknown mailbox");
 								continue;

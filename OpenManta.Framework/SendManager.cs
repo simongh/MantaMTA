@@ -1,8 +1,8 @@
-﻿using OpenManta.Core;
-using OpenManta.Data;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
+using OpenManta.Core;
+using OpenManta.Data;
 
 namespace OpenManta.Framework
 {
@@ -32,19 +32,14 @@ namespace OpenManta.Framework
 		/// </summary>
 		private object _SendsLock = new object();
 
-		static SendManager()
-		{
-			Instance = new SendManager(SendDBFactory.Instance);
-		}
-
-		private SendManager(ISendDB sendDb)
+		public SendManager(ISendDB sendDb)
 		{
 			Guard.NotNull(sendDb, nameof(sendDb));
 
 			_sendDb = sendDb;
 		}
 
-		public static SendManager Instance { get; private set; }
+		public static SendManager Instance { get; internal set; }
 
 		/// <summary>
 		/// Clear the Sends from memory.

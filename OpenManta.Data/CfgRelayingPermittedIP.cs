@@ -1,15 +1,14 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Net;
 using OpenManta.Core;
 
 namespace OpenManta.Data
 {
-	public static class CfgRelayingPermittedIPFactory
-	{
-		public static ICfgRelayingPermittedIP Instance { get; internal set; }
-	}
+	//public static class CfgRelayingPermittedIPFactory
+	//{
+	//	public static ICfgRelayingPermittedIP Instance { get; internal set; }
+	//}
 
 	internal class CfgRelayingPermittedIP : ICfgRelayingPermittedIP
 	{

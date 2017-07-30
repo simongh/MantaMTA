@@ -7,10 +7,10 @@ using OpenManta.Core;
 
 namespace OpenManta.Data
 {
-	public static class CfgLocalDomainsFactory
-	{
-		public static ICfgLocalDomains Instance { get; internal set; }
-	}
+	//public static class CfgLocalDomainsFactory
+	//{
+	//	public static ICfgLocalDomains Instance { get; internal set; }
+	//}
 
 	internal class CfgLocalDomains : ICfgLocalDomains
 	{

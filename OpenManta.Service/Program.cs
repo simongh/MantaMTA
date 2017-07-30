@@ -14,7 +14,7 @@ namespace OpenManta.Service
 			{
 				host.UseLog4Net();
 
-				host.UseNinject(new ServiceModule(), new Framework.FrameworkModule(), new Core.CoreModule(), new Data.DataModule());
+				host.UseNinject(new Data.DataModule(), new ServiceModule(), new Framework.FrameworkModule(), new Core.CoreModule());
 
 				host.Service<OpenMantaService>(sc =>
 				{

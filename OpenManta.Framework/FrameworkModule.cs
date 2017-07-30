@@ -1,4 +1,6 @@
-﻿namespace OpenManta.Framework
+﻿using Ninject;
+
+namespace OpenManta.Framework
 {
 	public class FrameworkModule : Ninject.Modules.NinjectModule
 	{
@@ -10,7 +12,7 @@
 			Bind<IEventHttpForwarder>().To<EventHttpForwarder>().InSingletonScope();
 			Bind<IEventsFileHandler>().To<EventsFileHandler>().InSingletonScope();
 			Bind<IEventsManager>().To<EventsManager>().InSingletonScope();
-			Bind<IMantaCoreEvents>().To<MantaCoreEvents>();
+			Bind<IMantaCoreEvents>().To<MantaCoreEvents>().InSingletonScope();
 			Bind<IMessageManager>().To<MessageManager>();
 			Bind<IMessageSender>().To<MessageSender>().InSingletonScope();
 			Bind<IMtaMessageHelper>().To<MtaMessageHelper>();
@@ -44,6 +46,8 @@
 			Bind<log4net.ILog>().ToMethod(ctx => log4net.LogManager.GetLogger(MtaParameters.MTA_NAME));
 
 			MtaParametersFactory.Initialise(Kernel);
+
+			SendManager.Instance = Kernel.Get<SendManager>();
 		}
 	}
 }

@@ -1,15 +1,14 @@
 ﻿using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
 using System.Linq;
 using OpenManta.Core;
 
 namespace OpenManta.Data
 {
-	public static class VirtualMtaDBFactory
-	{
-		public static IVirtualMtaDB Instance { get; internal set; }
-	}
+	//public static class VirtualMtaDBFactory
+	//{
+	//	public static IVirtualMtaDB Instance { get; internal set; }
+	//}
 
 	internal class VirtualMtaDB : IVirtualMtaDB
 	{

@@ -4,10 +4,10 @@ using OpenManta.Core;
 
 namespace OpenManta.Data
 {
-	public static class MtaMessageDBFactory
-	{
-		public static IMtaMessageDB Instance { get; internal set; }
-	}
+	//public static class MtaMessageDBFactory
+	//{
+	//	public static IMtaMessageDB Instance { get; internal set; }
+	//}
 
 	internal class MtaMessageDB : IMtaMessageDB
 	{

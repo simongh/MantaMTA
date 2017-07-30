@@ -27,7 +27,7 @@ namespace OpenManta.Framework.Smtp
 		private readonly ILog _logging;
 		private readonly IMtaParameters _config;
 
-		private SmtpTransactionLogger(ILog logging, IMtaParameters config)
+		public SmtpTransactionLogger(ILog logging, IMtaParameters config)
 		{
 			Guard.NotNull(logging, nameof(logging));
 			Guard.NotNull(config, nameof(config));

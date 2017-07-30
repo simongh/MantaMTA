@@ -5,10 +5,10 @@ using OpenManta.Core;
 
 namespace OpenManta.Data
 {
-	public static class MtaTransactionFactory
-	{
-		public static IMtaTransaction Instance { get; internal set; }
-	}
+	//public static class MtaTransactionFactory
+	//{
+	//	public static IMtaTransaction Instance { get; internal set; }
+	//}
 
 	internal class MtaTransaction : IMtaTransaction
 	{

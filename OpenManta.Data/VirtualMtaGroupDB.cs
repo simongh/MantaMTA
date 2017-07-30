@@ -8,10 +8,10 @@ using OpenManta.Core;
 
 namespace OpenManta.Data
 {
-	public static class VirtualMtaGroupDBFactory
-	{
-		public static IVirtualMtaGroupDB Instance { get; internal set; }
-	}
+	//public static class VirtualMtaGroupDBFactory
+	//{
+	//	public static IVirtualMtaGroupDB Instance { get; internal set; }
+	//}
 
 	internal class VirtualMtaGroupDB : IVirtualMtaGroupDB
 	{

@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Data;
 using System.Data.SqlClient;
-using OpenManta.Core;
 using System.Threading.Tasks;
+using OpenManta.Core;
 
 namespace OpenManta.Data
 {
-	public static class SendDBFactory
-	{
-		public static ISendDB Instance { get; internal set; }
-	}
+	//public static class SendDBFactory
+	//{
+	//	public static ISendDB Instance { get; internal set; }
+	//}
 
 	internal class SendDB : ISendDB
 	{

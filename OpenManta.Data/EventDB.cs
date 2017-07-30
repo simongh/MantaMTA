@@ -8,10 +8,10 @@ using OpenManta.Core;
 
 namespace OpenManta.Data
 {
-	public static class EventDbFactory
-	{
-		public static IEventDB Instance { get; internal set; }
-	}
+	//public static class EventDbFactory
+	//{
+	//	public static IEventDB Instance { get; internal set; }
+	//}
 
 	/// <summary>
 	/// Performs database querying and retrieval operations for Manta's Events.

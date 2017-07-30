@@ -1,6 +1,4 @@
-﻿using Ninject;
-
-namespace OpenManta.Data
+﻿namespace OpenManta.Data
 {
 	public class DataModule : Ninject.Modules.NinjectModule
 	{
@@ -21,18 +19,18 @@ namespace OpenManta.Data
 			Bind<IVirtualMtaDB>().To<VirtualMtaDB>();
 			Bind<IVirtualMtaGroupDB>().To<VirtualMtaGroupDB>();
 
-			MantaDbFactory.Instance = Kernel.Get<IMantaDB>();
-			CfgLocalDomainsFactory.Instance = Kernel.Get<ICfgLocalDomains>();
-			CfgParaFactory.Instance = Kernel.Get<ICfgPara>();
-			CfgRelayingPermittedIPFactory.Instance = Kernel.Get<ICfgRelayingPermittedIP>();
-			EventDbFactory.Instance = Kernel.Get<IEventDB>();
-			FeedbackLoopEmailAddressDBFactory.Instance = Kernel.Get<IFeedbackLoopEmailAddressDB>();
-			MtaMessageDBFactory.Instance = Kernel.Get<IMtaMessageDB>();
-			MtaTransactionFactory.Instance = Kernel.Get<IMtaTransaction>();
-			OutboundRuleDBFactory.Instance = Kernel.Get<IOutboundRuleDB>();
-			SendDBFactory.Instance = Kernel.Get<ISendDB>();
-			VirtualMtaDBFactory.Instance = Kernel.Get<IVirtualMtaDB>();
-			VirtualMtaGroupDBFactory.Instance = Kernel.Get<IVirtualMtaGroupDB>();
+			//MantaDbFactory.Instance = Kernel.Get<IMantaDB>();
+			//CfgLocalDomainsFactory.Instance = Kernel.Get<ICfgLocalDomains>();
+			//CfgParaFactory.Instance = Kernel.Get<ICfgPara>();
+			//CfgRelayingPermittedIPFactory.Instance = Kernel.Get<ICfgRelayingPermittedIP>();
+			//EventDbFactory.Instance = Kernel.Get<IEventDB>();
+			//FeedbackLoopEmailAddressDBFactory.Instance = Kernel.Get<IFeedbackLoopEmailAddressDB>();
+			//MtaMessageDBFactory.Instance = Kernel.Get<IMtaMessageDB>();
+			//MtaTransactionFactory.Instance = Kernel.Get<IMtaTransaction>();
+			//OutboundRuleDBFactory.Instance = Kernel.Get<IOutboundRuleDB>();
+			//SendDBFactory.Instance = Kernel.Get<ISendDB>();
+			//VirtualMtaDBFactory.Instance = Kernel.Get<IVirtualMtaDB>();
+			//VirtualMtaGroupDBFactory.Instance = Kernel.Get<IVirtualMtaGroupDB>();
 		}
 	}
 }
