@@ -9,3 +9,5 @@ Database/MtaDB/scriptDb.log
 /.vs/
 *.userprefs
 OpenManta.Web/bower_components/
+/logs
+*.user
